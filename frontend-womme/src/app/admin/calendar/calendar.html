@@ -1,0 +1,179 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <!-- Add Date Button -->
+      <div class="table-header">
+        <button class="btn custom-assign-btn" (click)="openAddDialog()">
+          <i class="fa-solid fa-plus"></i>&nbsp; Add Date
+        </button>
+      </div>
+
+      <!-- Add/Edit Calendar Dialog -->
+      <p-dialog
+        header="{{ selectedDateStr ? 'Edit Calendar' : 'Add Calendar' }}"
+        [(visible)]="showCalendarDialog"
+        [modal]="true"
+        [closable]="true"
+        [dismissableMask]="true"
+        [baseZIndex]="10000"
+        [contentStyle]="{ overflow: 'visible', padding: '1rem' }"
+        [style]="{ width: '500px' }"  
+        [styleClass]="'custom-dialog small-dialog'">
+
+        <form #calendarForm="ngForm" class="p-fluid">
+          <div class="row g-3">
+
+            <!-- Date with Calendar Icon -->
+         <div class="col-12 mb-3">
+            <label class="form-label">Date <span class="text-danger">*</span></label>
+            <div class="d-flex align-items-center gap-2">
+                <input
+                type="text"
+                class="form-control flex-grow-1"
+                [(ngModel)]="selectedDateStr"
+                name="selectedDate"
+                (ngModelChange)="onInputChange($event)"
+                placeholder="Select Date"
+                
+                />
+                <i
+                class="pi pi-calendar"
+                style="cursor: pointer; font-size: 1.5rem;"
+                (click)="toggleCalendar()"
+                ></i>
+            </div>
+            <div *ngIf="submitted && !selectedDateStr" class="text-danger  ">
+            Date is required.
+            </div>
+            <div *ngIf="showCalendar" class="mt-2">
+                <p-calendar
+                [inline]="true"
+                [showOtherMonths]="true"
+                [showWeek]="true"
+                [monthNavigator]="true"
+                [yearNavigator]="true"
+                [yearRange]="'2000:2050'"
+                [(ngModel)]="selectedDate"
+                (onSelect)="onDateSelect($event)"
+                name="inlineCalendar"
+                >
+                <ng-template pTemplate="date" let-date>
+                    <div [ngClass]="getDateClass(date)">
+                    {{ date.day }}
+                    </div>
+                </ng-template>
+                </p-calendar>
+            </div>
+            </div>
+           <!-- Occasion -->
+            <div class="col-md-12">
+              <label class="form-label">Occasion<span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="occasion"
+                name="occasion"
+                placeholder="Enter Occasion"
+                required
+              />
+            </div>
+            <div *ngIf="submitted && !occasion" class="text-danger mb-2 mx-3">
+            Occasion is required.
+            </div>
+
+            <!-- Description -->
+            <div class="col-md-12">
+              <label class="form-label">Description<span class="text-danger">*</span></label>
+              <textarea
+                class="form-control"
+                [(ngModel)]="calendarDescription"
+                name="calendarDescription"
+                rows="2"    
+                placeholder="Enter Description"
+                required
+              ></textarea>
+            </div>
+            <div *ngIf="submitted && !calendarDescription" class="text-danger mb-2 mx-3">
+            Description is required.
+            </div>
+            <!-- Type -->
+            <div class="col-md-12">
+              <label class="form-label">Type<span class="text-danger">*</span></label>
+              <select
+                class="form-control"
+                [(ngModel)]="selectedType"
+                name="selectedType"
+                required
+              >
+                <option [value]="0">Overtime</option>
+                <option [value]="1">Double Time</option>
+              </select>
+            </div>
+
+            <!-- Message -->
+            <div *ngIf="successMessage" class="col-12 text-center mt-2 text-success">
+              {{ successMessage }}
+            </div>
+
+            <!-- Dialog Actions -->
+            <div class="col-12 text-end mt-3">
+              <button type="button" class="custom-submit-btn" (click)="submitCalendar()">Submit</button>
+              <!-- <button type="button" class="btn btn-secondary ms-2" (click)="closeDialog()">Cancel</button> -->
+            </div>
+
+          </div>
+        </form>
+      </p-dialog>
+
+      <!-- Calendar Table -->
+    <div class="card p-1 mt-3 shadow-sm">
+     <div class="card-body p-1">
+      <p-table
+        [value]="calendarList"
+        [paginator]="true"
+        [rows]="15"
+        [responsiveLayout]="'scroll'"
+        [scrollable]="true"
+        scrollHeight="400px"
+        class="p-datatable-sm p-datatable-striped custom-p-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="background-color: #ECC391;">Date</th>
+            <th style="background-color: #ECC391;">Occasion</th>
+            <th style="background-color: #ECC391;">Description</th>
+            <th style="background-color: #ECC391;">Type</th>
+            <th style="background-color: #ECC391;">Action</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-entry>
+          <tr>
+            <td>{{ entry.date }}</td>
+            <td>{{ entry.occasion }}</td>
+            <td>{{ entry.calendarDescription }}</td>
+            <td>{{ entry.flag === 0 ? 'Overtime' : 'Double Time' }}</td>
+           <td class="text-nowrap">
+                <a
+                    href="#"
+                    class="btn btn-danger btn-sm mx-1 delete-calendar"
+                    title="Delete"
+                    (click)="deleteEntry(entry.id, $event)"
+                >
+                    <i class="fa-solid fa-trash"></i>
+                </a>
+            </td>
+
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+    </div>
+    </section>
+  </main>
+</div>

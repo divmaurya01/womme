@@ -1,0 +1,252 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <div class="dashboard-control-bar d-flex flex-wrap justify-content-between align-items-center mb-3" style="gap: 1rem; padding-top: 2em;">
+        <!-- Search Input -->
+        <div class="flex-grow-1 position-relative" style="min-width: 250px; max-width: 400px;">
+          <input
+            type="text"
+            pInputText
+            placeholder="Search Job"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange($event)"
+            class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+            style="height: 45px; transition: all 0.3s;"
+          />
+        </div>
+
+        <!-- Export Icon Button -->
+        <button 
+          pButton 
+          type="button" 
+          icon="pi pi-download" 
+          class="p-button-rounded p-button-info shadow-sm"
+          style="height: 45px; width: 45px;"
+          (click)="exportJobs()"
+          title="Export Jobs">
+        </button>
+      </div>
+
+
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+          <p-table
+            #dt
+            [value]="transactions"
+            [lazy]="true"
+            [paginator]="true"
+            [rows]="50"
+            [totalRecords]="totalRecords"
+            (onLazyLoad)="loadJobsLazy($event)"
+            [loading]="isLoading"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            [rowExpandMode]="'multiple'"
+            [expandedRowKeys]="expandedRows" 
+            dataKey="serialNumber"
+          >
+          <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391;">S.No</th>
+                <th style="background-color: #ECC391;">Job</th>
+                <th style="background-color: #ECC391;">Serial No</th>
+                <th style="background-color: #ECC391;">Timer (HH:mm:ss)</th>
+                <th style="background-color: #ECC391;">Opr No.</th>
+                <th style="background-color: #ECC391;">Emp Name</th>
+                <th style="background-color: #ECC391;">Machine Name</th>
+                <th style="background-color: #ECC391;">Work Center</th>
+                <th style="background-color: #ECC391;"></th>
+                
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+              
+              <tr (click)="toggleRow(job)" [ngClass]="{'row-expanded': isRowExpanded(job)}">
+                <td>{{ dt.first + rowIndex + 1 }}</td>
+                <td>{{ job.jobNumber }}</td>
+                <td>{{ job.serialNumber }}</td>
+                <td>{{ formatTimer(job.timerHours || job.total_hours || 0) }}</td>
+                <td>{{ job.operationNumber }}</td>
+                <td>{{ job.employee_name }}</td>
+                <td>{{ job.machine_name }}</td>
+                <td>{{ job.workCenter }}</td>
+                <td class="text-center">
+                  <button 
+                    pButton 
+                    icon="pi pi-trash" 
+                    class="p-button-rounded p-button-danger p-button-sm" 
+                    [disabled]="roleId === 4"
+                    (click)="deleteJobTransaction(job)"
+                    title="Delete Transaction">
+                  </button>
+                </td>
+              </tr>
+
+              <tr *ngIf="isRowExpanded(job)">
+                <td colspan="9">
+                  <p-table [value]="job.allLogs" [responsiveLayout]="'scroll'" class="p-m-0 p-dense">
+                    <ng-template pTemplate="header">
+                      <tr>
+                        <th>Trans Date</th>
+                        <th>Status</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Hours</th>
+                        <th>Rate</th>
+                        <th>Amount</th>                        
+                        <th>Shift</th>
+                        <th>Employee</th>
+                        <th>Machine</th>
+                        <th>Edit</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-log>
+                      <tr>
+                        <td>{{ formatDateFromString(log.trans_date) }}</td>
+<td>
+  <ng-container *ngIf="isEditing(log); else statusView">
+    <!-- Only show dropdown if original status is Complete -->
+    <select *ngIf="log.status?.toString() === '3'"
+            [(ngModel)]="editingRows[log.trans_num].status"
+            class="form-control form-control-sm">
+      <option [value]="3">Complete</option>
+      <option [value]="2">Idle</option>
+    </select>
+
+    <!-- Fallback numeric input if status is not Complete -->
+    <input *ngIf="log.status?.toString() !== '3'" 
+           type="number" 
+           [(ngModel)]="editingRows[log.trans_num].status" 
+           class="form-control form-control-sm" />
+  </ng-container>
+
+  <ng-template #statusView>
+    {{ log.status?.toString() === '3' ? 'Complete' 
+       : log.status?.toString() === '2' ? 'Idle' 
+       : log.status?.toString() === '1' ? 'Started' 
+       : log.status }}
+  </ng-template>
+</td>
+<!-- Start Time -->
+<td>
+  <ng-container *ngIf="isEditing(log); else startView">
+    <input type="datetime-local"
+           [(ngModel)]="editingRows[log.trans_num].start_time"
+           (change)="calculateHoursAndAmount(log)"
+           class="form-control form-control-sm" />
+  </ng-container>
+  <ng-template #startView>
+    {{ log.start_time | date:'shortTime' }}
+  </ng-template>
+</td>
+
+<!-- End Time -->
+<td>
+  <ng-container *ngIf="isEditing(log); else endView">
+    <input type="datetime-local"
+           [(ngModel)]="editingRows[log.trans_num].end_time"
+           (change)="calculateHoursAndAmount(log)"
+           class="form-control form-control-sm" />
+  </ng-container>
+  <ng-template #endView>
+    {{ log.end_time | date:'shortTime' }}
+  </ng-template>
+</td>
+
+
+                        <!-- Hours -->
+                        <td>
+                          <ng-container *ngIf="isEditing(log); else hoursView">
+                            <input type="number"
+                                  [(ngModel)]="editingRows[log.trans_num]!.total_hours"
+                                  (ngModelChange)="calculateAmount(log)"
+                                  class="form-control form-control-sm" />
+                          </ng-container>
+                          <ng-template #hoursView>{{ formatTimer(log.total_hours ?? 0) }}</ng-template>
+                        </td>
+
+                        <!-- Rate -->
+                        <td>
+                          <ng-container *ngIf="isEditing(log); else rateView">
+                            <input type="number"
+                                  [(ngModel)]="editingRows[log.trans_num]!.job_rate"
+                                  (ngModelChange)="calculateAmount(log)"
+                                  class="form-control form-control-sm" />
+                          </ng-container>
+                          <ng-template #rateView>{{ log?.job_rate ?? '-' }}</ng-template>
+                        </td>
+
+                        <!-- Amount (readonly) -->
+                        <td>{{ isEditing(log) ? editingRows[log.trans_num].total_dollar : log?.total_dollar ?? '-' }}</td>
+
+
+                        <td>
+                            <ng-container *ngIf="isEditing(log); else shiftView">
+                              <select [(ngModel)]="editingRows[log.trans_num]!.shift" class="form-control form-control-sm">
+                                <option value="1">Day</option>
+                                <option value="2">Overtime</option>
+                              </select>
+                            </ng-container>
+                            <ng-template #shiftView>
+                              {{ log?.shift === '1' ? 'Day' : log?.shift === '2' ? 'Overtime' : '-' }}
+                            </ng-template>
+                          </td>
+
+                          <!-- Employee -->
+                          <td>
+                            <ng-container *ngIf="isEditing(log); else empView">
+                              <select [(ngModel)]="editingRows[log.trans_num]!.employee_num" class="form-control form-control-sm">
+                                <option *ngFor="let e of employees" [value]="e.empNum">{{ e.empName }}</option>
+                              </select>
+                            </ng-container>
+                            <ng-template #empView>{{ log?.employee_name ?? '-' }}</ng-template>
+                          </td>
+
+                          <!-- Machine -->
+                          <td>
+                            <ng-container *ngIf="isEditing(log); else machineView">
+                              <select [(ngModel)]="editingRows[log.trans_num]!.machine_num" class="form-control form-control-sm">
+                                <option *ngFor="let m of machines" [value]="m.machineNumber">{{ m.machineName }}</option>
+                              </select>                            
+                            </ng-container>
+                            <ng-template #machineView>{{ log?.machine_name ?? '-' }}</ng-template>
+                          </td>
+                       
+                        <!-- Edit / Save -->
+                        <td class="text-center">
+                          <button *ngIf="!isEditing(log)"
+                                  pButton icon="pi pi-pencil"
+                                  class="p-button-rounded p-button-text p-button-sm"
+                                  [disabled]="roleId === 4 || log.status?.toString() !== '3'"
+                                  (click)="startEdit(log)" title="Edit Hours & Rate">
+                          </button>
+
+                          <button *ngIf="isEditing(log)"
+                                  pButton icon="pi pi-check"
+                                  class="p-button-rounded p-button-success p-button-sm"
+                                  (click)="saveEdit(log)" title="Save">
+                          </button>
+                        </td>
+                      </tr>
+                    </ng-template>
+
+                  </p-table>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>

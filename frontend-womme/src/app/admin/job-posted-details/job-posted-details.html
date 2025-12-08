@@ -1,0 +1,72 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper p-4">
+
+      <!-- Job Details Header -->
+      <h4 class="mb-4">
+        📝 Job: {{ job }} / Operation No: {{ operation }} / Transaction: {{ selectedTransNum }} / WorkCenter: {{ workCenter }}
+      </h4>
+
+      <p-table #dt [value]="jobDetails" dataKey="serialNo" [responsiveLayout]="'scroll'">
+
+        <!-- Accordion-style Header -->
+        <ng-template pTemplate="body" let-rowData let-expanded="expanded">
+          <div class="card mb-3 shadow-sm border rounded-2xl bg-white">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                 style="background-color:#ECC391; font-weight:bold; cursor:pointer;"
+                 (click)="dt.toggleRow(rowData)">
+              <span>
+                Serial {{ rowData.serialNo }}
+              </span>
+              <i class="fas" [ngClass]="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </div>
+          </div>
+        </ng-template>
+
+        <!-- Row Expansion -->
+        <ng-template pTemplate="rowexpansion" let-rowData>
+          <div class="card-body bg-white shadow-sm border rounded-2xl mb-3">
+            <table class="table table-striped table-bordered table-sm mb-3">
+              <thead>
+                <tr>
+                  <th>Serial No</th>
+                  <th>Employee</th>
+                  <th>Machine</th>
+                  <th>Job Status Timeline</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let entry of rowData.logEntries">
+                  <td>{{ rowData.serialNo }}</td>
+                  <td>{{ entry.employeeCode }} - {{ entry.employeeName }}</td>
+                  <td>{{ entry.machineNumber }} - {{ entry.machineDescription }}</td>
+                  <td>
+                    <ng-container [ngSwitch]="entry.statusID">
+                      <span *ngSwitchCase="1">Started - {{ entry.statusTime | date:'short' }}</span>
+                      <span *ngSwitchCase="2">Paused - {{ entry.statusTime | date:'short' }}</span>
+                      <span *ngSwitchCase="3">Completed - {{ entry.statusTime | date:'short' }}</span>
+                      <span *ngSwitchDefault>Unknown</span>
+                    </ng-container>
+                  </td>
+                </tr>
+
+                <!-- Total Hours Row -->
+                <tr class="table-info">
+                  <td colspan="3" style="text-align:right; font-weight:bold;">Total Hours:</td>
+                  <td style="font-weight:bold;">{{ getTotalHours(rowData) }}</td>
+                </tr>
+              </tbody>
+
+            </table>
+          </div>
+        </ng-template>
+
+      </p-table>
+
+    </section>
+  </main>
+</div>

@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css?family=Arimo:400,400italic,700,700italic');
+
+body {
+  // font-family: 'Arimo', sans-serif;
+  margin: 0;
+}
+
+.bg-orange {
+  background-color: #ff6600 !important;
+}
+
+.stat-card {
+  transition: transform 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.card-text{
+  font-size: 25px;;
+}
+
+.soft-blue    { background-color: #94b48f; }
+.soft-yellow  { background-color: #b0c5e0; }
+.soft-red     { background-color: #d3c7bd; }
+.soft-green   { background-color: #C1BE94; }
+.soft-purple  { background-color: #e0a982; }
+.soft-cyan    { background-color: #C6BFAD; }
+.soft-pink    { background-color: #e6ac9d; }
+.soft-gray    { background-color: #A3C0B8; }
+
+
+/* Responsive */
+@media (max-width: 767px) {
+  .sidebar {
+    width: 60%;
+    min-width: unset;
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+}
+
+/* Table Styling */
+.styled-table {
+  width: 100%;
+  background-color: #fff;
+  border-collapse: collapse;
+}
+
+.styled-table th,
+.styled-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+thead.thead-dark th {
+  background-color: black;
+  color: white;
+}
+
+/* Scrollbar styling */
+main::-webkit-scrollbar {
+  width: 8px;
+}
+
+main::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 10px;
+}
+.sidebar-anchor {
+  font-size: 15px;
+   margin-right: 8px;
+   font-family: Arial;
+}

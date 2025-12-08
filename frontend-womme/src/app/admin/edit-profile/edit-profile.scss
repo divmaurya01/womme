@@ -1,0 +1,87 @@
+.profile-card,
+.details-card {  
+  overflow: hidden;
+}
+
+.profile-img-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+
+.custom-submit-btn {
+  background-color: #5CB78E;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-submit-btn:hover {
+  background-color: #4aa879; /* Slightly darker shade for hover */
+}
+
+.custom-back-btn {
+  background-color: #73817a;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-back-btn:hover {
+  background-color: #293b32; /* Slightly darker shade for hover */
+}
+
+
+
+.profile-pic {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #ECC391;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.upload-btn {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: #c29054;
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 33px;
+  padding: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+.upload-btn:hover {
+  background: #e5b870;
+}
+
+.profile-table {
+  margin: 0 auto;
+  font-size: 14px;
+  width: auto;
+  margin-top: 45px;
+}
+.profile-table .label {
+  font-weight: 600;
+  color: #555;
+  padding-right: 10px;
+  text-align: right;
+  font-size: 15px;
+}
+.profile-table .value {
+  color: #333;
+   font-size: 15px;
+}

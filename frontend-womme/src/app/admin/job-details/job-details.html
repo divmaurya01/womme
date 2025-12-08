@@ -1,0 +1,362 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper p-4">
+
+      <h4 *ngIf="jobDetails" class="mb-4 d-flex align-items-center justify-content-between">
+        📝 Unposted Job Transaction - {{ job }} / Operation No: {{ operation }}/ Quantity: {{ releasedQty }}     
+
+        <!-- Download Report Icon -->
+        <i class="fas fa-download"
+          style="cursor:pointer; font-size: 1.2rem; color: #4AA879;"
+          title="Download Report"
+          (click)="downloadReport()">
+        </i> 
+      </h4>
+      
+
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+
+          <p-table 
+          #dt 
+          [value]="jobDetails" 
+          dataKey="transNum" 
+          [responsiveLayout]="'scroll'"
+          tableStyleClass="table table-striped table-bordered table-hover table-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391; padding: 10px;">Actions</th>
+                <th style="background-color: #ECC391; padding: 10px;">Timer</th>
+                <th style="background-color: #ECC391; padding: 10px;">Serial No</th>                
+                <th style="background-color: #ECC391; padding: 10px;">Transaction No</th>
+                <th style="background-color: #ECC391; padding: 10px;">Work Center</th>
+                <th style="background-color: #ECC391; padding: 10px;">Job Qty</th>
+                <th style="background-color: #ECC391; padding: 10px;">Employee</th>
+                <th style="background-color: #ECC391; padding: 10px;">Machine</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-rowData>
+              <ng-container *ngFor="let qty of [].constructor(rowData.releasedQty); let i = index">
+                <tr [ngStyle]="{ 'background-color': getRowColor(rowData['status_' + (i + 1)]) }">
+
+                  <!-- Actions -->
+                  <td>
+                    <ng-container [ngSwitch]="rowData['status_' + (i + 1)]">
+                      
+                      <!-- Not Started -->
+                      <button *ngSwitchCase="null" class="custom-submit-btn btn-sm"
+                              (click)="startWizard(rowData.transNum, i + 1, rowData['empCode_' + (i + 1)])">
+                        Start
+                      </button>
+                      <button *ngSwitchCase="undefined" class="custom-submit-btn btn-sm"
+                              (click)="startWizard(rowData.transNum, i + 1, rowData['empCode_' + (i + 1)])">
+                        Start
+                      </button>
+                      <button *ngSwitchCase="''" class="custom-submit-btn btn-sm"
+                              (click)="startWizard(rowData.transNum, i + 1, rowData['empCode_' + (i + 1)])">
+                        Start
+                      </button>
+                      <button *ngSwitchCase="'Unknown'" class="custom-submit-btn btn-sm"
+                              (click)="startWizard(rowData.transNum, i + 1, rowData['empCode_' + (i + 1)])">
+                        Start
+                      </button>
+
+                      <!-- Started -->
+                      <ng-container *ngSwitchCase="'Started'">
+                        <button class="custom-pause-btn btn-sm"
+                                (click)="pauseJob(rowData.transNum, i + 1)">Pause</button>
+                        <button class="custom-complete-btn btn-sm"
+                                (click)="completeJob(rowData.transNum, i + 1)">Stop</button>
+                      </ng-container>
+
+                      <!-- Paused -->
+                      <ng-container *ngSwitchCase="'Paused'">
+                        <button class="custom-submit-btn btn-sm"
+                                (click)="rowData['empCode_' + (i + 1)] === emp_num 
+                                          ? resumeJob(rowData.transNum, i + 1) 
+                                          : startWizard(rowData.transNum, i + 1, rowData['empCode_' + (i + 1)])">
+                          Resume
+                        </button>
+                        <button class="custom-complete-btn btn-sm"
+                                (click)="completeJob(rowData.transNum, i + 1)">Stop</button>
+                      </ng-container>
+
+                      <!-- Completed -->
+                      <span *ngSwitchCase="'Completed'" class="badge bg-success">Completed</span>
+                    </ng-container>
+                  </td>
+
+                  <!-- Timer -->
+                  <td>
+                    <span class="elapsed-time">
+                      {{ elapsedTimes[rowData.transNum + '_' + (i + 1)] || '00:00:00' }}
+                    </span>
+                  </td>
+
+                  <!-- Serial No -->
+                  <td>{{ rowData.job }}-{{ i + 1 }}</td>
+                  
+                  
+
+                  <!-- Transaction No -->
+                  <td>{{ rowData.transNum }}</td>
+
+                  <!-- Work Center -->
+                  <td>{{ rowData.workCenter }}</td>
+
+                  <!-- Job Qty -->
+                  <td>1</td>
+
+                  <!-- Employee -->
+                  <td>{{ rowData['empCode_' + (i + 1)] || '-' }}</td>
+
+                  <!-- Machine -->
+                  <td>{{ rowData['machineCode_' + (i + 1)] || '-' }}</td>
+
+                  
+                </tr>
+              </ng-container>
+            </ng-template>
+          </p-table>
+
+          </div>
+      </div>
+
+      
+
+
+
+
+      
+     
+
+
+            <p-dialog
+                    header="Job Assignment"
+                    [(visible)]="showWizard"
+                    [dismissableMask]="true"
+                    [modal]="true"
+                    [closable]="true"
+                    [style]="{ width: '800px' }">
+
+                    <div class="card p-2">
+
+                      <!-- Step 1: Job -->
+                      <div *ngIf="wizardStep === 1" class="row align-items-start">
+                        <!-- Left -->
+                        <div class="col-md-5 border-end pe-4">
+                          <h5 class="fw-bold mb-3 text-primary">Step 1: Scan Job QR</h5>
+                          <p class="text-muted">Please scan the Job QR code. The expected Job is: {{ job }} </p>            
+                        </div>
+
+                        <!-- Right -->
+                        <div class="col-md-7 ps-4">
+                          <button type="button" class="btn btn-outline-primary mb-3"
+                                  (click)="useCamera = !useCamera">
+                            <i class="pi" [ngClass]="useCamera ? 'pi-upload' : 'pi-video'"></i>
+                            {{ useCamera ? 'Use File Upload' : 'Open Camera' }}
+                          </button>
+
+                          <!-- Camera -->
+                          <div *ngIf="useCamera" class="card shadow-sm mb-3">
+                            <div class="card-body">
+                              <zxing-scanner [device]="selectedDevice"
+                                            (camerasFound)="onCamerasFound($event)"
+                                            (scanSuccess)="handleScannedData($event)">
+                              </zxing-scanner>
+                            </div>
+                          </div>
+
+                          <!-- File -->
+                          <div class="mb-3">
+                            <label for="fileJob" class="form-label fw-semibold">Or Upload Job QR File</label>
+                            <input id="fileJob" type="file" class="form-control"
+                                  (change)="onFileSelected($event)" />
+                          </div>
+
+                          <!-- Result -->
+                          <div *ngIf="scannedData" class="mt-3">
+                            <div [ngClass]="{
+                                'alert alert-success shadow-sm': stepValid,
+                                'alert alert-danger shadow-sm': !stepValid
+                              }">
+                              {{ getStepMessage() }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Step 2: Operation -->
+                      <div *ngIf="wizardStep === 2" class="row align-items-start">
+                        <div class="col-md-5 border-end pe-4">
+                          <h5 class="fw-bold mb-3 text-primary">Step 2: Scan Operation QR</h5>
+                          <p class="text-muted">Expected Operation Number: {{ operation }}</p>
+                          
+                        </div>
+
+                        <div class="col-md-7 ps-4">
+                          <button type="button" class="btn btn-outline-primary mb-3"
+                                  (click)="useCamera = !useCamera">
+                            <i class="pi" [ngClass]="useCamera ? 'pi-upload' : 'pi-video'"></i>
+                            {{ useCamera ? 'Use File Upload' : 'Open Camera' }}
+                          </button>
+
+                          <div *ngIf="useCamera" class="card shadow-sm mb-3">
+                            <div class="card-body">
+                              <zxing-scanner [device]="selectedDevice"
+                                            (camerasFound)="onCamerasFound($event)"
+                                            (scanSuccess)="handleScannedData($event)">
+                              </zxing-scanner>
+                            </div>
+                          </div>
+
+                          <div class="mb-3">
+                            <label for="fileOp" class="form-label fw-semibold">Or Upload Operation QR File</label>
+                            <input id="fileOp" type="file" class="form-control"
+                                  (change)="onFileSelected($event)" />
+                          </div>
+
+                          <div *ngIf="scannedData" class="mt-3">
+                            <div [ngClass]="{
+                                'alert alert-success shadow-sm': stepValid,
+                                'alert alert-danger shadow-sm': !stepValid
+                              }">
+                              {{ getStepMessage() }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Step 3: Machine -->
+                      <div *ngIf="wizardStep === 3" class="row align-items-start">
+                        <div class="col-md-5 border-end pe-4">
+                          <h5 class="fw-bold mb-3 text-primary">Step 3: Scan Machine QR</h5>
+                          <p class="text-muted">Expected Machine Number: {{ getMachineList()}}</p>
+                          
+                        </div>
+
+                        <div class="col-md-7 ps-4">
+                          <button type="button" class="btn btn-outline-primary mb-3"
+                                  (click)="useCamera = !useCamera">
+                            <i class="pi" [ngClass]="useCamera ? 'pi-upload' : 'pi-video'"></i>
+                            {{ useCamera ? 'Use File Upload' : 'Open Camera' }}
+                          </button>
+
+                          <div *ngIf="useCamera" class="card shadow-sm mb-3">
+                            <div class="card-body">
+                              <zxing-scanner [device]="selectedDevice"
+                                            (camerasFound)="onCamerasFound($event)"
+                                            (scanSuccess)="handleScannedData($event)">
+                              </zxing-scanner>
+                            </div>
+                          </div>
+
+                          <div class="mb-3">
+                            <label for="fileMachine" class="form-label fw-semibold">Or Upload Machine QR File</label>
+                            <input id="fileMachine" type="file" class="form-control"
+                                  (change)="onFileSelected($event)" />
+                          </div>
+
+                          <div *ngIf="scannedData" class="mt-3">
+                            <div [ngClass]="{
+                                'alert alert-success shadow-sm': stepValid,
+                                'alert alert-danger shadow-sm': !stepValid
+                              }">
+                              {{ getStepMessage() }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Step 4: Employee -->
+                      <div *ngIf="wizardStep === 4" class="row align-items-start">
+                        <div class="col-md-5 border-end pe-4">
+                          <h5 class="fw-bold mb-3 text-primary">Step 4: Scan Employee QR</h5>
+                          <p class="text-muted">Expected Employees: {{ getEmployeeList() }}</p>
+                          
+                        </div>
+
+                        <div class="col-md-7 ps-4">
+                          <button type="button" class="btn btn-outline-primary mb-3"
+                                  (click)="useCamera = !useCamera">
+                            <i class="pi" [ngClass]="useCamera ? 'pi-upload' : 'pi-video'"></i>
+                            {{ useCamera ? 'Use File Upload' : 'Open Camera' }}
+                          </button>
+
+                          <div *ngIf="useCamera" class="card shadow-sm mb-3">
+                            <div class="card-body">
+                              <zxing-scanner [device]="selectedDevice"
+                                            (camerasFound)="onCamerasFound($event)"
+                                            (scanSuccess)="handleScannedData($event)">
+                              </zxing-scanner>
+                            </div>
+                          </div>
+
+                          <div class="mb-3">
+                            <label for="fileEmp" class="form-label fw-semibold">Or Upload Employee QR File</label>
+                            <input id="fileEmp" type="file" class="form-control"
+                                  (change)="onFileSelected($event)" />
+                          </div>
+
+                          <div *ngIf="scannedData" class="mt-3">
+                            <div [ngClass]="{
+                                'alert alert-success shadow-sm': stepValid,
+                                'alert alert-danger shadow-sm': !stepValid
+                              }">
+                              {{ getStepMessage() }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+
+                    <!-- Wizard Footer -->
+                    <ng-template pTemplate="footer">
+                      <div class="d-flex justify-content-between w-100">
+                        <button
+                          type="button"
+                          class="btn btn-secondary"
+                          (click)="prevStep()"
+                          [disabled]="wizardStep === 1">
+                          Previous
+                        </button>
+
+                        <button
+                          *ngIf="wizardStep < 4"
+                          type="button"
+                          class="custom-submit-btn"
+                          (click)="nextStep()"
+                          [disabled]="!stepValid">
+                          Next
+                        </button>
+
+                        <button
+                          *ngIf="wizardStep === 4 && stepValid"
+                          type="button"
+                          class="custom-submit-btn"
+                          (click)="finishWizard()">
+                          Finish
+                        </button>
+                      </div>
+                    </ng-template>
+            </p-dialog>
+
+
+
+      
+
+      
+      
+      
+      
+      
+
+    </section>
+  </main>
+</div>

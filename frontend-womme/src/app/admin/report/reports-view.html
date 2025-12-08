@@ -1,0 +1,200 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+    
+  <main class="main-content">
+    <section class="table-wrapper">
+      <div *ngIf="jobData; else loading" class="text-center mb-4">
+        <button class="btn btn-primary me-2" (click)="downloadPDF()">
+          <i class="bi bi-file-earmark-pdf"></i> Download PDF
+        </button>
+ 
+      </div>
+
+      <!-- Ensure jobData is loaded -->
+      <div *ngIf="jobData; else loading">
+        
+        <!-- Bootstrap Tab View -->
+        <!-- <ul class="nav nav-tabs" id="jobTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="total-tab" data-bs-toggle="tab" data-bs-target="#total" type="button" role="tab">
+              Reports Jobs
+            </button>
+          </li>
+        </ul> -->
+
+        <!-- TOTAL JOBS REPORT TAB -->
+        <div class="tab-pane fade show active" id="total" role="tabpanel" style="width:100%;">
+          <div class="report-wrapper" style="width:100%">
+
+            <!-- Header: Logo | QR Code | Job ID -->
+            <table class="header-table" style="width:100%; table-layout: fixed !important;">
+              <tr>
+                <td class="job-id" style="font-size: 25px; width:40%">
+                  <strong>{{ jobData.job }}</strong>
+                </td>
+                <td class="logo-cell" rowspan="2" style="width:60%">
+                  <img src="assets/images/WOMLogo.png" alt="WOM Logo" height="90" />
+                </td>
+              </tr>
+            </table>
+
+            <!-- === JOB META DATA TABLE === -->
+            <table class="meta-info-table" style="width:100%">
+              <tr>
+                <td><strong>Job Date:</strong> &nbsp;{{ jobData.jobDate }}</td>
+                
+                <td rowspan="4" style="text-align: right;">
+                  <img *ngIf="qrCodeUrl; else noQr" [src]="qrCodeUrl" height="120" alt="Job QR"/>
+                  <ng-template #noQr>
+                    <span>No QR available</span>
+                  </ng-template>
+                </td>
+                <td></td>
+                <td><strong>Status:</strong>&nbsp; {{ jobData.status }}</td>
+              </tr>
+              <tr>
+                <td><strong>Job Due Date:</strong> &nbsp;{{ jobData.jobDueDate }}</td>
+                <td></td>
+                <td><strong>Released:</strong> &nbsp;{{ jobData.released }}</td>
+              </tr>
+              <tr>
+                <td><strong>Item:</strong>&nbsp; {{ jobData.item }}</td>
+                <td></td>
+                <td><strong>PSL:</strong> &nbsp;{{ jobData.psl }}</td>
+              </tr>
+              <tr>
+                <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ jobData.description }}</td>
+                <td></td>
+                <!-- <td></td> -->
+                <td><strong>Drawing No:</strong>&nbsp; {{ jobData.drawingNo }}</td>
+              </tr>
+              <tr>
+              <td colspan="3">{{ jobData.ufItemDescription2 || '---' }} </td>
+
+              </tr>
+              <tr>
+                <td><strong>Part # Rev.:</strong>&nbsp; {{ jobData.partRev }}</td>
+                <td></td>
+                <td></td>
+                <td><strong>Traceability Heat Code/Batch #:</strong><br/> {{ jobData.traceCode }}</td>
+              </tr>
+              <tr>
+                <td><strong>Third Party Insp.:</strong>&nbsp; {{ jobData.thirdPartyInsp }}</td>
+                <td></td>
+                <td></td>
+                <td><strong>Heat #:</strong> &nbsp;{{ jobData.heatNo }}</td>
+              </tr>
+              <tr>
+                <td><strong>Material Class:</strong> &nbsp;&nbsp;&nbsp;{{ jobData.materialClass }}</td>
+                <td><strong>Temp Class :</strong>&nbsp; {{ jobData.tempClass }}</td>
+              </tr>
+              <tr>
+                <td><strong>Revision No:</strong> &nbsp;{{ jobData.revisionNo }}</td>
+                <td><strong>Revision Date :</strong>&nbsp;{{ jobData.date }}</td>
+                <td></td>
+                <td><strong>Drawing # Rev.:</strong> &nbsp;{{ jobData.drawingRev }}</td>
+              </tr>
+              <tr>
+                <td><strong>Remark:</strong>&nbsp; {{ jobData.remark }}</td>
+                <td></td>
+                <td></td>
+                <td><strong>SO No:</strong> &nbsp;{{ jobData.soNo }}</td>
+              </tr>
+              <tr>
+                <td><strong>Engineering Notes:</strong> &nbsp;{{ jobData.engineeringNotes }}</td>
+                <td><strong>Matl. Desc:</strong>&nbsp; {{ jobData.matlDesc }}</td>
+                <td></td>
+                <td><strong>Spec No:</strong>&nbsp; {{ jobData.specNo }}</td>
+              </tr>
+              <tr>
+                <td><strong>Prepared By:</strong>&nbsp; {{ jobData.preparedBy }}</td>
+                <td><strong>Date:</strong>&nbsp; {{ jobData.date }}</td>
+                <td><strong>Approved By:</strong> ___________________</td>
+              </tr>
+            </table>
+
+            <!-- === MATERIAL ISSUANCE SECTION === -->
+            <div *ngFor="let operation of jobOperations">
+              <!-- Operation Header Table -->
+              <table class="table table-bordered issuance-table mt-4">
+                <thead>
+                  <tr>
+                    <th>Operation No.</th>
+                    <th>Description</th>
+                    <th>Sr No.</th>
+                    <th>Qty</th>
+                    <th>Date</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngIf="operation.transactions && operation.transactions.length > 0; else noTransaction">
+                    <tr *ngFor="let trans of operation.transactions; let i = index">
+                      <!-- Only show operation no + QR + description for first transaction row -->
+                      <td *ngIf="i === 0" [attr.rowspan]="operation.transactions.length" style="vertical-align: middle; text-align:center;">
+                        <h4>{{ operation.operationNo }}</h4>
+                        <img *ngIf="operation.qrCodeUrl" [src]="operation.qrCodeUrl" alt="Operation QR" height="90" />
+                      </td>
+                      <td *ngIf="i === 0" [attr.rowspan]="operation.transactions.length" style="vertical-align: middle;">
+                        {{ operation.description }}
+                      </td>
+
+                      <!-- Transaction details -->
+                      <td>{{ trans.serialNo }}</td>
+                      <td>{{ trans.qty }}</td>
+                      <td>{{ trans.date }}</td>
+                      <td>{{ trans.notes || '' }}</td>
+                    </tr>
+                  </ng-container>
+
+                  <!-- No Transaction Case -->
+                  <ng-template #noTransaction>
+                    <tr>
+                      <td style="text-align:center;">
+                        <h4>{{ operation.operationNo }}</h4>
+                        <img *ngIf="operation.qrCodeUrl" [src]="operation.qrCodeUrl" alt="Operation QR" height="90" />
+                      </td>
+                      <td>{{ operation.description }}</td>
+                      <td colspan="4" class="text-center text-muted"><em>No transactions available</em></td>
+                    </tr>
+                  </ng-template>
+                </tbody>
+              </table>
+
+              <!-- Sequence Table -->
+              <table class="table table-bordered item-table no-header" style="width:100%">
+                <thead class="item-class">
+                  <tr>
+                    <th>Seq No.</th>
+                    <th>Item</th>
+                    <th>Desc</th>
+                    <th>Qty</th>
+                    <th>Serial no./Grade</th>
+                    <th>Remark</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of operation.items">
+                    <td style="width: 8%;">{{ item.seq }}</td>
+                    <td style="width: 15%;">{{ item.item }}</td>
+                    <td style="width: 45%;">{{ item.description }}</td>
+                    <td style="width: 5%;">{{ item.qty }}</td>
+                    <td style="width: 15%;">{{ item.serialNumber || '_______________' }}</td>
+                    <td style="width: 15%;">{{ item.remark || '_____________' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #loading>
+        <p>Loading job report...</p>
+      </ng-template>
+
+    </section>
+  </main>
+</div>

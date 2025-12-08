@@ -1,0 +1,189 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+      
+      <!-- Table Header -->
+      <div class="mb-3" style="padding-top: 2em;">
+        <button class="btn custom-assign-btn" (click)="showForm = true">
+          + Assigned Job
+        </button>
+      </div>
+
+      <p-dialog
+        header="{{ selectedEntryNo ? 'Edit Assigned Job' : 'Add Assigned Job' }}"
+        [(visible)]="showForm"
+        [modal]="true"
+        [closable]="true"
+        [dismissableMask]="true"          
+        [style]="{ width: '600px' }"
+        [baseZIndex]="10000"
+        (onHide)="resetForm()"
+        [contentStyle]="{ overflow: 'visible' }"
+        [styleClass]="'custom-dialog'"    
+      >
+
+        
+        <form #assignedJobForm="ngForm" (ngSubmit)="submitForm()" class="p-fluid">
+          <div class="row g-3">
+
+            <!-- Employee -->
+            <div class="col-md-12">
+              <label for="employeeCode" class="form-label">Employee<span class="text-danger">*</span></label>
+              <p-dropdown
+                id="employeeCode"
+                [options]="users"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="form.employeeCode"
+                name="employeeCode"
+                placeholder="Select Employee"
+                class="w-100"
+                    [disabled]="selectedEntryNo !== null" 
+                  [required]="true"
+                #employeeCode="ngModel"
+              ></p-dropdown>
+                <div *ngIf="employeeCode.invalid && (employeeCode.touched || assignedJobForm.submitted)" class="text-danger small mt-1">
+                  Please select an employee.
+                </div>
+            </div>
+
+            <!-- Job -->
+            <div class="col-md-12">
+              <label for="jobNo" class="form-label">Job<span class="text-danger">*</span></label>
+              <p-dropdown
+                id="jobNo"
+                [options]="jobOptions"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="form.jobNo"
+                name="jobNo"
+                placeholder="Select Job"
+                class="w-100"
+                 [disabled]="selectedEntryNo !== null"
+                [required]="true"
+                #jobNo="ngModel"
+              ></p-dropdown>
+              <div *ngIf="jobNo.invalid && (jobNo.touched || assignedJobForm.submitted)" class="text-danger small mt-1">
+                  Please select a job.
+                </div>
+            </div>
+
+            <!-- Assigned Hours -->
+            <div class="col-md-12">
+              <label for="assignedHours" class="form-label">Assigned Hours<span class="text-danger">*</span></label>
+              <input
+                id="assignedHours"
+                type="number"
+                class="form-control"
+                [(ngModel)]="form.assignedHours"
+                name="assignedHours"
+                placeholder="Enter hours"
+                required
+                pattern="^[0-9]+$"
+                min="1"   
+                #assignedHours="ngModel"
+              />
+                 <div *ngIf="assignedHours.errors?.['required'] && (assignedHours.touched || assignedJobForm.submitted)" class="text-danger small mt-1">
+                    Assigned hours is required.
+                  </div>
+                  <div *ngIf="assignedHours.errors?.['min'] && (assignedHours.touched || assignedJobForm.submitted)" class="text-danger small mt-1">
+                    Assigned hours must be greater than 0.
+                  </div>
+            </div>
+
+            <!-- Remark -->
+            <div class="col-md-12">
+              <label for="remark" class="form-label">Remark<span class="text-danger">*</span></label>
+              <textarea
+                id="remark"
+                class="form-control"
+                rows="2"
+                [(ngModel)]="form.remark"
+                name="remark"
+                placeholder="Add any notes"
+                required
+                #remark="ngModel"
+              ></textarea>
+              <div *ngIf="remark.invalid && (remark.touched || assignedJobForm.submitted)" class="text-danger small mt-1">
+                  Please enter a remark.
+                </div>
+            </div>
+<div *ngIf="formError" class="text-danger text-center mb-2">
+  {{ formError }}
+</div>
+            <!-- Submit Button -->
+            <div class="col-12 text-end">
+              <button type="submit" class="custom-submit-btn mt-3" >
+                {{ selectedEntryNo ? 'Update' : 'Submit' }}
+              </button>
+            </div>
+
+          </div>
+        </form>
+      </p-dialog>
+
+     <div class="card p-1 mt-3 shadow-sm">
+      <div class="card-body p-1">
+          <p-table
+            #dt
+            [value]="assignedJobs"
+            [paginator]="true"
+            [rows]="15"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            columnResizeMode="expand"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            class="p-datatable-sm p-datatable-striped custom-p-table"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391;">Sr No.</th>
+                <th style="background-color: #ECC391;">Employee Code</th>
+                <th style="background-color: #ECC391;">Username</th>
+                <th style="background-color: #ECC391;">Job No</th>
+                <th style="background-color: #ECC391;">Job Name</th>
+                <th style="background-color: #ECC391;">Assigned Hours</th>
+                <th style="background-color: #ECC391;">Remark</th>
+              
+                <th style="background-color: #ECC391;">Action</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+              <tr *ngIf="filterRow(job)">
+                <td>{{ dt.first + rowIndex + 1 }}</td>
+                <td>{{ job.employeeCode }}</td>
+                <td>{{ job.username }}</td>
+                <td>{{ job.jobNumber }}</td>
+                <td>{{ job.jobName }}</td>
+                <td>{{ job.assignedHours }}</td>
+                <td>{{ job.remark }}</td>
+                
+
+                <td class="text-nowrap">
+                <a href="#" class="btn btn-primary btn-sm mx-1 edit-job" title="Edit"
+                    (click)="editAssignedJob($event,job)">
+                    <i class="fa-solid fa-pencil"></i>
+                  </a>
+
+                  <a href="#" class="btn btn-danger btn-sm mx-1 delete-job" title="Delete" (click)="deleteAssignedJob($event, job.entryNo)">
+                      <i class="fa-solid fa-trash"></i>
+                    </a>
+
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+          </div>
+     </div>
+    </section>
+  </main>
+</div>

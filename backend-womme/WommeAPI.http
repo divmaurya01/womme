@@ -1,0 +1,6 @@
+@WommeAPI_HostAddress = http://localhost:5173
+
+GET {{WommeAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,106 @@
+.custom-assign-btn {
+  background-color: #ECC391;
+  color: black;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500; 
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-assign-btn:hover {
+  background-color: #e5b870;
+}
+
+.custom-submit-btn {
+  background-color: #5CB78E;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-submit-btn:hover {
+  background-color: #4aa879; /* Slightly darker shade for hover */
+}
+
+
+::ng-deep .custom-dialog .p-dialog-header-close {
+  background-color: red !important;
+  color: white !important;
+  border-radius: 4px;
+}
+
+.sync-btn {
+  background-color: #8feab8; /* Light green */
+  color: #000;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  border: none;
+}
+
+.sync-btn:hover {
+  background-color: #ECC391; /* Orange on hover */
+  color: #000;
+  transform: scale(1.05);
+}
+
+.sync-btn:disabled {
+  background-color: #beead4;
+  cursor: not-allowed;
+}
+
+
+.table-wrapper {
+  padding: 1rem;
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-add {
+      background-color: #28a745;
+      color: white;
+      border-radius: 0pxx;
+    }
+  }
+}
+
+
+.edit-job{
+    color: white;
+    font-size: 8px;
+}
+
+.delete-job{
+    color: white;
+    font-size: 8px;
+    background-color: #FF646D!important;
+}
+.download-job{
+    color: white;
+    font-size: 8px;
+    background-color: #4AA879!important;
+}
+
+.custom-p-table th,
+.custom-p-table td {
+  text-align: center;
+  vertical-align: middle; 
+  font-size: 0.85rem;      
+}
+::ng-deep .p-dropdown-label {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

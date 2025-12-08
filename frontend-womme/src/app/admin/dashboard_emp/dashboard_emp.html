@@ -1,0 +1,150 @@
+<!-- HEADER -->
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<!-- PAGE LAYOUT -->
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  
+  <!-- SIDEBAR -->
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+  
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <div class="container-fluid mt-4">
+
+
+
+      <h2 class="title">Production & QC Control Tower</h2>
+      <div class="update-time">Last Live Update: <span>2:15:02 pm</span></div>
+
+      <!-- Current Operational Status -->
+      <section class="status-section">
+        <h3 class="section-title">Current Operational Status</h3>
+        <div class="status-cards">
+          <div *ngFor="let card of cards"
+              class="card"
+              [ngClass]="card.type"
+              [class.active]="selectedCard === card.type"
+              (click)="selectCard(card.type)">
+            <h4>{{ card.title }}</h4>
+            <p>{{ card.value }}</p>
+            <small *ngIf="card.small">{{ card.small }}</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- Resource Utilization Snapshot -->
+      <section class="resource-section">
+        <h3 class="section-title">Resource Utilization Snapshot</h3>
+    <div class="cards-grid two">
+    <!-- Idle Employees -->
+    <div class="card white bordered blue-border" style="padding: 15px; margin-bottom: 15px; border-radius: 10px;">
+      <div class="card-header" style="font-weight: bold; margin-bottom: 10px;">
+        <span>Idle Employees</span>                
+      </div>
+
+      <h2 style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 0; font-size: 24px;">
+        <span style="flex: 1; text-align: center; color: blue;">
+       {{ (utilization.totalEmployees || 0) - (utilization.activeEmployees || 0) }}
+{{ utilization.totalEmployees || 0 }}
+        </span>
+       <small style="text-align: right; font-size: 16px; color: #333;">
+          {{ getIdlePercentageEmployee() }}%
+        </small>
+      </h2>
+    </div>
+
+    <!-- Idle Machines -->
+    <div class="card white bordered blue-border" style="padding: 15px; margin-bottom: 15px; border-radius: 10px;">
+      <div class="card-header" style="font-weight: bold; margin-bottom: 10px;">
+        <span>Idle Machines</span>                
+      </div>
+
+      <h2 style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 0; font-size: 24px;">
+        <span style="flex: 1; text-align: center; color: blue;">
+          {{ (utilization.totalMachines || 0) - (utilization.activeMachines || 0) }} /
+          {{ utilization.totalMachines || 0 }}
+        </span>
+         <small style="text-align: right; font-size: 16px; color: #333;">
+          {{ getIdlePercentageMachine() }}%
+        </small>
+      </h2>
+    </div>
+  </div>
+
+      </section>
+
+      <!-- Detailed Active Job Monitoring -->
+     <!-- Detailed Active Job Monitoring -->
+<section class="job-section" style="margin-bottom: 20px;">
+  <h3 class="section-title">Detailed Active Job Monitoring</h3>
+
+  <table class="job-table">
+    <thead>
+      <tr>
+        <th>JOB ID</th>
+        <th>SERIAL NO</th>
+        <th>MACHINE</th>
+        <th>OPERATION</th>
+       
+        <th>TIME</th>
+        <th>PROGRESS</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let job of jobData">
+        <td><strong>{{ job.job }}</strong></td>
+        <td>{{ job.serialNo || '-' }}</td>
+        <td>{{ job.machine || '-' }}</td>
+        <td>{{ job.operation || '-' }}</td>
+      
+        <td>{{ job.time | date:'short' }}</td>
+
+        <!-- Progress Bar -->
+        <td>
+          <div class="progress-bar">
+            <div
+              class="fill"
+              [ngClass]="{
+                'green': job.progress === 'Completed',
+                'yellow': job.progress === 'Paused',
+                'red': job.progress === 'Unknown'
+              }"
+              style="width: 100%;"
+            ></div>
+          </div>
+          <span>{{ job.progress }}</span>
+        </td>
+      </tr>
+    </tbody>
+    
+  </table>
+  <div class="pagination-controls" style="text-align: center; margin-top: 15px;">
+  <button
+    (click)="prevPage()"
+    [disabled]="currentPage === 1"
+    style="margin-right: 10px; padding: 5px 10px;"
+  >
+    Prev
+  </button>
+
+  <span>Page {{ currentPage }} of {{ totalPages }}</span>
+
+  <button
+    (click)="nextPage()"
+    [disabled]="currentPage === totalPages"
+    style="margin-left: 10px; padding: 5px 10px;"
+  >
+    Next
+  </button>
+</div>
+
+</section>
+
+
+
+
+    </div>
+  </main>
+</div>
+    

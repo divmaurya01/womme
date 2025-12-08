@@ -1,0 +1,150 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <!-- Add Machine-WC Mapping Button -->
+      <div class="mb-3" style="padding-top: 2em;">
+        <button class="btn custom-assign-btn" (click)="openAddDialog()">
+          + Machine-WC Mapping
+        </button>
+      </div>
+
+      <!-- Dialog Box -->
+      <p-dialog
+        header="Add Machine to WC"
+        [(visible)]="showForm"
+        [modal]="true"
+        [closable]="true"
+        [dismissableMask]="true"
+        [style]="{ width: '600px' }"
+        [baseZIndex]="10000"
+        (onHide)="resetForm()"
+        [contentStyle]="{ overflow: 'visible' }"
+        [styleClass]="'custom-dialog'">
+
+        <form #machineForm="ngForm" (ngSubmit)="submitForm(machineForm)" class="p-fluid">
+          <div class="row g-3">
+
+      <!-- Machine Dropdown -->
+<div class="col-md-12">
+  <label for="machineName" class="form-label">
+    Machine <span class="text-danger">*</span>
+  </label>
+  <select
+  class="form-control"
+  [(ngModel)]="selectedMachine"
+  name="machineName"
+  required
+  #machineName="ngModel"
+  (change)="onMachineSelect()">
+  <option [ngValue]="null" disabled>-- Select any one --</option>
+  <option *ngFor="let machine of machinesList" [ngValue]="machine">
+    {{ machine.machineName }} ({{ machine.machineNumber }})
+  </option>
+</select>
+
+  <!-- Validation -->
+  <div *ngIf="!!machineName?.invalid && (!!machineName?.touched || !!machineForm?.submitted)" class="text-danger small mt-1">
+    Machine is required.
+  </div>
+</div>
+
+            <!-- Work Center Dropdown -->
+            <div class="col-md-12">
+              <label for="wcName" class="form-label">
+                Work Center <span class="text-danger">*</span>
+              </label>
+              <select
+                id="wcName"
+                class="form-control"
+                [(ngModel)]="selectedWc"
+                name="wcName"
+                required
+                #wcName="ngModel"
+                (change)="onWcSelect()">
+                <option [ngValue]="null" disabled>-- Select any one --</option>
+                <option *ngFor="let wc of wcList" [ngValue]="wc">
+                  {{ wc.wcName }} ({{ wc.wcCode }})
+                </option>
+              </select>
+              <div *ngIf="wcName.invalid && (wcName.touched || machineForm.submitted)" class="text-danger small mt-1">
+                Work Center is required.
+              </div>
+            </div>
+
+            <!-- Form Error -->
+            <div *ngIf="formError" class="text-danger text-center mb-2">
+              {{ formError }}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="col-12 text-end">
+              <button type="submit" class="custom-submit-btn mt-3">
+                Submit
+              </button>
+            </div>
+
+          </div>
+        </form>
+      </p-dialog>
+
+      <!-- Machines Table -->
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+          <p-table
+            #dt
+            [value]="machines"
+            [paginator]="true"
+            [rows]="15"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            columnResizeMode="expand"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            class="p-datatable-sm p-datatable-striped custom-p-table">
+
+            <!-- Table Header -->
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391;">Sr No.</th>
+                <th style="background-color: #ECC391;">WC Code</th>
+                <th style="background-color: #ECC391;">WC Name</th>
+                <th style="background-color: #ECC391;">Machine No.</th>
+                <th style="background-color: #ECC391;">Machine Description</th>
+                <th style="background-color: #ECC391;">Action</th>
+              </tr>
+            </ng-template>
+
+            <!-- Table Body -->
+            <ng-template pTemplate="body" let-machine let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ dt.first + rowIndex + 1 }}</td>
+                <td>{{ machine.wc }}</td>
+                <td>{{ machine.wcName }}</td>
+                <td>{{ machine.machineNumber }}</td>
+                <td>{{ machine.machineDescription }}</td>
+                <td class="text-nowrap">
+                  <a href="#"
+                     class="btn btn-danger btn-sm mx-1 delete-job"
+                     title="Delete"
+                     (click)="deleteMachineWC($event, machine.machineNumber, machine.wc)">
+                    <i class="fa-solid fa-trash"></i>
+                  </a>
+                </td>
+              </tr>
+            </ng-template>
+
+          </p-table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>

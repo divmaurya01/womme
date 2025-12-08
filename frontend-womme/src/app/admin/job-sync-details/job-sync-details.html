@@ -1,0 +1,99 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper p-4">
+
+      <!-- Page Title -->
+      <h4 *ngIf="rawJobData" class="mb-4 d-flex align-items-center justify-content-between">
+        📝 Job Transaction - {{ jobNumber }}     
+        <i class="fas fa-download"
+          style="cursor:pointer; font-size: 1.2rem; color: #4AA879;"
+          title="Download Report">
+        </i> 
+      </h4>
+
+      <!-- Empty State -->
+      <div *ngIf="rawJobData.length === 0" class="text-center text-gray-500 mt-5">
+        No job transactions available.
+      </div>
+
+      <!-- PrimeNG Table -->
+      <p-table #dt [value]="rawJobData" dataKey="trans_num" [responsiveLayout]="'scroll'">
+
+        <!-- Accordion Header -->
+        <ng-template pTemplate="body" let-rowData let-expanded="expanded">
+          <div class="card mb-3 shadow-sm border rounded-2xl bg-white">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                style="background-color:#ECC391; font-weight:bold; cursor:pointer;" 
+                (click)="dt.toggleRow(rowData)">
+              <span>
+                Operation {{ rowData.oper_num }} / 
+                Type: {{ rowData.trans_type }} / 
+                Transaction No. {{ rowData.trans_num }}
+              </span>              
+              <i class="fas" [ngClass]="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </div>
+          </div>          
+        </ng-template>
+
+        <!-- Accordion Expanded Row -->
+        <ng-template pTemplate="rowexpansion" let-rowData>
+          <div class="card-body bg-white shadow-sm border rounded-2xl mb-3">
+
+            <!-- Extra Job Details -->
+            <table class="table table-striped table-bordered table-hover table-sm mb-3">
+              <tbody>
+                <tr>
+                  <th>Job</th> <td>{{ rowData.job }}</td>
+                  <th>Suffix</th> <td>{{ rowData.suffix }}</td>
+                  <th>Operation</th> <td>{{ rowData.oper_num }}</td>
+                </tr>
+                <tr>
+                  <th>Transaction Type</th> <td>{{ rowData.trans_type }}</td>
+                  <th>Transaction Date</th> <td>{{ rowData.trans_date | date:'short' }}</td>
+                  <th>Next Operation</th> <td>{{ rowData.next_oper || '-' }}</td>
+                </tr>
+                <tr>
+                  <th>Qty Complete</th> <td>{{ rowData.qty_complete }}</td>
+                  <th>Qty Scrapped</th> <td>{{ rowData.qty_scrapped }}</td>
+                  <th>Employee</th> <td>{{ rowData.emp_num }}</td>
+                </tr>
+                <tr>
+                  <th>Warehouse</th> <td>{{ rowData.whse }}</td>
+                  <th>Shift</th> <td>{{ rowData.shift }}</td>
+                  <th>Posted</th> <td>{{ rowData.posted ? 'Yes' : 'No' }}</td>
+                </tr>
+                <tr>
+                  <th>Job Rate</th> <td>{{ rowData.job_rate }}</td>
+                  <th>Pay Rate</th> <td>{{ rowData.pay_rate }}</td>
+                  <th>WC</th> <td>{{ rowData.wc }}</td>
+                </tr>
+                <tr>
+                  <th>Fixed Overhead</th> <td>{{ rowData.fixovhd }}</td>
+                  <th>Variable Overhead</th> <td>{{ rowData.varovhd }}</td>
+                  <th>Class</th> <td>{{ rowData.trans_class }}</td>
+                </tr>
+                <tr>
+                  <th>Created By</th> <td>{{ rowData.createdBy }}</td>
+                  <th>Updated By</th> <td>{{ rowData.updatedBy }}</td>
+                  <th>Create Date</th> <td>{{ rowData.createDate | date:'short' }}</td>
+                </tr>
+                <tr>
+                  <th>Record Date</th> <td>{{ rowData.recordDate | date:'short' }}</td>
+                  <td colspan="4"></td> <!-- filler to keep 6 cols consistent -->
+                </tr>
+              </tbody>
+
+            </table>
+
+          </div>
+        </ng-template>
+
+      </p-table>
+
+    </section>
+  </main>
+</div>

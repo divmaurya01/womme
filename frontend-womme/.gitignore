@@ -1,0 +1,40 @@
+# Angular build and environment
+/dist/
+/out-tsc/
+/.angular
+.angular/cache/
+
+# Environment files (optional, if you use different .envs for prod/dev)
+*.env
+*.local.env
+
+# Node modules
+/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDEs and editors
+/.idea/
+/.vscode/
+/*.sublime-project
+/*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Compiled output
+*.js
+*.js.map
+*.tsbuildinfo
+
+# Coverage reports
+/coverage/
+
+# Misc
+package-lock.json
+npm-shrinkwrap.json

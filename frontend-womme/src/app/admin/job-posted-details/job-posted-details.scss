@@ -1,0 +1,179 @@
+.custom-assign-btn {
+  background-color: #ECC391;
+  color: black;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500; 
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-assign-btn:hover {
+  background-color: #e5b870;
+}
+
+.custom-submit-btn {
+  background-color: #5CB78E;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  margin: 10px;
+}
+
+.custom-submit-btn:hover {
+  background-color: #4aa879; /* Slightly darker shade for hover */
+}
+
+.custom-pause-btn {
+  background-color: #b7ac5c;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  margin: 10px;
+}
+
+.custom-pause-btn:hover {
+  background-color: #a89f4a; /* Slightly darker shade for hover */
+}
+
+.custom-complete-btn {
+  background-color: red;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  margin: 10px;
+}
+
+.custom-complete-btn:hover {
+  background-color: #FF646D; /* Slightly darker shade for hover */
+}
+
+
+::ng-deep .p-dialog-header .p-dialog-header-icons .p-dialog-header-close {
+  background-color: red !important;
+  color: white !important;
+  border-radius: 50px !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+
+
+/* Add this to your job-details.scss */
+.timer-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 150px; /* adjust as needed */
+  margin: 20px 0;
+  
+}
+
+.job-timer-table {
+  background: #f0f8ff; /* light blue background */
+  border-radius: 12px;
+  padding: 20px 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-size: 1.5rem;
+  text-align: center;
+  color: #333;
+  
+}
+
+.job-td {
+  padding: 10px;
+  
+}
+
+.job-timer-table strong {
+  font-weight: 700;
+  color: #1e90ff; /* nice blue */
+}
+
+.elapsed-time {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ff4500; /* orange-red for time */
+  margin-left: 10px;
+}
+
+.job-buttons-wrapper {
+  display: flex;
+  justify-content: center; /* center horizontally */
+  align-items: center;     /* center vertically if needed */
+  gap: 15px;               /* space between buttons */
+  margin: 20px 0;          /* spacing above/below */
+  flex-wrap: wrap;         /* allow wrapping if screen is small */
+}
+
+.job-buttons-wrapper button {
+  min-width: 120px;        /* optional: make buttons uniform size */
+  font-weight: bold;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+table tfoot {
+  font-weight: bold;          /* Make all text bold */
+  background-color: #f9f9f9;  /* Light background (optional for separation) */
+  color: #333;                 /* Dark text color for contrast */
+}
+
+.table-wrapper {
+  padding: 1rem;
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-add {
+      background-color: #28a745;
+      color: white;
+      border-radius: 0pxx;
+    }
+  }
+}
+
+
+.edit-job{
+    color: white;
+    font-size: 8px;
+}
+
+.delete-job{
+    color: white;
+    font-size: 8px;
+    background-color: #FF646D!important;
+}
+
+.custom-p-table th,
+.custom-p-table td {
+  text-align: center;
+  vertical-align: middle; /* Optional: aligns text vertically center */
+  font-size: 0.85rem;      /* Already added for small text */
+}
+::ng-deep .p-dropdown-label {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

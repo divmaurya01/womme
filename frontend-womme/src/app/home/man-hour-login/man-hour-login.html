@@ -1,0 +1,74 @@
+<div class="login-wrapper">
+  <div class="login-container">
+    <!-- Left Panel -->
+    <div class="left-panel">
+      <div class="logo">
+        <img src="assets/images/WOMLogo.png" style=" display: block;
+          margin: auto;
+          width: 50%;">
+      </div>
+      <h2 class="title">Login</h2>
+      <!-- Employee ID -->
+
+      <label for="userID">Employee Login</label>
+      <div class="input-group" [ngClass]="{ 'invalid': submitted && !userID }">
+        <input
+          id="userID"
+          type="text"
+          placeholder="Enter your user ID"
+          [(ngModel)]="userID"
+        />
+        <i class="fa-solid fa-user icon"></i>
+      </div>
+        <div class="error-message" *ngIf="submitted && !userID">
+        Please enter your Employee ID
+      </div>
+      <!-- Password -->
+
+      <label for="password">Password</label>
+      <div class="input-group" [ngClass]="{ invalid: submitted && !password }" style="position: relative;">
+        <input
+          id="password"
+          [type]="showPassword ? 'text' : 'password'"
+          placeholder="Enter your password"
+          [(ngModel)]="password"
+        />
+        <!-- <i class="fa-solid fa-lock icon"></i> -->
+ 
+        <!-- Eye Icon for Show/Hide -->
+        <i
+          class="fa"
+          [ngClass]="showPassword ? 'fa-eye':'fa-eye-slash'"
+          (click)="togglePassword()"
+          style="position: absolute; right: 15px; top: 15px; cursor: pointer;"
+        ></i>
+      </div>
+ 
+      <div class="error-message" *ngIf="submitted && !password">
+        Password cannot be empty
+      </div>    
+  <!-- Toast messages -->
+      <div class="toast error" *ngIf="errorMessage">{{ errorMessage }}</div>
+      <div class="toast success" *ngIf="successMessage">{{ successMessage }}</div>
+
+      <a class="forget-link" href="#">Forgot password?</a>
+
+      <button class="login-button" (click)="login()">Log in</button>
+
+      <p class="signup-link">
+        Don't have an account? <a href="#">Sign up</a>
+      </p>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+      <div class="right-part-image-container">
+        <img
+          src="assets/images/bop-homepage-banner-web.jpg"
+          alt="Welcome"
+          class="right-img"
+        />
+      </div>
+    </div>
+  </div>
+</div>

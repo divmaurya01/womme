@@ -1,0 +1,141 @@
+<!-- HEADER -->
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+
+<!-- PAGE LAYOUT -->
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <!-- SIDEBAR -->
+   <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <div class="container-fluid mt-4">
+      <!-- STATS CARDS -->
+     <div class="row mt-4">
+      <ng-container *ngFor="let stat of systemStats">
+        <div class="col-md-4">
+          <div class="card stat-card text-dark mb-3" [ngClass]="stat.color">
+            <div class="card-body">
+              <h5 class="card-title">{{ stat.title }}</h5>
+              <b class="card-text">{{ stat.count }}</b>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+
+
+      <!-- CHARTS ROW 1 -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header" style="background-color: #52c5cf;">User Distribution</div>
+            <div class="card-body">
+              <canvas baseChart
+                      [data]="userChartData"
+                      [type]="'pie'"
+                      style="max-width: 500px; max-height: 300px;">
+              </canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header" style="background-color: #ECAB5F;">Activity Monitor</div>
+            <div class="card-body">
+              <canvas baseChart
+                      [data]="activityChartData"
+                      [type]="'bar'"
+                       style="max-width: 500px; max-height: 400px;">
+              </canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- TABS: Active Workers / Machines -->
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header" style="background-color: #9FC5E8;">
+              Active Overview
+            </div>
+            <div class="card-body">
+
+              <!-- Tab Headers -->
+              <ul class="nav nav-tabs" id="overviewTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="workers-tab" data-bs-toggle="tab" data-bs-target="#workers" type="button" role="tab">Active Workers</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="machines-tab" data-bs-toggle="tab" data-bs-target="#machines" type="button" role="tab">Active Machines</button>
+                </li>
+              </ul>
+
+              <!-- Tab Content -->
+              <div class="tab-content mt-3" id="overviewTabsContent">
+                <!-- Active Workers Table -->
+                <div class="tab-pane fade show active" id="workers" role="tabpanel">
+                  <div class="table-responsive">
+                    <table class="table table-striped table-bordered">
+                      <thead class="table-light">
+                        <tr>
+                          <th>S.No</th>
+                          <th>Worker Code</th>
+                          <th>Name</th>
+                          <th>Dept</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let w of activeWorkers; index as i">
+                          <td>{{ i+1 }}</td>
+                          <td>{{ w.code }}</td>
+                          <td>{{ w.name }}</td>
+                          <td>{{ w.dept }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Active Machines Table -->
+                <div class="tab-pane fade" id="machines" role="tabpanel">
+                  <div class="table-responsive">
+                    <table class="table table-striped table-bordered">
+                      <thead class="table-light">
+                        <tr>
+                          <th>S.No</th>
+                          <th>Machine Name</th>
+                          <th>Code</th>
+                          <th>Workcenter</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let m of activeMachines; index as i">
+                          <td>{{ i+1 }}</td>
+                          <td>{{ m.name }}</td>
+                          <td>{{ m.code }}</td>
+                          <td>{{ m.workcenter }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+     
+
+      
+    </div>
+  </main>
+</div>

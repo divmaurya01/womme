@@ -1,0 +1,293 @@
+.custom-assign-btn {
+  background-color: #91ecbb;
+  color: black;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500; 
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-assign-btn:hover {
+  background-color: #e5b870;
+}
+
+.custom-badge-completed {
+  background-color: #82f2c3 !important;
+  color: #1a1a1a; /* dark text for contrast */
+  padding: 5px 5px;
+  border-radius: 0.75em;
+  font-weight: 600;
+  font-size: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.custom-submit-btn {
+  background-color: #5CB78E;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-submit-btn:hover {
+  background-color: #4aa879; /* Slightly darker shade for hover */
+}
+
+
+::ng-deep .custom-dialog .p-dialog-header-close {
+  background-color: red !important;
+  color: white !important;
+  border-radius: 4px;
+}
+
+.custom-complete-timer{
+  background-color: #1e9f04;  
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  padding: 5px; 
+  border-radius: 10px
+}
+
+
+
+.table-wrapper {
+  padding: 1rem;
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-add {
+      background-color: #28a745;
+      color: white;
+      border-radius: 0pxx;
+    }
+  }
+}
+
+.job-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+::ng-deep .p-tabview .p-tabview-nav {
+  padding: 10px !important;
+}
+
+
+::ng-deep .p-tabview .p-tabview-nav li.p-highlight,
+::ng-deep .p-tabview .p-tabview-nav li[role="presentation"] {
+  margin-right: 10px !important;
+}
+
+
+
+.job-tab {
+  background: #ecc391;
+  padding: 6px 12px;
+  border-radius: 16px;     // rounded pill
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: default;
+  transition: all 0.2s ease-in-out;
+}
+
+.job-tab:hover {
+  background: #e2b96f;
+  transform: translateY(-1px);
+}
+
+.close-icon {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: red;
+  transition: color 0.2s ease-in-out;
+}
+
+.close-icon:hover {
+  color: red;
+}
+
+.paddingbtn{
+  margin-top: 10px;
+}
+.delete-job {
+  background: transparent;
+  border: none;
+  color: #FF646D;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  padding-left: 10;
+  margin: 0;
+}
+
+.delete-job:hover {
+  color: red;
+}
+
+.custom-start-timer{
+  background-color: #82b75c;  
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  padding: 5px; 
+  border-radius: 10px
+}
+
+.custom-pause-timer{
+  background-color: #79791d;  
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  padding: 5px; 
+  border-radius: 10px
+}
+
+.custom-complete-timer{
+  background-color: #1e9f04;  
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  padding: 5px; 
+  border-radius: 10px
+}
+
+.action-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 14px;
+  margin: 0 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #fff; /* icon color */
+}
+
+/* Specific colors */
+.action-circle.play {
+  background-color: #82b75c; /* green */
+}
+
+.action-circle.pause {
+  background-color: #ecc391; /* yellow */
+  color: #000; /* better contrast */
+}
+
+.action-circle.stop {
+  background-color: #FF646D; /* red */
+}
+
+.job-timer-card {
+  background: #f4f9ff;
+  padding: 4px 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  display: inline-block;
+}
+
+
+.custom-p-table th,
+.custom-p-table td {
+  text-align: center;
+  vertical-align: middle; /* Optional: aligns text vertically center */
+  font-size: 0.85rem;      /* Already added for small text */
+}
+::ng-deep .p-dropdown-label {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+::ng-deep .p-tabview .p-tabview-nav li.p-tabview-selected {
+  background-color: #4caf50; /* active tab color */
+  color: white;
+  font-weight: bold;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.3s ease;
+}
+
+::ng-deep .p-tabview .p-tabview-nav li:not(.p-tabview-selected):hover {
+  background-color: #f0f0f0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Optional: style tab content */
+::ng-deep .p-tabview .p-tabview-panel {
+  border: 1px solid #4caf50;
+  border-top: none;
+  padding: 1rem;
+  border-radius: 0 0 8px 8px;
+  background-color: #fafafa;
+}
+
+/* Active tab button */
+::ng-deep .p-tabview .p-tabview-nav li.p-tabview-selected > a.p-tabview-nav-link {
+  background-color: #4caf50;  /* Active tab color */
+  color: white;               /* Text color */
+  font-weight: bold;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+/* Inactive tabs */
+::ng-deep .p-tabview .p-tabview-nav li:not(.p-tabview-selected) > a.p-tabview-nav-link {
+  background-color: #f5f5f5;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+/* Hover effect for inactive tabs */
+::ng-deep .p-tabview .p-tabview-nav li:not(.p-tabview-selected) > a.p-tabview-nav-link:hover {
+  background-color: #a1c372;
+  cursor: pointer;
+}
+
+.action-circle {
+  display: inline-block;
+  font-size: 1.2rem;
+  width: 28px;
+  height: 28px;
+  text-align: center;
+  line-height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  background-color: #ecf3f9;
+  cursor: pointer;
+}
+
+.pi-play {
+  color: #28a745; // green for resume
+}
+
+.pi-pause {
+  color: #ffc107; // yellow for pause
+}
+
+
+

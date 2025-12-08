@@ -1,0 +1,31 @@
+<aside class="sidebar">
+  <ng-container *ngFor="let section of groupedSidebarItems">
+    <div class="sidebar-section-title">{{ section.title }}</div>
+
+    <ul
+      cdkDropList
+      [cdkDropListData]="section.items"
+      class="sidebar-list"
+      (cdkDropListDropped)="dropItem($event, section)"
+    >
+      <li class="sidebar-item" *ngFor="let item of section.items" cdkDrag>
+      <a
+        class="sidebar-anchor d-flex align-items-center gap-2"
+        [routerLink]="item.link"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: false }"
+        (click)="onItemClickAndNavigate(item)"
+      >
+        <fa-icon 
+          [icon]="item.icon" 
+          class="sidebar-icon" 
+          [ngStyle]="{ color: item.color }">
+        </fa-icon>
+        <span>{{ item.label }}</span>
+      </a>
+
+
+      </li>
+    </ul>
+  </ng-container>
+</aside>

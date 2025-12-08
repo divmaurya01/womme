@@ -1,0 +1,176 @@
+.custom-assign-btn {
+  background-color: #ECC391;
+  color: black;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500; 
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-assign-btn:hover {
+  background-color: #e5b870;
+}
+
+.custom-submit-btn {
+  background-color: #5CB78E;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+  margin-right: 5px; 
+  
+}
+
+.custom-submit-btn:hover {
+  background-color: #4aa879; /* Slightly darker shade for hover */
+}
+
+.custom-pause-btn {
+  background-color: #b7ac5c;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+  margin-right: 5px; 
+  
+}
+
+.custom-pause-btn:hover {
+  background-color: #a89f4a; /* Slightly darker shade for hover */
+}
+
+.custom-complete-btn {
+  background-color: red;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+  margin-right: 5px; 
+  
+}
+
+.custom-complete-btn:hover {
+  background-color: #FF646D; /* Slightly darker shade for hover */
+}
+
+::ng-deep .p-dialog-header .p-dialog-header-icons .p-dialog-header-close {
+  background-color: red !important;
+  color: white !important;
+  border-radius: 50px !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.timer-wrapper {
+  display: flex;
+  justify-content: right ;
+  align-items: right;
+  // height: 80px; /* adjust as needed */
+  float: left;  
+}
+
+.job-timer-table {
+  background: #f0f8ff; /* light blue background */
+  border-radius: 12px;
+  padding: 20px 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-size: 1.5rem;
+  text-align: center;
+  color: #333;
+}
+
+.job-td {
+  padding: 10px;
+}
+
+.job-timer-table strong {
+  font-weight: 700;
+  color: #1e90ff; /* nice blue */
+}
+
+.elapsed-time {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ff4500; /* orange-red for time */
+  margin-left: 10px;
+}
+
+.job-buttons-wrapper {
+  display: flex;
+  justify-content: left; 
+  align-items: left;     
+  flex-wrap: wrap;   
+}
+
+.job-buttons-wrapper button {
+  min-width: 120px;
+  font-weight: bold;
+  margin-right: 0px;
+  margin-top: 0;
+  margin-bottom: 0;
+  // padding: 6px 16px;  /* tighter button height */
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+
+
+.edit-job {
+  color: white;
+  font-size: 8px;
+}
+
+.delete-job {
+  color: white;
+  font-size: 8px;
+  background-color: #FF646D !important;
+}
+
+.custom-p-table th,
+.custom-p-table td {
+  text-align: center;
+  vertical-align: middle;
+  font-size: 0.85rem;
+}
+
+::ng-deep .p-dropdown-label {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-span{
+  text-align: center; 
+  background: #f4f9ff; 
+  padding: 2px 8px; 
+  border-radius: 5px; 
+  font-size: 10px; 
+  color: #4AA879; 
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.job-timer-card {
+  background: #f4f9ff;
+  padding: 4px 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  display: inline-block;
+}
+
+.elapsed-time {
+  color: orangered;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+/* component.scss */
+::ng-deep .custom-table .p-datatable-thead > tr > th {
+  background-color: #ECC391 !important;
+  color: white !important;
+  font-weight: bold;
+  text-align: center;
+}
+

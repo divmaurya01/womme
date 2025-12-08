@@ -1,0 +1,229 @@
+<!-- HEADER -->
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<!-- PAGE LAYOUT -->
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  
+  <!-- SIDEBAR -->
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+  
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <div class="container-fluid mt-4">
+
+        <!-- Real-Time Production Overview -->
+       <section class="section">
+  <h3 class="section-title">Transaction Overview</h3>
+  <div class="cards-grid">
+    <div class="card green">
+      <div class="card-header">
+        <span>JOBS RUNNING (LIVE)</span>
+        <i class="bi bi-lightning-charge"></i>
+      </div>
+      <h1>{{ transaction.runningJobs }}</h1>
+      <p>jobs</p>
+    </div>
+
+    <div class="card yellow">
+      <div class="card-header">
+        <span>JOBS PAUSED (ATTENTION)</span>
+        <i class="bi bi-scissors"></i>
+      </div>
+      <h1>{{ transaction.pausedJobs }}</h1>
+      <p>needs check</p>
+    </div>
+
+    <div class="card red">
+      <div class="card-header">
+        <span>EXTENDED JOBS (OT)</span>
+        <i class="bi bi-clock"></i>
+      </div>
+      <h1>{{ transaction.extendedJobs }}</h1>
+      <p>critical</p>
+    </div>
+
+    <div class="card gray">
+      <div class="card-header">
+        <span>COMPLETED JOBS (TODAY)</span>
+        <i class="bi bi-check2"></i>
+      </div>
+      <h1>{{ transaction.completedJobs }}</h1>
+      <p>in last 24h</p>
+    </div>
+  </div>
+</section>
+
+        <!-- Real-Time Production Overview -->
+       <section class="section">
+  <h3 class="section-title">QC Overview</h3>
+  <div class="cards-grid">
+    <div class="card green">
+      <div class="card-header">
+        <span>JOBS RUNNING (LIVE)</span>
+        <i class="bi bi-lightning-charge"></i>
+      </div>
+      <h1>{{ qc.runningQCJobs }}</h1>
+      <p>jobs</p>
+    </div>
+
+    <div class="card yellow">
+      <div class="card-header">
+        <span>JOBS PAUSED (ATTENTION)</span>
+        <i class="bi bi-scissors"></i>
+      </div>
+      <h1>{{ qc.pausedQCJobs }}</h1>
+      <p>needs check</p>
+    </div>
+
+    <div class="card red">
+      <div class="card-header">
+        <span>EXTENDED JOBS (OT)</span>
+        <i class="bi bi-clock"></i>
+      </div>
+      <h1>{{ qc.extendedQCJobs }}</h1>
+      <p>critical</p>
+    </div>
+
+    <div class="card gray">
+      <div class="card-header">
+        <span>COMPLETED JOBS (TODAY)</span>
+        <i class="bi bi-check2"></i>
+      </div>
+      <h1>{{ qc.completedQCJobs }}</h1>
+      <p>in last 24h</p>
+    </div>
+  </div>
+</section>
+
+      <!-- Idle Resource Monitor -->
+<section class="section">
+  <h3 class="section-title">Idle Resource Monitor</h3>
+  <div class="cards-grid two">
+    <!-- Idle Employees -->
+    <div class="card white bordered blue-border" style="padding: 15px; margin-bottom: 15px; border-radius: 10px;">
+      <div class="card-header" style="font-weight: bold; margin-bottom: 10px;">
+        <span>Idle Employees</span>                
+      </div>
+
+      <h2 style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 0; font-size: 24px;">
+        <span style="flex: 1; text-align: center; color: blue;">
+       {{ (utilization.totalEmployees || 0) - (utilization.activeEmployees || 0) }}
+{{ utilization.totalEmployees || 0 }}
+        </span>
+       <small style="text-align: right; font-size: 16px; color: #333;">
+          {{ getIdlePercentageEmployee() }}%
+        </small>
+      </h2>
+    </div>
+
+    <!-- Idle Machines -->
+    <div class="card white bordered blue-border" style="padding: 15px; margin-bottom: 15px; border-radius: 10px;">
+      <div class="card-header" style="font-weight: bold; margin-bottom: 10px;">
+        <span>Idle Machines</span>                
+      </div>
+
+      <h2 style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 0; font-size: 24px;">
+        <span style="flex: 1; text-align: center; color: blue;">
+          {{ (utilization.totalMachines || 0) - (utilization.activeMachines || 0) }} /
+          {{ utilization.totalMachines || 0 }}
+        </span>
+         <small style="text-align: right; font-size: 16px; color: #333;">
+          {{ getIdlePercentageMachine() }}%
+        </small>
+      </h2>
+    </div>
+  </div>
+</section>
+
+
+<section style="padding: 20px; margin-bottom: 20px; background: #f9f9f9; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+  <h3 style="margin-bottom: 15px; font-size: 20px; color: #333; border-bottom: 2px solid #007bff; display: inline-block; padding-bottom: 5px;">
+    Currently Jobs Status
+  </h3>
+
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+      <thead style="background: #007bff; color: white;">
+        <tr>
+          <th style="padding: 10px;">S.No</th>
+          <th style="padding: 10px;">Job</th>
+          <th style="padding: 10px;">Serial No</th>
+          <th style="padding: 10px;">Operation</th>
+          <th style="padding: 10px;">Work Center</th>
+          <th style="padding: 10px;">Employee</th>
+          <th style="padding: 10px;">Machine</th>
+          <th style="padding: 10px;">Status</th>
+          <th style="padding: 10px;">Type</th>
+          <th style="padding: 10px;">Time</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let item of jobData; let i = index" 
+            [ngStyle]="{
+              'background-color': hoveredRow === i ? '#f1f9ff' : (i % 2 === 0 ? '#fff' : '#f9f9f9'),
+              'border-bottom': '1px solid #ddd',
+              'transition': 'background 0.3s'
+            }"
+            (mouseenter)="hoveredRow = i"
+            (mouseleave)="hoveredRow = -1">
+
+          <td style="padding: 10px;">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+          <td style="padding: 10px;">{{ item.job }}</td>
+          <td style="padding: 10px;">{{ item.serialNo || '-' }}</td>
+          <td style="padding: 10px;">{{ item.operation }}</td>
+          <td style="padding: 10px;">{{ item.wc }}</td>
+          <td style="padding: 10px;">{{ item.employee }}</td>
+          <td style="padding: 10px;">{{ item.machine || '-' }}</td>
+          <td style="padding: 10px;">
+            <span [style.color]="
+              item.progress === 'Completed' ? 'green' :
+              item.progress === 'Paused' ? 'orange' :
+              item.progress === 'Extended' ? 'red' :
+              '#007bff'"
+              style="font-weight: bold;">
+              {{ item.progress }}
+            </span>
+          </td>
+          <td style="padding: 10px;">{{ item.type }}</td>
+          <td style="padding: 10px;">{{ item.time | date:'short' }}</td>
+        </tr>
+
+        <tr *ngIf="jobData.length === 0">
+          <td colspan="10" style="text-align: center; padding: 15px; color: gray;">No records found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+ <div class="pagination-controls" style="text-align: center; margin-top: 15px;">
+  <button
+    (click)="prevPage()"
+    [disabled]="currentPage === 1"
+    style="margin-right: 10px; padding: 5px 10px;"
+  >
+    Prev
+  </button>
+
+  <span>Page {{ currentPage }} of {{ totalPages }}</span>
+
+  <button
+    (click)="nextPage()"
+    [disabled]="currentPage === totalPages"
+    style="margin-left: 10px; padding: 5px 10px;"
+  >
+    Next
+  </button>
+</div>
+
+</section>
+
+
+
+
+        </div>
+  </main>
+</div>
+    
+
+      

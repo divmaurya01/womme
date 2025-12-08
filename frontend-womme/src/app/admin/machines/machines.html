@@ -1,0 +1,158 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <!-- Add Machine Button -->
+      <div class="mb-3" style="padding-top: 2em;">
+        <button class="btn custom-assign-btn" (click)="openAddDialog(machineForm)">
+          + Machine
+        </button>
+      </div>
+
+      <!-- Dialog Box -->
+      <p-dialog
+        header="{{ newMachine.entryNo ? 'Edit Machine' : 'Add Machine' }}"
+        [(visible)]="showForm"
+        [modal]="true"
+        [closable]="true"
+        [dismissableMask]="true"
+        [style]="{ width: '600px' }"
+        [baseZIndex]="10000"
+        (onHide)="resetForm()"
+        [contentStyle]="{ overflow: 'visible' }"
+        [styleClass]="'custom-dialog'">
+        
+        <form  #machineForm="ngForm"(ngSubmit)="submitForm(machineForm)" class="p-fluid">
+          <div class="row g-3">
+
+            <!-- Machine Number -->
+            <div class="col-md-12">
+              <label for="machineNumber" class="form-label">Machine Number<span class="text-danger">*</span></label>
+              <input
+                id="machineNumber"
+                type="text"
+                class="form-control"
+                [(ngModel)]="newMachine.machineNumber"
+                name="machineNumber"
+                placeholder="Enter machine number"
+                #machineNumber="ngModel" 
+                 pattern="^[0-9]+$"
+                (keypress)="allowOnlyNumbers($event)"  
+                required
+                />
+                   <div *ngIf="machineNumber.invalid && (machineNumber.touched || machineForm.submitted)" class="text-danger small mt-1">
+                    Machine Number is required and must be numeric.
+                  </div>
+            </div>
+
+            <!-- Machine Name -->
+            <div class="col-md-12">
+              <label for="machineName" class="form-label">Machine Name<span class="text-danger">*</span></label>
+              <input
+                id="machineName"
+                type="text"
+                class="form-control"
+                [(ngModel)]="newMachine.machineName"
+                name="machineName"
+                required
+                placeholder="Enter machine name" 
+                #machineName="ngModel" />
+                <div *ngIf="machineName.invalid && (machineName.touched || machineForm.submitted)" class="text-danger small mt-1">
+                  Machine Name is required.
+                </div>
+                </div>
+
+            <!-- Machine Description -->
+            <div class="col-md-12">
+              <label for="machineDescription" class="form-label">Description<span class="text-danger">*</span></label>
+              <textarea
+                id="machineDescription"
+                class="form-control"
+                rows="2"
+                [(ngModel)]="newMachine.machineDescription"
+                name="machineDescription"
+                required
+                placeholder="Enter description"
+                 
+                #machineDescription="ngModel">
+                </textarea>
+              <div *ngIf="machineDescription.invalid && (machineDescription.touched || machineForm.submitted)" class="text-danger small mt-1">
+                Description is required.
+              </div>           
+              </div>
+                <div *ngIf="formError" class="text-danger text-center mb-2">
+                  {{ formError }}
+                </div>
+                  <!-- Submit Button -->
+                  <div class="col-12 text-end">
+                    <button type="submit" class="custom-submit-btn mt-3">
+                      {{ newMachine.entryNo ? 'Update' : 'Submit' }}
+                    </button>
+                  </div>
+
+                </div>
+              </form>
+       </p-dialog>
+
+      <!-- Machines Table -->
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+          <p-table
+            #dt
+            [value]="filteredMachines()"
+            [paginator]="true"
+            [rows]="15"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            columnResizeMode="expand"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            class="p-datatable-sm p-datatable-striped custom-p-table">
+
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391;">Sr No.</th>
+                <th style="background-color: #ECC391;">Machine Number</th>
+                <th style="background-color: #ECC391;">Machine Name</th>
+                <th style="background-color: #ECC391;">Description</th>
+                <th style="background-color: #ECC391;">Action</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-machine let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ dt.first + rowIndex + 1 }}</td>
+                <td>{{ machine.machineNumber }}</td>
+                <td>{{ machine.machineName }}</td>
+                <td>{{ machine.machineDescription }}</td>
+                <td class="text-nowrap">
+                  <a href="#" class="btn btn-primary btn-sm mx-1 edit-job" title="Edit"
+                     (click)="editMachine($event, machine)">
+                    <i class="fa-solid fa-pencil"></i>
+                  </a>
+                  <a href="#" class="btn btn-danger btn-sm mx-1 delete-job" title="Delete"
+                     (click)="deleteMachine($event, machine.entryNo)">
+                    <i class="fa-solid fa-trash"></i>
+                  </a>
+                    <a href="#" class="btn btn-success btn-sm mx-1 download-job" title="Download QR"
+                      (click)="downloadMachineQR($event, machine.machineNumber)">
+                      <i class="fa-solid fa-download"></i>
+                    </a>
+                </td>
+              </tr>
+            </ng-template>
+
+          </p-table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>

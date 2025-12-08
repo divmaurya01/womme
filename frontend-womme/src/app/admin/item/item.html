@@ -1,0 +1,81 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <!-- Control bar -->
+      <div
+        class="dashboard-control-bar d-flex flex-wrap justify-content-between align-items-center mb-3"
+        style="gap: 1rem; padding-top: 2em;"
+      >
+        <!-- Search Input (left) -->
+        <div class="flex-grow-1 position-relative" style="min-width: 250px; max-width: 400px;">
+          <input
+            type="text"
+            pInputText
+            placeholder="Search Item"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange($event)"
+            class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+            style="height: 45px; transition: all 0.3s;"
+          />
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+          <p-table
+            #dt
+            [value]="items"
+            [lazy]="true"
+            [paginator]="true"
+            [rows]="50"
+            [totalRecords]="totalRecords"
+            (onLazyLoad)="loadJobsLazy($event)"
+            [loading]="isLoading"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            columnResizeMode="expand"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391; padding: 10px 10px;">S.No</th>
+                <th style="background-color: #ECC391; padding: 10px 10px;">Item</th>
+                <th style="background-color: #ECC391; padding: 10px 10px;">Description</th>
+                <th style="background-color: #ECC391; padding: 10px 10px;">Order No</th>
+                <th style="background-color: #ECC391; padding: 10px 10px;">Qty Released</th>
+                <th style="background-color: #ECC391; padding: 10px 10px;">Qty Complete</th>
+                <th style="background-color: #ECC391; padding: 10px 10px;">Qty Scrapped</th>
+                <th style="background-color: #ECC391; padding: 10px 10px;">Status</th>
+                <th style="background-color: #ECC391; padding: 10px 10px;">Root Job</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-item let-rowIndex="rowIndex">
+              <tr>
+                <td style="padding: 10px 10px;">{{ dt.first + rowIndex + 1 }}</td>
+                <td style="padding: 10px 10px;">{{ item.item }}</td>
+                <td style="padding: 10px 10px;">{{ item.description }}</td>
+                <td style="padding: 10px 10px;">{{ item.lot_Size }}</td>
+                <td style="padding: 10px 10px;">{{ item.abc_Code }}</td>
+                <td style="padding: 10px 10px;">{{ item.drawing_Nbr }}</td>
+                <td style="padding: 10px 10px;">{{ item.product_Code }}</td>
+                <td style="padding: 10px 10px;">{{ item.p_M_T_Code }}</td>
+                <td style="padding: 10px 10px;">{{ item.weight_Units }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,55 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content p-3">
+
+    <div class="role-tabs-container">
+      <div class="tabs">
+        <div class="role-tabs">
+          <div
+            *ngFor="let role of roles; let i = index"
+            [ngClass]="{ 'tab-active': selectedRole?.roleID === role.roleID }"
+            class="role-tab"
+            (click)="onRoleClick(role)"
+          >
+            {{ role.roleName }}
+            <span class="close-icon" (click)="deleteRole(role, $event)">✖</span>
+          </div>
+          <!-- <div class="role-tab add-tab" (click)="addRole()">➕ Add Role</div> -->
+        </div>
+      </div>
+
+      <!-- Permissions Dialog -->
+      <!-- PERMISSIONS SECTION -->
+       
+<div class="permissions-container" *ngIf="selectedRole">
+   <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-3">
+            <h3>Permissions for: <strong>{{ selectedRole?.roleName }}</strong></h3>
+
+  <div class="permissions-grid">
+    <div *ngFor="let page of pages" class="permission-card">
+      <label>
+        <input
+          type="checkbox"
+          [checked]="rolePermissions[page.pageID]"
+          (change)="togglePermission(page.pageID)"
+        />
+        {{ page.pageName }}
+      </label>
+    </div>
+  </div>
+
+  <div class="permission-actions">
+    <button class="custom-submit-btn" (click)="savePermissions()">Save</button>
+    <button class="custom-cancel-btn" (click)="selectedRole = null">Cancel</button>
+  </div>
+</div>
+
+</div>
+</div>
+    </div>
+  </main>
+</div>

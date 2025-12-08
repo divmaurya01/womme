@@ -1,0 +1,244 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <!-- Top Control Bar -->
+      <div class="dashboard-control-bar d-flex flex-column mb-3" style="gap: 1rem; padding-top: 2em;">
+
+        <!-- + Employee Button (Top Left) -->
+        <div class="d-flex justify-content-start">
+          <button
+            class="btn custom-assign-btn px-4 py-2"
+            style="height: 40px; white-space: nowrap;"
+            (click)="openAddDialog()">
+            + Employee
+          </button>
+        </div>
+
+        <!-- Employee Search + Sync Section -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <!-- Search Input (Left Side) -->
+          <div class="d-flex align-items-center flex-grow-1" style="max-width: 500px;">
+            <input
+              type="text"
+              pInputText
+              placeholder="Search Employee"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="onSearchChange($event)"
+              class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+              style="height: 45px; transition: all 0.3s;"
+            />
+          </div>
+
+          <!-- Sync Button (Right Side) -->
+          <div class="ms-auto">
+            <button
+              type="button"
+              class="btn custom-assign-btn rounded-pill px-4 py-2 sync-btn"
+              (click)="syncEmployee()"
+              [disabled]="isLoading">
+              <i class="fas fa-sync-alt mx-2"></i>
+              <span *ngIf="!isLoading">Sync Employee From SyteLine</span>
+              <span *ngIf="isLoading">Syncing... <i class="fas fa-spinner fa-spin ms-1"></i></span>
+            </button>
+              <div *ngIf="syncMessage" class="mt-2" 
+                [ngClass]="{ 'text-success': !isError, 'text-danger': isError }">
+              {{ syncMessage }}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Add/Edit Employee Dialog -->
+      <p-dialog
+        header="{{ isEditMode ? 'Edit Employee' : 'Add Employee' }}"
+        [(visible)]="showForm"
+        [modal]="true"
+        [closable]="true"
+        [dismissableMask]="true"
+        [style]="{ width: '700px' }"
+        [baseZIndex]="10000"
+        (onHide)="onDialogClose()"
+        [contentStyle]="{ overflow: 'visible' }"
+        [styleClass]="'custom-dialog'">
+
+        <form #employeeForm="ngForm" (ngSubmit)="submitForm(employeeForm)" class="p-fluid">
+          <div class="row g-3">
+
+            <!-- Employee Number -->
+            <div class="col-md-6">
+              <label for="empNum" class="form-label">Employee Number<span class="text-danger">*</span></label>
+              <input id="empNum" type="text" class="form-control"
+                    [(ngModel)]="newEmployee.empNum"
+                    name="empNum"
+                    required
+                    [disabled]="isEditMode" />
+              <div *ngIf="employeeForm.submitted && !newEmployee.empNum" class="text-danger small">
+                Employee Number is required
+              </div>
+            </div>
+
+            <!-- Name -->
+            <div class="col-md-6">
+              <label for="name" class="form-label">Name<span class="text-danger">*</span></label>
+              <input id="name" type="text" class="form-control"
+                    [(ngModel)]="newEmployee.name" name="name" required />
+              <div *ngIf="employeeForm.submitted && !newEmployee.name" class="text-danger small">
+                Name is required
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="col-md-6">
+              <label for="passwordHash" class="form-label">Password<span class="text-danger">*</span></label>
+              <input id="passwordHash" class="form-control"
+                    [(ngModel)]="newEmployee.passwordHash"
+                    [type]="isEditMode ? 'text' : 'password'"
+                    name="passwordHash" required />
+              <div *ngIf="employeeForm.submitted && !newEmployee.passwordHash" class="text-danger small">
+                Password is required
+              </div>
+            </div>
+
+            <!-- Role Dropdown -->
+            <div class="col-md-6">
+              <label for="roleID" class="form-label">Role <span class="text-danger">*</span></label>
+              <p-dropdown
+                [options]="roles"
+                [(ngModel)]="newEmployee.roleID"
+                optionLabel="roleName"
+                optionValue="roleID"
+                placeholder="Select Role"
+                name="roleID"
+                #roleCtrl="ngModel"
+                [required]="true">
+              </p-dropdown>
+              <div *ngIf="employeeForm.submitted && !newEmployee.roleID" class="text-danger small">
+                Role is required
+              </div>
+            </div>
+
+            <!-- Site Ref -->
+            <div class="col-md-6">
+              <label for="site_ref" class="form-label">Site Reference</label>
+              <input
+                id="site_ref"
+                type="text"
+                class="form-control"
+                [(ngModel)]="newEmployee.site_ref"
+                name="site_ref"
+                required
+              />
+            </div>
+
+            <!-- Created By -->
+            <div class="col-md-6">
+              <label for="createdBy" class="form-label">Created By</label>
+              <input id="createdBy" type="text" class="form-control"
+                    name="createdBy" value="WOMM APP" disabled />
+            </div>
+
+            <!-- Active Checkbox -->
+            <div class="col-md-6 d-flex align-items-center mt-4 mx-4">
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input"
+                      [(ngModel)]="newEmployee.isActive" name="isActive" />
+                <label class="form-check-label">Active</label>
+              </div>
+            </div>
+
+            <!-- Form Error -->
+            <div *ngIf="formError" class="text-danger text-center mb-2 col-12">
+              {{ formError }}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="col-12 text-end">
+              <button type="submit" class="btn btn-primary mt-3">
+                {{ isEditMode ? 'Update' : 'Submit' }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </p-dialog>
+
+      <!-- Employees Table -->
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+          <p-table
+            #dt
+            [value]="employees"
+            [lazy]="true"
+            [paginator]="true"
+            [rows]="10"
+            [totalRecords]="totalRecords"
+            (onLazyLoad)="loadEmployeesLazy($event)"
+            [loading]="isLoading"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            columnResizeMode="expand"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            class="p-datatable-sm p-datatable-striped custom-p-table"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391;">Sr No.</th>
+                <th style="background-color: #ECC391;">Employee No.</th>
+                <th style="background-color: #ECC391;">Name</th>
+                <th style="background-color: #ECC391;">Department</th>
+                <th style="background-color: #ECC391;">Emp. Type</th>
+                <th style="background-color: #ECC391;">Pay</th>
+                <th style="background-color: #ECC391;">Reg Rate</th>
+                <th style="background-color: #ECC391;">OT Rate</th>
+                <th style="background-color: #ECC391;">Doub Rate</th>
+                <th style="background-color: #ECC391;">Action</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-emp let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ dt.first + rowIndex + 1 }}</td>
+                <td>{{ emp.empNum }}</td>
+                <td>{{ emp.name }}</td>
+                <td>{{ emp.dept }}</td>
+                <td>{{ emp.emp_type }}</td>
+                <td>{{ emp.pay_freq }}</td>
+                <td>{{ emp.mfg_dt_rate }}</td>
+                <td>{{ emp.mfg_ot_rate }}</td>
+                <td>{{ emp.mfg_reg_rate }}</td>
+
+                <td class="text-nowrap">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm mx-1 edit-job"
+                    title="Edit"
+                    (click)="openEditDialog(emp)">
+                    <i class="fa-solid fa-pencil"></i>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn btn-success btn-sm mx-1 download-job"
+                    title="Download QR"
+                    (click)="downloadEmployeeQR(emp.empNum)">
+                    <i class="fa-solid fa-download"></i>
+                  </button>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>

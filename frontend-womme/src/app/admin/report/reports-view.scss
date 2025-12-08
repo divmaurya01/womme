@@ -1,0 +1,212 @@
+.custom-assign-btn {
+  background-color: #91ecbb;
+  color: black;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500; 
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-assign-btn:hover {
+  background-color: #e5b870;
+}
+
+.custom-tab-row .nav-link {
+  background-color: #f2f2f2; /* Light grey */
+  color: #333;
+  border: 1px solid #ddd;
+  border-bottom: none;
+}
+
+.custom-tab-row .nav-link.active {
+  background-color: #007bff; /* Bootstrap primary */
+  color: white;
+  font-weight: bold;
+}
+
+
+.custom-badge-completed {
+  background-color: #82f2c3 !important;
+  color: #1a1a1a; /* dark text for contrast */
+  padding: 5px 5px;
+  border-radius: 0.75em;
+  font-weight: 600;
+  font-size: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.custom-submit-btn {
+  background-color: #5CB78E;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-submit-btn:hover {
+  background-color: #4aa879; /* Slightly darker shade for hover */
+}
+
+
+::ng-deep .custom-dialog .p-dialog-header-close {
+  background-color: red !important;
+  color: white !important;
+  border-radius: 4px;
+}
+
+
+
+.table-wrapper {
+  padding: 1rem;
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-add {
+      background-color: #28a745;
+      color: white;
+      border-radius: 0pxx;
+    }
+  }
+}
+
+
+.edit-job{
+    color: white;
+    font-size: 8px;
+}
+
+.delete-job{
+    color: white;
+    font-size: 8px;
+    background-color: #FF646D!important;
+}
+
+.custom-p-table th,
+.custom-p-table td {
+  text-align: center;
+  vertical-align: middle; /* Optional: aligns text vertically center */
+  font-size: 0.85rem;      /* Already added for small text */
+}
+::ng-deep .p-dropdown-label {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.report-wrapper {
+  padding-left: 16px;
+  font-size: 13px;
+  background-color: #FFF8F7;
+  margin-top: 20px;
+  width:100%;
+  overflow-x: auto;
+  .header-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+
+    .left, .center, .right {
+      width: 32%;
+      text-align: center;
+    }
+  }
+
+  .meta-table {
+    width: 100%;
+    margin-bottom: 1rem;
+  overflow-x: auto;
+    td {
+      padding: 4px 6px;
+      border: none;
+    }
+  }
+
+  .issuance-table {
+    th, td {
+      padding: 6px;
+      font-size: 12px;
+    }
+
+    th {
+      background-color: #eceaea;
+      text-align: center;
+    }
+
+    td img {
+      object-fit: contain;
+      border: 1px solid #ccc;
+      background: #fff;
+      padding: 2px;
+    }
+  }
+  .item-table thead {
+background-color: #FFF8F7}
+}
+
+.job-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 16px;
+  margin-bottom: 20px;
+
+  div {
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+
+  .full-width {
+    grid-column: span 3;
+    font-weight: 500;
+    font-size: 15px;
+  }
+}
+
+.issuance-table {
+  table-layout: fixed; /* ensures consistent width distribution */
+  width: 100%;
+  word-wrap: break-word;
+  border-collapse: collapse;
+
+  th, td {
+    padding: 8px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  /* force long description to wrap nicely */
+  td:nth-child(2), th:nth-child(2) {
+    word-break: break-word;
+    white-space: normal;
+    max-width: 250px; /* adjust as needed */
+  }
+
+  /* balance column widths */
+  th:nth-child(1), td:nth-child(1) { width: 10%; }  /* Operation No */
+  th:nth-child(2), td:nth-child(2) { width: 40%; }  /* Description */
+  th:nth-child(3), td:nth-child(3) { width: 20%; }  /* Sr No. */
+  th:nth-child(4), td:nth-child(4) { width: 10%; }  /* Qty */
+  th:nth-child(5), td:nth-child(5) { width: 10%; }  /* Date */
+  th:nth-child(6), td:nth-child(6) { width: 15%; }  /* Notes */
+}
+
+/* optional: make the description cell auto-wrap more gracefully */
+.issuance-table td:nth-child(2) {
+  text-align: left;
+  line-height: 1.4;
+}

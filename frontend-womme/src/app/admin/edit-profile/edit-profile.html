@@ -1,0 +1,143 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+      
+      <div class="container-fluid" style="gap: 1rem; padding-top: 2em;">
+        <div class="row g-3">
+
+          <!-- Profile Card (Left) -->
+          <div class="col-md-4">
+            <div class="card profile-card shadow-sm">
+              <div 
+                class="d-flex justify-content-between align-items-center px-3 py-2" 
+                style="background-color: #ECC391;"
+              >
+                <h5 class="mb-0">Profile</h5>
+                <button class="btn btn-sm btn-link p-0" (click)="toggleEditImage()">
+                  <i class="fa fa-edit text-dark" style="cursor: pointer; font-size: 15px;"></i>
+                </button>
+              </div>
+
+              <div class="card-body text-center">
+                <div class="profile-img-wrapper">
+                  <img 
+                    [src]="profileImage" 
+                    alt="Profile Image" 
+                    class="profile-pic"
+                    (error)="profileImage='../../../assets/images/favicon-96x96.png'" 
+                  />
+
+                  <!-- Upload option -->
+                  <label *ngIf="editImageMode" class="upload-btn">
+                    <i class="fa fa-camera"></i>
+                    <input type="file" accept="image/*" (change)="onFileSelected($event)" hidden />
+                  </label>
+                </div>
+
+                <!-- Save / Cancel -->
+                <div *ngIf="editImageMode" style="margin-top: 35px;">
+                  <button 
+                    class="custom-submit-btn" 
+                    [disabled]="!selectedFile" 
+                    (click)="saveProfileImage()">
+                    Save
+                  </button>&nbsp;&nbsp;
+                  <button class="custom-back-btn" (click)="toggleEditImage()">
+                    Cancel
+                  </button>
+                </div>
+
+                <!-- User info -->
+                <div class="mt-3">
+                  <table class="table table-sm table-borderless profile-table">
+                    <tbody>
+                      <tr>
+                        <td class="label"><i class="fa fa-user me-1"></i> Name:</td>
+                        <td class="value">{{ userName }}</td>
+                      </tr>
+                      <tr>
+                        <td class="label"><i class="fa fa-id-badge me-1"></i> Employee Code:</td>
+                        <td class="value"><b>{{ employeeCode }}</b></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Details Card (Right) -->
+          <div class="col-md-8">
+            <div class="card details-card shadow-sm">
+              <div 
+                class="d-flex justify-content-between align-items-center px-3 py-2" 
+                style="background-color: #ECC391;"
+              >
+                <h5 class="mb-0">Employee Details</h5>
+                <button class="btn btn-sm btn-link p-0" (click)="toggleEditDetails()">
+                  <i class="fa fa-edit text-dark" style="cursor: pointer; font-size: 15px;"></i>
+                </button>
+                
+              </div>
+
+              <div class="card-body">
+                <div class="row g-3">
+                  
+                  <div class="col-md-6">
+                    <label class="form-label">Employee Code</label>
+                    <input type="text" readonly [value]="employeeCode" class="form-control" />
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">User Name</label>
+                    <input type="text" [readonly]="!editDetailsMode" [(ngModel)]="userName" class="form-control" />
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Role ID</label>
+                    <input type="text" readonly [value]="roleID" class="form-control" />
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Password</label>
+                    <div class="input-group">
+                      <input 
+                        [type]="showPassword ? 'text' : 'password'"
+                        [(ngModel)]="passwordHash"
+                        [readonly]="!editDetailsMode"
+                        class="form-control"
+                      />
+                      <button type="button" (click)="togglePasswordVisibility()" style="border: 0; cursor: pointer;">
+                        <i class="fa" [ngClass]="showPassword ?  'fa-eye' : 'fa-eye-slash'"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div >
+                      <input type="checkbox" [(ngModel)]="isActive" [disabled]="!editDetailsMode" class="form-check-input" style=" margin-left: 2px; margin-top: 10px; " />
+                      <label class="form-check-label" style="margin-top: 6px; ">Active</label>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Save / Cancel -->
+                <div *ngIf="editDetailsMode" class="text-end mt-3">
+                  <button class="custom-submit-btn">Save</button>&nbsp;&nbsp;
+                  <button class="custom-back-btn" (click)="toggleEditDetails()">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>

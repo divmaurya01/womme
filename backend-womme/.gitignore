@@ -1,0 +1,78 @@
+# Build results
+bin/
+obj/
+out/
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.vsp
+*.vspx
+*.pidb
+*.sln.docstates
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# DotCover
+*.dotCover
+
+# Logs
+*.log
+
+# Test results
+TestResult*/  
+*.trx  
+*.coverage  
+*.coveragexml
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# Publish folder
+publish/
+wwwroot/
+
+# Environment-specific files
+appsettings.Development.json
+secrets.json
+
+# NuGet packages
+*.nupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Auto-generated migrations (optional)
+Migrations/
+
+# Local database
+*.mdf
+*.ldf
+
+# SQLite database
+*.db
+*.sqlite
+
+# Entity Framework tools cache
+efbundle/
+
+# Others
+_ReSharper*/

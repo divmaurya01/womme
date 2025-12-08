@@ -1,0 +1,82 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <div
+        class="dashboard-control-bar d-flex flex-wrap justify-content-between align-items-center mb-3"
+        style="gap: 1rem; padding-top: 2em;"
+      >
+        <!-- Search Input (left)  [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange($event)" -->
+        <div class="flex-grow-1 position-relative" style="min-width: 250px; max-width: 400px;">
+          <input
+            type="text"
+            pInputText
+            placeholder="Search Operation"
+           [(ngModel)]="searchText"
+            (ngModelChange)="onOperationSearchChange($event)"
+            class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+            style="height: 45px; transition: all 0.3s;"
+          />
+        </div>
+      </div>
+
+      <!-- Dialog Box -->
+      
+
+      <!-- Operations Table -->
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+          <p-table
+            #dt
+            [value]="operations"
+            [paginator]="true"
+            [rows]="15"
+            [lazy]="true"
+            (onLazyLoad)="loadOperations($event)"
+            [totalRecords]="totalOperations"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            columnResizeMode="expand"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            class="p-datatable-sm p-datatable-striped custom-p-table"
+          >
+
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391;">Sr No.</th>
+                <th style="background-color: #ECC391;">Operation Number</th>                
+                <th style="background-color: #ECC391;">Download Code</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-op let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ dt.first + rowIndex + 1 }}</td>
+                <td>{{ op.operationNumber }}</td>                
+                <td class="text-nowrap">                  
+                  <button type="button" 
+                        class="btn btn-success btn-sm mx-1 download-job" style="cursor:pointer;"
+                        title="Download QR"
+                        (click)="downloadOperationQR(op.operationNumber)">
+                      <i class="fa-solid fa-download"></i>
+                  </button>                  
+                </td>
+              </tr>
+            </ng-template>
+
+          </p-table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>
