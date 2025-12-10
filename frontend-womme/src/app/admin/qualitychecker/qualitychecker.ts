@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
 import { Table } from 'primeng/table';
@@ -46,7 +46,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   ongoingJobs: any[] = [];
   completedJobs: any[] = [];
   scrappedJobs: any[] = [];
-totalScrappedRecords: number = 0;
+  totalScrappedRecords: number = 0;
   loggedInUser: string = '';
   jobTimers: { [key: string]: any } = {};
 
@@ -54,7 +54,8 @@ totalScrappedRecords: number = 0;
     private jobService: JobService,
     private router: Router,
     private route: ActivatedRoute,
-    private loader: LoaderService
+    private loader: LoaderService,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -227,7 +228,8 @@ totalScrappedRecords: number = 0;
     });
   }
 
-  /** Load Ongoing Jobs with pause/resume timer */
+ 
+
   loadOngoingJobs() {
     this.isLoading = true;
     this.loader.show();
@@ -239,27 +241,43 @@ totalScrappedRecords: number = 0;
         Object.values(this.jobTimers).forEach(timer => clearInterval(timer));
         this.jobTimers = {};
 
-        const latestJobMap: { [key: string]: any } = {};
-        allJobs.forEach((job: any) => {
-          const key = `${job.job}-${job.serialNo}-${job.oper_num}-${job.wc}`;
-          const prev = latestJobMap[key];
-          if (!prev || new Date(job.trans_date) > new Date(prev.trans_date)) {
-            latestJobMap[key] = job;
-          }
-        });
-
-        const activeJobs = Object.values(latestJobMap).filter(job => job.status === "1" || job.status === "2");
+        const activeJobs = allJobs.filter((x: any) => x.status === "1" || x.status === "2");
 
         this.ongoingJobs = activeJobs.map((x: any, index: number) => {
           const jobKey = `${x.job}-${x.serialNo}-${x.oper_num}-${x.wc}-${index}`;
-const elapsedSeconds = x.start_time
-  ? Math.max(
-      0,
-      Math.floor(
-        (new Date().getTime() - new Date(x.start_time + 'Z').getTime()) / 1000
-      )
-    )
-  : 0;
+
+          let elapsedSeconds = 0;
+
+          const startTime = x.start_time ? new Date(x.start_time) : null;
+          const totalASeconds = x.total_a_hrs ? x.total_a_hrs * 3600 : 0;
+          const now = new Date();
+
+          // --------------------------------------
+          // CASE 1 → Running fresh (no total hours)
+          // --------------------------------------
+          if (x.status === "1" && !x.total_a_hrs) {
+            elapsedSeconds = startTime ? Math.floor((now.getTime() - startTime.getTime()) / 1000): 0;
+            
+          }
+
+          // ----------------------------------------------------------
+          // CASE 2 → Resumed running (status 1 + has total previous hrs)
+          // ----------------------------------------------------------
+          else if (x.status === "1" && x.total_a_hrs > 0) {
+            const currentRunSec = startTime
+            ? Math.floor((now.getTime() - startTime.getTime()) / 1000)
+            : 0;
+
+            elapsedSeconds = totalASeconds + currentRunSec;
+          }
+
+          // --------------------------------------
+          // CASE 3 → Paused (status 2)
+          // --------------------------------------
+          else if (x.status === "2") {
+            elapsedSeconds = totalASeconds;
+          }
+
           const jobObj: any = {
             uniqueRowId: jobKey,
             jobNumber: x.job,
@@ -269,21 +287,27 @@ const elapsedSeconds = x.start_time
             item: x.item,
             empNum: x.emp_num,
             trans_num: x.trans_num ?? x.trans_number ?? null,
-            
-            qtyReleased: x.qty_released ?? 1,
-            startTime: x.start_time ? new Date(x.start_time) : null,
+
+            qtyReleased: 1,
+            startTime: startTime,
             endTime: x.end_time ? new Date(x.end_time) : null,
+
             elapsedSeconds: elapsedSeconds,
             elapsedTime: this.formatElapsedTime(elapsedSeconds),
-            isPaused: x.status === "2" ? true : false,
-             remark: x.remark ?? ""
+
+            isPaused: x.status === "2",
+            remark: x.remark ?? "",
+            qcGroup: x.qcgroup ?? null
           };
 
-          if (!jobObj.isPaused && !jobObj.endTime) {
-            jobObj.timerInterval = setInterval(() => {
-              jobObj.elapsedSeconds++;
-              jobObj.elapsedTime = this.formatElapsedTime(jobObj.elapsedSeconds);
-            }, 1000);
+          // Start timer ONLY if status = 1 (active)
+          if (!jobObj.isPaused) {
+            jobObj.timerInterval = this.ngZone.run(() => {
+              return setInterval(() => {
+                jobObj.elapsedSeconds++;
+                jobObj.elapsedTime = this.formatElapsedTime(jobObj.elapsedSeconds);
+              }, 1000);
+            });
             this.jobTimers[jobKey] = jobObj.timerInterval;
           }
 
@@ -294,20 +318,46 @@ const elapsedSeconds = x.start_time
         this.loader.hide();
       },
       error: (err) => {
-        console.error('Error fetching active jobs:', err);
+        console.error("Error fetching active jobs:", err);
         this.isLoading = false;
         this.loader.hide();
       }
     });
   }
 
+
   /** Format elapsed time */
-  formatElapsedTime(totalSeconds: number): string {
-    const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
-    const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
-    const s = (totalSeconds % 60).toString().padStart(2, '0');
+ formatElapsedTime(totalSeconds: number): string {
+    if (totalSeconds < 0) totalSeconds = 0; // safety guard
+
+    const h = Math.floor(totalSeconds / 3600)
+      .toString()
+      .padStart(2, '0');
+
+    const m = Math.floor((totalSeconds % 3600) / 60)
+      .toString()
+      .padStart(2, '0');
+
+    const s = Math.floor(totalSeconds % 60)
+      .toString()
+      .padStart(2, '0');
+
     return `${h}:${m}:${s}`;
   }
+
+  formatTime(hours: number): string {
+    if (!hours || hours <= 0) return "00:00:00";
+
+    const totalSeconds = Math.floor(hours * 3600);
+
+    const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+
+    return `${h}:${m}:${s}`;
+  }
+
+
 
   /** Toggle Pause / Resume */
   togglePauseResume(job: any) {
@@ -329,10 +379,12 @@ const elapsedSeconds = x.start_time
         next: () => {
           job.isPaused = false;
 
-          job.timerInterval = setInterval(() => {
-            job.elapsedSeconds++;
-            job.elapsedTime = this.formatElapsedTime(job.elapsedSeconds);
-          }, 1000);
+          job.timerInterval = this.ngZone.run(() => { // <-- Use NgZone
+              return setInterval(() => {
+                  job.elapsedSeconds++;
+                  job.elapsedTime = this.formatElapsedTime(job.elapsedSeconds);
+              }, 1000);
+          });
           this.jobTimers[job.uniqueRowId] = job.timerInterval;
 
           Swal.fire('Resumed', `Job ${job.jobNumber} resumed successfully.`, 'success');
@@ -475,56 +527,55 @@ completeQCJob(job: any) {
 }
 
 
-  /** Load Completed Jobs using GetPostedTransactions */
-/** Load Completed Jobs using new API */
-loadCompletedJobs() {
-  this.isLoading = true;
-  this.loader.show();
+ 
+  loadCompletedJobs() {
+    this.isLoading = true;
+    this.loader.show();
 
-  this.jobService.GetCompletedQCJobs()
-    .pipe(finalize(() => this.loader.hide()))
-    .subscribe({
-      next: (res: any) => {
-        let jobs = res.data ?? [];
+    this.jobService.GetCompletedQCJobs()
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: (res: any) => {
+          let jobs = res.data ?? [];
 
-        // Optional: Role-based filtering
-        const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-        const employeeCode = userDetails.employeeCode || '';
-        const roleid = userDetails.roleID || '';
-        if (roleid === 4 || roleid === 5) {
-          jobs = jobs.filter((job: any) => (job.empNum || '').trim() === employeeCode);
+          // Optional: Role-based filtering
+          const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+          const employeeCode = userDetails.employeeCode || '';
+          const roleid = userDetails.roleID || '';
+          if (roleid === 4 || roleid === 5) {
+            jobs = jobs.filter((job: any) => (job.empNum || '').trim() === employeeCode);
+          }
+
+          // ✅ Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
+          const grouped: { [key: string]: any[] } = jobs.reduce((acc: { [key: string]: any[] }, row: any) => {
+            const key = `${row.jobNumber}|${row.operationNumber}|${row.serialNo}|${row.qcgroup}`;
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(row);
+            return acc;
+          }, {});
+
+          // Build final array
+          this.completedJobs = Object.values(grouped).map((group: any[]) => {
+            // Sort by endTime descending to get latest completed row
+            group.sort((a, b) => new Date(b.endTime || 0).getTime() - new Date(a.endTime || 0).getTime());
+            const lastRow = group[0];
+
+            return {
+              ...lastRow,
+              compositeKey: `${lastRow.jobNumber}-${lastRow.serialNo}-${lastRow.operationNumber}-${lastRow.qcgroup}`,
+              allLogs: group
+            };
+          });
+
+          this.totalRecords = this.completedJobs.length;
+          this.isLoading = false;
+        },
+        error: (err) => {
+          console.error('Error fetching completed jobs:', err);
+          this.isLoading = false;
         }
-
-        // ✅ Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
-        const grouped: { [key: string]: any[] } = jobs.reduce((acc: { [key: string]: any[] }, row: any) => {
-          const key = `${row.jobNumber}|${row.operationNumber}|${row.serialNo}|${row.qcgroup}`;
-          if (!acc[key]) acc[key] = [];
-          acc[key].push(row);
-          return acc;
-        }, {});
-
-        // Build final array
-        this.completedJobs = Object.values(grouped).map((group: any[]) => {
-          // Sort by endTime descending to get latest completed row
-          group.sort((a, b) => new Date(b.endTime || 0).getTime() - new Date(a.endTime || 0).getTime());
-          const lastRow = group[0];
-
-          return {
-            ...lastRow,
-            compositeKey: `${lastRow.jobNumber}-${lastRow.serialNo}-${lastRow.operationNumber}-${lastRow.qcgroup}`,
-            allLogs: group
-          };
-        });
-
-        this.totalRecords = this.completedJobs.length;
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Error fetching completed jobs:', err);
-        this.isLoading = false;
-      }
-    });
-}
+      });
+  }
 
 loadScrappedJobs() {
   this.isLoading = true;

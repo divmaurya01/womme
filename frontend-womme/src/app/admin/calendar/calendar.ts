@@ -21,7 +21,7 @@ import { finalize } from 'rxjs/operators';
     FormsModule,
     CalendarModule,
     HeaderComponent,
-    SidenavComponent,DialogModule,TableModule,ButtonModule
+    SidenavComponent, DialogModule, TableModule, ButtonModule
   ],
 })
 export class CalendarComponent implements OnInit {
@@ -37,12 +37,34 @@ export class CalendarComponent implements OnInit {
   showCalendar = false;
   showCalendarDialog = false;
   submitted = false;
+  monthList = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
 
-  constructor(private jobService: JobService, private cdr: ChangeDetectorRef,private loader:LoaderService) {}
+  yearList: number[] = [];
+  selectedYear = new Date().getFullYear();
+
+  showMonthCalendar = false;
+  monthViewDate: Date = new Date();
+  calendarDialog: boolean = false;
+  showCalendarScreen: boolean = false;
+
+  selectedMonth: number = 0;
+  openCalendarDialog: boolean = false; // controls dialog visibility
+
+  dummyDate: Date = new Date();
+
+
+
+  constructor(private jobService: JobService, private cdr: ChangeDetectorRef, private loader: LoaderService) { }
 
   ngOnInit() {
     this.loadCalendarList();
     this.fetchMarkedDates();
+    for (let y = 2000; y <= 2050; y++) {
+      this.yearList.push(y);
+    }
   }
 
   loadCalendarList() {
@@ -74,59 +96,59 @@ export class CalendarComponent implements OnInit {
         }
       });
   }
-// showCalendarDialog = false;
+  // showCalendarDialog = false;
 
-// Open dialog
-openAddDialog(form?: any) {
-  this.resetForm(form);
-    this.submitted = false;     
-  this.showCalendarDialog = true;
+  // Open dialog
+  openAddDialog(form?: any) {
+    this.resetForm(form);
+    this.submitted = false;
+    this.showCalendarDialog = true;
     this.showCalendar = false;   // hide inline calendar initially
-}
-
-// Close dialog
-closeDialog() {
-  this.showCalendarDialog = false;
-  this.submitted = false;      
-  this.showCalendar = false;   // also hide calendar
-}
-
-toggleCalendar() {
-  this.showCalendar = !this.showCalendar; // toggle immediately
-  if (this.showCalendar) {
-    this.fetchMarkedDates(); // fetch marked dates, no need to wait for toggle
   }
-}
+
+  // Close dialog
+  closeDialog() {
+    this.showCalendarDialog = false;
+    this.submitted = false;
+    this.showCalendar = false;   // also hide calendar
+  }
+
+  toggleCalendar() {
+    this.showCalendar = !this.showCalendar; // toggle immediately
+    if (this.showCalendar) {
+      this.fetchMarkedDates(); // fetch marked dates, no need to wait for toggle
+    }
+  }
 
 
 
-fetchMarkedDates(callback?: () => void) {
-  this.loader.show();
-  this.jobService.GetAllCalendars()
-    .pipe(finalize(() => this.loader.hide()))
-    .subscribe({
-      next: (data: any[]) => {
-        this.markedDates = {};
-        if (Array.isArray(data)) {
-          data.forEach(entry => {
-            try {
-              const d = new Date(entry?.date);
-              if (!isNaN(d.getTime())) {
-                const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                this.markedDates[key] = entry?.flag ?? false;
+  fetchMarkedDates(callback?: () => void) {
+    this.loader.show();
+    this.jobService.GetAllCalendars()
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: (data: any[]) => {
+          this.markedDates = {};
+          if (Array.isArray(data)) {
+            data.forEach(entry => {
+              try {
+                const d = new Date(entry?.date);
+                if (!isNaN(d.getTime())) {
+                  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                  this.markedDates[key] = entry?.flag ?? false;
+                }
+              } catch (err) {
+                console.warn("Invalid entry skipped:", entry, err);
               }
-            } catch (err) {
-              console.warn("Invalid entry skipped:", entry, err);
-            }
-          });
-        }
-        console.log("Loaded marked dates:", this.markedDates);
-        this.cdr.detectChanges();
-        callback?.();
-      },
-      error: err => console.error("Failed to fetch calendars:", err)
-    });
-}
+            });
+          }
+          console.log("Loaded marked dates:", this.markedDates);
+          this.cdr.detectChanges();
+          callback?.();
+        },
+        error: err => console.error("Failed to fetch calendars:", err)
+      });
+  }
 
 
   // Called from HTML dateTemplate ng-template
@@ -139,34 +161,34 @@ fetchMarkedDates(callback?: () => void) {
   }
 
 
-onDateSelect(date: Date) {
-  this.selectedDate = date;
+  onDateSelect(date: Date) {
+    this.selectedDate = date;
 
-  // Format date as YYYY-MM-DD for input
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+    // Format date as YYYY-MM-DD for input
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
 
-  this.selectedDateStr = `${year}-${month}-${day}`; // <-- update input
+    this.selectedDateStr = `${year}-${month}-${day}`; // <-- update input
 
-  this.showCalendar = false; // hide calendar after selection
-}
-
-// Optional: if user types manually in input
-onInputChange(value: string) {
-  // Only parse if value is a valid date
-  const parsed = new Date(value);
-  if (!isNaN(parsed.getTime())) {
-    this.selectedDate = parsed;
+    this.showCalendar = false; // hide calendar after selection
   }
-}
+
+  // Optional: if user types manually in input
+  onInputChange(value: string) {
+    // Only parse if value is a valid date
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+      this.selectedDate = parsed;
+    }
+  }
   showValidation = false;
 
   submitCalendar() {
-    this.submitted = true; 
+    this.submitted = true;
 
     if (!this.selectedDateStr || !this.occasion || !this.calendarDescription) {
-      return; 
+      return;
     }
 
     if (this.isDateAlreadyUsed()) {
@@ -259,36 +281,103 @@ onInputChange(value: string) {
     });
   }
 
- resetForm(form?: any) {
-  this.selectedDate = null;
-  this.selectedDateStr = '';
-  this.occasion = '';
-  this.calendarDescription = '';
-  this.selectedType = 0;
+  resetForm(form?: any) {
+    this.selectedDate = null;
+    this.selectedDateStr = '';
+    this.occasion = '';
+    this.calendarDescription = '';
+    this.selectedType = 0;
 
-  if (form) {
-    form.resetForm(); // reset the form if passed
+    if (form) {
+      form.resetForm(); // reset the form if passed
+    }
   }
-}
 
-getDateClass(date: any): string {
-  const dateStr = `${date.year}-${String(date.month + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
-  const flag = this.markedDates[dateStr];
 
-  console.log(`Date: ${dateStr}, Flag: ${flag}`); 
+  isDateAlreadyUsed(): boolean {
+    if (!this.selectedDateStr) return false;
 
-  if (flag === 0) return 'overtime-day';
-  if (flag === 1) return 'doubletime-day';
-  return '';
-}
-
-isDateAlreadyUsed(): boolean {
-  if (!this.selectedDateStr) return false;
-
-  return this.calendarList.some(entry => entry.date === this.selectedDateStr);
-}
+    return this.calendarList.some(entry => entry.date === this.selectedDateStr);
+  }
 
   toggleSidebar() {
     this.isSidebarHidden = !this.isSidebarHidden;
   }
+
+  getHoverText(date: any): string {
+    const dateStr = `${date.year}-${String(date.month + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+
+    const entry = this.calendarList.find(x => x.date === dateStr);
+    if (!entry) return '';
+
+    return entry.flag === 0 ? 'Overtime' : 'Double Time';
+  }
+
+
+  getHoverTextFromString(dateStr: string): string {
+    if (!dateStr) return '';
+
+    // If markedDates not filled, attempt to ensure it's available
+    const flag = this.markedDates?.[dateStr];
+    if (flag === 0) return 'Overtime';
+    if (flag === 1) return 'Double Time';
+
+    return '';
+  }
+
+
+
+
+  backToMonths() {
+    this.showCalendarScreen = false;
+  }
+
+
+
+  getDateClass(date: any): string {
+
+    // 1️⃣ Convert to real JavaScript date
+    const jsDate = new Date(date.year, date.month, date.day);
+
+    // 2️⃣ If Sunday → always overtime
+    if (jsDate.getDay() === 0) {  // Sunday = 0
+      return "overtime-day";
+    }
+
+    // 3️⃣ For backend marked dates
+    const full = `${date.year}-${String(date.month + 1).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+    const entry = this.calendarList.find(x => x.date === full);
+
+    if (!entry) return "";
+    return entry.flag === 0 ? "overtime-day" : "doubletime-day";
+  }
+
+  openCalendarForDate(dateStr: string, event: Event) {
+    event.preventDefault();
+
+    const parts = dateStr.split("-");
+    this.selectedYear = Number(parts[0]);
+    this.selectedMonth = Number(parts[1]);
+
+    this.monthViewDate = new Date(this.selectedYear, this.selectedMonth - 1, 1);
+
+    this.calendarDialog = true;
+    this.showCalendarScreen = true;
+  }
+  loadYearCalendar() {
+    if (this.selectedMonth > 0) {
+      this.openCalendarMonth(this.selectedMonth);
+    }
+  }
+  openShowCalendarDialog() {
+    this.openCalendarDialog = true;
+    this.showCalendarScreen = false; // show months initially
+  }
+  openCalendarMonth(month: number) {
+    this.selectedMonth = month;
+    this.monthViewDate = new Date(this.selectedYear, month - 1, 1);
+    this.dummyDate = new Date(this.selectedYear, month - 1, 1);
+    this.showCalendarScreen = true;
+  }
+  
 }

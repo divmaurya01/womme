@@ -1326,22 +1326,58 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
 
 
 
+    // [HttpGet]
+    // public IActionResult GetActiveJobTransactions()
+    // {
+    //     // Step 1: group and compute latest + total hours
+    //     var grouped = _context.JobTranMst
+    //         .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
+    //         .Select(g => new
+    //         {
+    //             Latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault(),
+    //             TotalHours = g.Sum(x => x.a_hrs ?? 0)
+    //         })
+    //         .ToList(); // run on SQL first, then filter in memory safely
+
+    //     // Step 2: filter only active jobs (status 1 or 2)
+    //     var latestJobs = grouped
+    //         .Where(x => x.Latest != null && (x.Latest.status == "1" || x.Latest.status == "2"))
+    //         .Select(x => new
+    //         {
+    //             x.Latest!.job,
+    //             x.Latest.SerialNo,
+    //             x.Latest.oper_num,
+    //             x.Latest.wc,
+    //             x.Latest.start_time,
+    //             x.Latest.end_time,
+    //             x.Latest.status,
+    //             x.Latest.emp_num,
+    //             x.Latest.machine_id,
+    //             a_hrs = x.TotalHours
+    //         })
+    //         .ToList();
+
+    //     return Ok(new { data = latestJobs, total = latestJobs.Count });
+    // }
+
     [HttpGet]
     public IActionResult GetActiveJobTransactions()
     {
-        // Step 1: group and compute latest + total hours
-        var grouped = _context.JobTranMst
+        
+            var latestByJob = _context.JobTranMst
+            .Where(j => j.trans_type == "D")
             .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
             .Select(g => new
             {
                 Latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault(),
-                TotalHours = g.Sum(x => x.a_hrs ?? 0)
+                TotalHours = g.Where(x => x.status == "1").Sum(x => x.a_hrs ?? 0)
             })
-            .ToList(); // run on SQL first, then filter in memory safely
+            .ToList();
 
-        // Step 2: filter only active jobs (status 1 or 2)
-        var latestJobs = grouped
-            .Where(x => x.Latest != null && (x.Latest.status == "1" || x.Latest.status == "2"))
+        // STEP 2 — Keep only rows where latest status is 1 or 2
+            var activeJobs = latestByJob
+            .Where(x => x.Latest != null && 
+                    (x.Latest.status == "1" || x.Latest.status == "2" ))
             .Select(x => new
             {
                 x.Latest!.job,
@@ -1353,12 +1389,15 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                 x.Latest.status,
                 x.Latest.emp_num,
                 x.Latest.machine_id,
-                a_hrs = x.TotalHours
+                total_a_hrs = x.TotalHours
             })
             .ToList();
 
-        return Ok(new { data = latestJobs, total = latestJobs.Count });
+        return Ok(new { data = activeJobs, total = activeJobs.Count });
     }
+
+
+
 
     [HttpGet]
     public async Task<IActionResult> CanStartJob(string job, string serialNo, int operNum)
@@ -1846,70 +1885,43 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
 
 
 
-    // [HttpGet]
-    // public IActionResult GetActiveQCJobs()
-    // {
-    //     // Step 1: filter first by status and trans_type
-    //     var activeQcJobs = _context.JobTranMst
-    //         .Where(j => (j.status == "1" || j.status == "2") && j.trans_type == "M")
-    //         .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
-    //         .Select(g => new
-    //         {
-    //             Latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault()
-    //         })
-    //         .ToList();
-
-    //     // Step 2: project response with required fields
-    //     var result = activeQcJobs
-    //         .Where(x => x.Latest != null)
-    //         .Select(x => new
-    //         {
-    //             x.Latest!.job,
-    //             x.Latest.SerialNo,
-    //             x.Latest.oper_num,
-    //             x.Latest.wc,
-    //             x.Latest.start_time,
-    //             x.Latest.end_time,
-    //             x.Latest.status,
-    //             x.Latest.emp_num,
-    //             item = x.Latest.item,          // replaced machine_id
-    //             qcgroup = x.Latest.qcgroup,    // new field
-    //             a_hrs = x.Latest.a_hrs         // just the a_hrs, no sum
-    //         })
-    //         .ToList();
-
-    //     return Ok(new { data = result, total = result.Count });
-    // }
-
-    [HttpGet]
+   [HttpGet]
     public IActionResult GetActiveQCJobs()
     {
-        var activeQcJobs = _context.JobTranMst
-            .Where(j => j.trans_type == "M")  // only filter by trans_type
+        // STEP 1 — Get last row (any status) per job
+        var latestByJob = _context.JobTranMst
+            .Where(j => j.trans_type == "M")
             .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
-            .AsEnumerable() // switch to LINQ-to-Objects
-            .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault()) // now safe
-            .Where(x => x != null && (x.status == "1" || x.status == "2")) // latest status filter
+            .Select(g => new
+            {
+                Latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault(),
+                TotalHours = g.Where(x => x.status == "1").Sum(x => x.a_hrs ?? 0)
+            })
             .ToList();
 
-        var result = activeQcJobs.Select(x => new
-        {
-            x!.trans_num,
-            x.job,
-            x.SerialNo,
-            x.oper_num,
-            x.wc,
-            x.start_time,
-            x.end_time,
-            x.status,
-            x.emp_num,
-            item = x.item,
-            qcgroup = x.qcgroup,
-            remark = x.Remark,
-            a_hrs = x.a_hrs
-        }).ToList();
+        // STEP 2 — Keep only groups where the REAL latest status is 1 or 2
+        var active = latestByJob
+            .Where(x => x.Latest != null && (x.Latest.status == "1" || x.Latest.status == "2"))
+            .Select(x => new
+            {
+                x.Latest!.job,
+                x.Latest.trans_num,
+                x.Latest.Remark,
+                x.Latest.SerialNo,
+                x.Latest.oper_num,
+                x.Latest.wc,
+                x.Latest.start_time,
+                x.Latest.end_time,
+                x.Latest.status,
+                x.Latest.emp_num,
+                item = x.Latest.item,
+                qcgroup = x.Latest.qcgroup,
+                latest_a_hrs = x.Latest.a_hrs,
+                total_a_hrs = x.TotalHours
+            })
+            .ToList();
 
-        return Ok(new { data = result, total = result.Count });
+        return Ok(new { data = active, total = active.Count });
     }
 
 
@@ -1969,7 +1981,8 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                     empNum = j.emp_num,
                     qtyReleased = jobMaster?.qty_released ?? 0,
                     item = jobMaster?.item ?? "",
-                    remark = j.Remark ?? "",   
+                    remark = j.Remark ?? "", 
+                    total_a_hrs = j.a_hrs,  
                     //  endTime = DateTime.Now // current time for UI
                 });
             }

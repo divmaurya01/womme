@@ -73,9 +73,9 @@
                 <td>{{ job.emp_num }}</td>
                 <td>{{ job.machine_id }}</td>
                 <td><span class="job-timer-card">
-  {{ formatTime(job.displaySeconds ?? job.elapsedSeconds ?? (job.a_hrs * 3600)) }}
-</span>
-</td>
+                  {{ formatTime(job.elapsedSeconds) }}
+                </span>
+                </td>
                 <td>
                   <!-- Job not started / no status -->
                   <i *ngIf="!job.status" 
@@ -326,12 +326,8 @@
                         </button>
 
                       </div>
-                    </ng-template>
-            </p-dialog>
-
-              
-
-
+              </ng-template>
+      </p-dialog>
 
 
     </section>

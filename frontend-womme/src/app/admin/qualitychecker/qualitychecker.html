@@ -161,38 +161,33 @@
                     <!-- Action column with Pause/Resume & Complete -->
                     <td>
                     <i 
-  [class.pi]="true"
-  [class.action-circle]="true"
-  [class.pi-play]="job.isPaused"
-  [class.pi-pause]="!job.isPaused"
-  title="{{ job.isPaused ? 'Resume' : 'Pause' }}"
-  (click)="togglePauseResume(job)">
-</i>
+                      [class.pi]="true"
+                      [class.action-circle]="true"
+                      [class.pi-play]="job.isPaused"
+                      [class.pi-pause]="!job.isPaused"
+                      title="{{ job.isPaused ? 'Resume' : 'Pause' }}"
+                      (click)="togglePauseResume(job)">
+                    </i>
 
                       <i class="pi pi-stop action-circle stop" title="Complete" (click)="completeQCJob(job)"></i>
                     </td>
 
                     <!-- NCR column -->
-                    <td>
-                      <input type="text" [value]="job.ncr" disabled class="form-control form-control-sm"/>
+                    <td> 
+                      <input type="text" [value]="job.ncr || ''" disabled class="form-control form-control-sm" /> 
                     </td>
-
+                    
                     <!-- Remark column -->
-                    <!-- Remark column -->
-<td>
-  <input
-    type="text"
-    [(ngModel)]="job.remark"
-    placeholder="Enter remark"
-    class="form-control form-control-sm"
-    [readonly]="job.isRemarkSaved"
-    (keyup.enter)="saveQCRemark(job)"
-  />
- 
-</td>
-
-
-
+                    <td>
+                      <input
+                        type="text"
+                        [(ngModel)]="job.remark"
+                        placeholder="Enter remark"
+                        (keyup.enter)="saveQCRemark(job)"
+                        class="form-control form-control-sm"
+                        title="Enter remark and click outside to save"
+                      />             
+                    </td>
                     <!-- Report column -->
                     <td>
                       <i class="pi pi-file-pdf" style="cursor:pointer;" (click)="viewReport(job)" title="Report"></i>
@@ -236,8 +231,7 @@
                     <th style="background-color: #ECC391; padding: 10px;">Employee</th>
                     <th style="background-color: #ECC391; padding: 10px;">Qty</th>
                     <th style="background-color: #ECC391; padding: 10px;">Total Hours</th> 
-                    <th style="background-color: #ECC391;padding: 10px;">Scrapped</th>
-  
+                    <th style="background-color: #ECC391;padding: 10px;">Scrapped</th>  
                     <th style="background-color: #ECC391; padding: 10px;">Remark</th>
                     <th style="background-color: #ECC391; padding: 10px;">Report</th>
                   </tr>
@@ -253,38 +247,37 @@
                     <td>{{ job.item }}</td>
                     <td>{{ job.empNum }}</td>
                     <td>{{ job.qtyReleased }}</td>
-                   <td>{{ job.timerHours }}</td>  
-
+                    <td>{{ formatTime(job.total_a_hrs) }}</td>
                    <td>
-  <input
-    type="checkbox"
-    [(ngModel)]="job.isScrapped"
-    (change)="markAsScrapped(job)"
-    [disabled]="job.isScrapped"
-  />
-</td>
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="job.isScrapped"
+                      (change)="markAsScrapped(job)"
+                      [disabled]="job.isScrapped"
+                    />
+                  </td>
 
                     
                     <td>                     
-  <input
-    type="text"
-    [(ngModel)]="job.remark"
-    placeholder="Enter remark"
-     (keyup.enter)="saveQCRemark(job)"
-    class="form-control form-control-sm"
-    title="Enter remark and click outside to save"
-  />
-</td> 
+                      <input
+                        type="text"
+                        [(ngModel)]="job.remark"
+                        placeholder="Enter remark"
+                        (keyup.enter)="saveQCRemark(job)"
+                        class="form-control form-control-sm"
+                        title="Enter remark and click outside to save"
+                      />
+                    </td> 
                     
                    <td>
-  <!-- Report Download Icon -->
-  <i
-    class="pi pi-file-pdf"
-    style="cursor:pointer; color: #1976d2;"
-    (click)="viewReport(job)"
-    title="Download Report">
-  </i>
-</td>
+                    <!-- Report Download Icon -->
+                    <i
+                      class="pi pi-file-pdf"
+                      style="cursor:pointer; color: #1976d2;"
+                      (click)="viewReport(job)"
+                      title="Download Report">
+                    </i>
+                  </td>
 
                   </tr>
                 </ng-template>

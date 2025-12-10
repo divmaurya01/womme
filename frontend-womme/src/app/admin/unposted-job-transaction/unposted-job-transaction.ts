@@ -413,12 +413,12 @@ export class UnpostedJobTransaction implements OnInit {
     this.jobService.CompleteJob(payload).subscribe({
       next: (res: any) => {
                 Swal.fire({
-  icon: 'success',
-  title: 'Success',
-  text: 'Job has been completed successfully!',
-  showConfirmButton: false,
-  timer: 3000
-});
+              icon: 'success',
+              title: 'Success',
+              text: 'Job has been completed successfully!',
+              showConfirmButton: false,
+              timer: 3000
+            });
 
         clearInterval(this.activeTimers[selectedRow.serialNo]);
         this.searchTerm = '';  
@@ -456,34 +456,24 @@ export class UnpostedJobTransaction implements OnInit {
       if (match) {
         const key = job.serialNo;
 
-        // a_hrs IS ALREADY IN SECONDS — DO NOT MULTIPLY BY 3600
-        let accumulated = Number(match.a_hrs ?? 0);
+        // Convert backend hours to seconds
+        const accumulated = Math.floor((match.total_a_hrs ?? 0) * 3600);
 
         let elapsedSeconds = accumulated;
 
-        if (match.status === "1") {
-          // Backend time is already UTC — DO NOT append 'Z'
-          const startTime = match.start_time ? new Date(match.start_time) : null;
-          const nowUtc = new Date();
+        // Only start timer if job is running
+        if (match.status === "1" && match.start_time) {
+          const startTime = new Date(match.start_time);
+          elapsedSeconds += Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
 
-          const extra = startTime
-            ? Math.floor((nowUtc.getTime() - startTime.getTime()) / 1000)
-            : 0;
-
-          elapsedSeconds = accumulated + extra;
-
-          // Always restart fresh timer
           if (this.activeTimers[key]) clearInterval(this.activeTimers[key]);
 
           this.activeTimers[key] = setInterval(() => {
             const target = this.transactions.find(x => x.serialNo === key);
             if (target) target.elapsedSeconds += 1;
           }, 1000);
-
         } else {
-          // STOPPED OR PAUSED → Show accumulated only
-          elapsedSeconds = accumulated;
-
+          // paused or completed
           if (this.activeTimers[key]) {
             clearInterval(this.activeTimers[key]);
             delete this.activeTimers[key];

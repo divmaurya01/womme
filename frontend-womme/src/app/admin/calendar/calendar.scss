@@ -8,7 +8,7 @@
   justify-content: center;
   border-radius: 50%;
 }
-
+ 
 .doubletime-day {
   background-color: rgb(179, 251, 157) !important;
   color: white !important;
@@ -26,12 +26,12 @@
 }
 .table-wrapper {
   padding: 1rem;
-
+ 
   .table-header {
     display: flex;
     justify-content: space-between;
     margin-bottom: 1rem;
-
+ 
     .custom-assign-btn {
       background-color: #ECC391;
       color: black;
@@ -39,53 +39,135 @@
       cursor: pointer;
       padding: 12px 16px;
       border-radius: 0;
-      font-weight: 500; 
+      font-weight: 500;
       transition: all 0.2s ease-in-out;
       margin-top: 2rem;
     }
-
+ 
     .custom-assign-btn:hover {
       background-color: #e5b870;
     }
   }
 }
-
+ 
 .custom-dialog {
   .form-label {
     font-weight: 500;
   }
-
+ 
   .text-danger {
     font-size: 12px;
     margin-top: 4px;
   }
 }
-
+ 
 ::ng-deep .custom-dialog .p-dialog-header-close {
   background-color: red !important;
   color: white !important;
   border-radius: 50% !important;
 }
-
+ 
 ::ng-deep .custom-dialog .custom-submit-btn {
-  background-color: #5CB78E !important; 
-  color: white !important; 
+  background-color: #5CB78E !important;
+  color: white !important;
   border: none !important;
   box-shadow: none !important;
   padding: 12px 16px;
   border-radius: 0;
   font-weight: 500;
 }
-
+ 
 ::ng-deep .custom-dialog .custom-submit-btn:hover {
   background-color: #4aa879 !important;
 }
-
+ 
 .custom-p-table th,
 .custom-p-table td {
   text-align: center;
   vertical-align: middle;
   font-size: 0.85rem;
 }
-
-/* Calendar Marked Dates */
+.calendar-date-link {
+  color: #1e1e1e;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-block;
+  padding: 2px 4px;
+}
+ 
+.calendar-date-link:hover {
+  color: #084a8a;
+  text-decoration: none;
+}
+.month-box {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+ 
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+ 
+.month-btn {
+  background: #f3f3f3;
+  border: none;
+  padding: 6px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+ 
+.month-btn:hover {
+  background: #ffe0b3;
+  font-weight: bold;
+}
+ 
+/* Legend */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+ 
+.legend-item {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  border-radius: 4px;
+}
+ 
+ 
+ 
+/* Highlighting dates */
+ 
+    .custom-show-btn {
+      background-color: #ECC391;
+      color: black;
+      border: none;
+      cursor: pointer;
+      padding: 12px 16px;
+      border-radius: 0;
+      font-weight: 500;
+      transition: all 0.2s ease-in-out;
+      margin-top: 2rem;
+    }
+    .month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+ 
+.month-btn {
+  padding: 8px;
+  border: none;
+  background: #f1f1f1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+ 
+.month-btn:hover {
+  background: #e0e0e0;
+}
+ 

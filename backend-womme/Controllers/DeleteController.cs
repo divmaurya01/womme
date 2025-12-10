@@ -130,15 +130,15 @@ public class DeleteController : ControllerBase
     
                 // ✅ Step 2: Delete from Syteline jobtran_mst table
                 bool deletedInSyteline = false;
-                try
-                {
-                    deletedInSyteline = await _sytelineService.DeleteJobFromSytelineAsync(dto.jobNumber, dto.serialNo,dto.oper_num);
-                }
-                catch (Exception sytelineEx)
-                {
-                    // Optional: you can log this or return partial success
-                    Console.WriteLine($"[DeleteJobTransaction] Failed to delete in Syteline: {sytelineEx.Message}");
-                }
+                // try
+                // {
+                //     deletedInSyteline = await _sytelineService.DeleteJobFromSytelineAsync(dto.jobNumber, dto.serialNo,dto.oper_num);
+                // }
+                // catch (Exception sytelineEx)
+                // {
+                //     // Optional: you can log this or return partial success
+                //     Console.WriteLine($"[DeleteJobTransaction] Failed to delete in Syteline: {sytelineEx.Message}");
+                // }
     
                 return Ok(new
                 {

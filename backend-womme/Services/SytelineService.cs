@@ -10,118 +10,247 @@ namespace WommeAPI.Services
     {
         private readonly string _connectionString;
 
-        public SytelineService(IConfiguration configuration)
+    public SytelineService(IConfiguration configuration)
         {
             // Ensure connection string exists, otherwise throw meaningful error
             _connectionString = configuration.GetConnectionString("SytelineConnection")
                 ?? throw new InvalidOperationException("Syteline connection string is missing in appsettings.json.");
         }
 
-        /// <summary>
-        /// Inserts a JobTranMst record into Syteline's jobtran_mst table.
-        /// Uses a dummy employee if emp_num is null or empty to avoid FK errors.
-        /// Supports QC jobs by setting trans_type = "M" and assigning a qcgroup.
-        /// </summary>
-public async Task InsertJobTranAsync(JobTranMst jobTran, JobTranMst? firstStartRow = null, bool isQCJob = false)
-{
-    if (jobTran == null)
-        throw new ArgumentNullException(nameof(jobTran));
-
-    try
+       
+    public async Task InsertJobTranAsync(JobTranMst jobTran, JobTranMst? firstStartRow = null, bool isQCJob = false)
     {
+        if (jobTran == null)
+            throw new ArgumentNullException(nameof(jobTran));
+
+        try
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                using (var transaction = conn.BeginTransaction())
+                {
+                    // --------------------------------------------------------
+                    // STEP 1: DELETE Duplicates from Syteline BEFORE INSERT
+                    // --------------------------------------------------------
+                    string deleteSql = @"
+                        DELETE FROM jobtran_mst
+                        WHERE job = @job
+                        AND oper_num = @oper_num
+                        AND wc = @wc
+                        AND Uf_MHSerialNo = @SerialNo
+                        AND Uf_MHStatus = '1'";  
+                    
+                    using (SqlCommand deleteCmd = new SqlCommand(deleteSql, conn, transaction))
+                    {
+                        deleteCmd.Parameters.AddWithValue("@job", jobTran.job);
+                        deleteCmd.Parameters.AddWithValue("@oper_num", jobTran.oper_num);
+                        deleteCmd.Parameters.AddWithValue("@wc", jobTran.wc ?? (object)DBNull.Value);
+                        deleteCmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
+
+                        await deleteCmd.ExecuteNonQueryAsync();
+                    }
+
+                    // --------------------------------------------------------
+                    // STEP 2: INSERT NEW ROW TO SYTELINE (existing code)
+                    // --------------------------------------------------------
+
+                    int startTimeInt = (int)jobTran.start_time.Value.TimeOfDay.TotalSeconds;
+                    int elapsedSeconds = (int)Math.Round((jobTran.a_hrs ?? 0) * 3600);
+                    int endTimeInt = (startTimeInt + elapsedSeconds) % 86400;
+
+                    string insertSql = @"
+                        INSERT INTO jobtran_mst
+                        (site_ref, job, suffix, oper_num, next_oper, trans_type,
+                        trans_date, start_time, end_time, a_hrs, a_$, qty_complete, qty_moved, qty_scrapped,
+                        emp_num, wc, whse, shift, pay_rate, job_rate, issue_parent, complete_op,
+                        close_job, posted, Uf_MHSerialNo, Uf_MHStatus, Uf_QCGroup,
+                        CreatedBy, UpdatedBy, Uf_MovedOKToStock)
+                        VALUES
+                        (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
+                        @trans_date, @start_time, @end_time, @a_hrs, @a_dollar, @qty_complete, @qty_moved, @qty_scrapped,
+                        @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate, @issue_parent, @complete_op,
+                        @close_job, @posted, @SerialNo, @Status, @QCGroup,
+                        @CreatedBy, @UpdatedBy, @MovedOKToStock)";
+
+                    using (SqlCommand cmd = new SqlCommand(insertSql, conn, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@site_ref", jobTran.site_ref ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@job", jobTran.job);
+                        cmd.Parameters.AddWithValue("@suffix", jobTran.suffix);
+                        cmd.Parameters.AddWithValue("@oper_num", jobTran.oper_num);
+                        cmd.Parameters.AddWithValue("@next_oper", jobTran.next_oper ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@trans_type", jobTran.trans_type ?? "D");
+                        cmd.Parameters.AddWithValue("@trans_date", jobTran.trans_date ?? DateTime.Now);
+
+                        cmd.Parameters.AddWithValue("@start_time", startTimeInt);
+                        cmd.Parameters.AddWithValue("@end_time", endTimeInt);
+
+                        cmd.Parameters.AddWithValue("@a_hrs", jobTran.a_hrs ?? 0);
+                        cmd.Parameters.AddWithValue("@a_dollar", jobTran.a_dollar ?? 0);
+
+                        cmd.Parameters.AddWithValue("@qty_complete", jobTran.qty_complete ?? 0);
+                        cmd.Parameters.AddWithValue("@qty_moved", jobTran.qty_moved ?? 0);
+                        cmd.Parameters.AddWithValue("@qty_scrapped", jobTran.qty_scrapped ?? 0);
+
+                        cmd.Parameters.AddWithValue("@emp_num", jobTran.emp_num);
+                        cmd.Parameters.AddWithValue("@wc", jobTran.wc ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@whse", jobTran.whse ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@shift", jobTran.shift ?? (object)DBNull.Value);
+
+                        cmd.Parameters.AddWithValue("@pay_rate", jobTran.pay_rate ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@job_rate", jobTran.job_rate ?? (object)DBNull.Value);
+
+                        cmd.Parameters.AddWithValue("@issue_parent", jobTran.issue_parent ?? 0);
+                        cmd.Parameters.AddWithValue("@complete_op", jobTran.complete_op ?? 0);
+                        cmd.Parameters.AddWithValue("@close_job", jobTran.close_job ?? 0);
+                        cmd.Parameters.AddWithValue("@posted", jobTran.posted ?? 0);
+
+                        cmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
+                        cmd.Parameters.AddWithValue("@Status", "1");
+                        cmd.Parameters.AddWithValue("@QCGroup", isQCJob ? jobTran.qcgroup : (object)DBNull.Value);
+
+                        cmd.Parameters.AddWithValue("@CreatedBy", jobTran.CreatedBy ?? "system");
+                        cmd.Parameters.AddWithValue("@UpdatedBy", jobTran.UpdatedBy ?? "system");
+                        cmd.Parameters.AddWithValue("@MovedOKToStock", jobTran.Uf_MovedOKToStock ?? 0);
+
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+
+                    await transaction.CommitAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Syteline Insert ERROR: " + ex.Message);
+        }
+    }
+
+
+
+    public async Task InsertJobTransBulkAsync(IEnumerable<JobTranMst> jobTransList)
+    {
+        if (jobTransList == null || !jobTransList.Any())
+            return;
+
+        // Assumption: all items in jobTransList share same job, oper_num, wc, SerialNo
+        var first = jobTransList.First();
+        string job = first.job;
+        int oper = first.oper_num ?? 0;
+        string wc = first.wc;
+        string serial = first.SerialNo;
+
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             await conn.OpenAsync();
             using (var transaction = conn.BeginTransaction())
             {
-                // -----------------------------
-                // ALWAYS INSERT → NEVER CHECK
-                // -----------------------------
+                // DELETE existing Syteline entries for that job/oper/wc/serial
+                string deleteSql = @"
+                    DELETE FROM jobtran_mst
+                    WHERE job = @job 
+                    AND oper_num = @oper_num
+                    AND wc = @wc
+                    AND Uf_MHSerialNo = @SerialNo
+                    AND Uf_MHStatus = '1'";  
 
-                // Convert start_time to seconds-of-day
-                int startTimeInt = (int)jobTran.start_time.Value.TimeOfDay.TotalSeconds;
-
-                // Convert a_hrs to seconds
-                int elapsedSeconds = (int)Math.Round((jobTran.a_hrs ?? 0) * 3600);
-
-                // Calculate end_time safely (0–86399 range)
-                int endTimeInt = (startTimeInt + elapsedSeconds) % 86400;
-
-                // --------------------------------------
-                // ALWAYS INSERT INTO JOBTRAN_MST
-                // --------------------------------------
-                string insertSql = @"
-                INSERT INTO jobtran_mst
-                (site_ref, job, suffix, oper_num, next_oper, trans_type,
-                 trans_date, start_time, end_time, a_hrs, a_$, qty_complete, qty_moved, qty_scrapped,
-                 emp_num, wc, whse, shift, pay_rate, job_rate, issue_parent, complete_op,
-                 close_job, posted, Uf_MHSerialNo, Uf_MHStatus, Uf_QCGroup,
-                 CreatedBy, UpdatedBy, Uf_MovedOKToStock)
-                VALUES
-                (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
-                 @trans_date, @start_time, @end_time, @a_hrs, @a_dollar, @qty_complete, @qty_moved, @qty_scrapped,
-                 @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate, @issue_parent, @complete_op,
-                 @close_job, @posted, @SerialNo, @Status, @QCGroup,
-                 @CreatedBy, @UpdatedBy, @MovedOKToStock)";
-
-                using (SqlCommand cmd = new SqlCommand(insertSql, conn, transaction))
+                using (var del = new SqlCommand(deleteSql, conn, transaction))
                 {
-                    cmd.Parameters.AddWithValue("@site_ref", jobTran.site_ref ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@job", jobTran.job);
-                    cmd.Parameters.AddWithValue("@suffix", jobTran.suffix);
-                    cmd.Parameters.AddWithValue("@oper_num", jobTran.oper_num);
-                    cmd.Parameters.AddWithValue("@next_oper", jobTran.next_oper ?? (object)DBNull.Value);
+                    del.Parameters.AddWithValue("@job", job);
+                    del.Parameters.AddWithValue("@oper_num", oper);
+                    del.Parameters.AddWithValue("@wc", (object)wc ?? DBNull.Value);
+                    del.Parameters.AddWithValue("@SerialNo", serial);
+                    await del.ExecuteNonQueryAsync();
+                }
 
-                    cmd.Parameters.AddWithValue("@trans_type", jobTran.trans_type ?? "D");
-                    cmd.Parameters.AddWithValue("@trans_date", jobTran.trans_date ?? DateTime.Now);
+                // Now insert all rows
+                foreach (var jt in jobTransList)
+                {
+                    int startTimeInt = (int)jt.start_time.Value.TimeOfDay.TotalSeconds;
+                    int elapsedSeconds = (int)Math.Round((jt.a_hrs ?? 0m) * 3600);
+                    int endTimeInt = (startTimeInt + elapsedSeconds) % 86400;
 
-                    cmd.Parameters.AddWithValue("@start_time", startTimeInt);
-                    cmd.Parameters.AddWithValue("@end_time", endTimeInt);
+                    string insertSql = @"
+                    INSERT INTO jobtran_mst
+                    (site_ref, job, suffix, oper_num, next_oper, trans_type,
+                        trans_date, start_time, end_time, a_hrs, a_$, qty_complete, qty_moved, qty_scrapped,
+                        emp_num, wc, whse, shift, pay_rate, job_rate, issue_parent, complete_op,
+                        close_job, posted, Uf_MHSerialNo, Uf_MHStatus, Uf_QCGroup,
+                        CreatedBy, UpdatedBy, Uf_MovedOKToStock)
+                    VALUES
+                    (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
+                        @trans_date, @start_time, @end_time, @a_hrs, @a_dollar, @qty_complete, @qty_moved, @qty_scrapped,
+                        @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate, @issue_parent, @complete_op,
+                        @close_job, @posted, @SerialNo, @Status, @QCGroup,
+                        @CreatedBy, @UpdatedBy, @MovedOKToStock)";
 
-                    cmd.Parameters.AddWithValue("@a_hrs", jobTran.a_hrs ?? 0);
-                    cmd.Parameters.AddWithValue("@a_dollar", jobTran.a_dollar ?? 0);
+                    using (var ins = new SqlCommand(insertSql, conn, transaction))
+                    {
+                        ins.Parameters.AddWithValue("@site_ref", "DEFAULT");
+                        ins.Parameters.AddWithValue("@job", jt.job);
+                        ins.Parameters.AddWithValue("@suffix", jt.suffix);
+                        ins.Parameters.AddWithValue("@oper_num", jt.oper_num);
+                        ins.Parameters.AddWithValue("@next_oper", jt.next_oper ?? (object)DBNull.Value);
+                        ins.Parameters.AddWithValue("@trans_type", jt.trans_type ?? "D");
+                        ins.Parameters.AddWithValue("@trans_date", jt.trans_date ?? DateTime.Now);
 
-                    cmd.Parameters.AddWithValue("@qty_complete", jobTran.qty_complete ?? 0);
-                    cmd.Parameters.AddWithValue("@qty_moved", jobTran.qty_moved ?? 0);
-                    cmd.Parameters.AddWithValue("@qty_scrapped", jobTran.qty_scrapped ?? 0);
+                        ins.Parameters.AddWithValue("@start_time", startTimeInt);
+                        ins.Parameters.AddWithValue("@end_time", endTimeInt);
 
-                    cmd.Parameters.AddWithValue("@emp_num", jobTran.emp_num);
-                    cmd.Parameters.AddWithValue("@wc", jobTran.wc ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@whse", jobTran.whse ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@shift", jobTran.shift ?? (object)DBNull.Value);
+                        ins.Parameters.AddWithValue("@a_hrs", jt.a_hrs ?? 0m);
+                        ins.Parameters.AddWithValue("@a_dollar", jt.a_dollar ?? 0m);
 
-                    cmd.Parameters.AddWithValue("@pay_rate", jobTran.pay_rate ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@job_rate", jobTran.job_rate ?? (object)DBNull.Value);
+                        ins.Parameters.AddWithValue("@qty_complete", jt.qty_complete ?? 0);
+                        ins.Parameters.AddWithValue("@qty_moved", jt.qty_moved ?? 0);
+                        ins.Parameters.AddWithValue("@qty_scrapped", jt.qty_scrapped ?? 0);
 
-                    cmd.Parameters.AddWithValue("@issue_parent", jobTran.issue_parent ?? 0);
-                    cmd.Parameters.AddWithValue("@complete_op", jobTran.complete_op ?? 0);
-                    cmd.Parameters.AddWithValue("@close_job", jobTran.close_job ?? 0);
-                    cmd.Parameters.AddWithValue("@posted", jobTran.posted ?? 0);
+                        ins.Parameters.AddWithValue("@emp_num", "   1234");
+                        ins.Parameters.AddWithValue("@wc", jt.wc ?? (object)DBNull.Value);
+                        ins.Parameters.AddWithValue("@whse", jt.whse ?? (object)DBNull.Value);
+                        ins.Parameters.AddWithValue("@shift", jt.shift ?? (object)DBNull.Value);
 
-                    cmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
-                    cmd.Parameters.AddWithValue("@Status", jobTran.status);
-                    cmd.Parameters.AddWithValue("@QCGroup", isQCJob ? jobTran.qcgroup : (object)DBNull.Value);
+                        ins.Parameters.AddWithValue("@pay_rate", jt.pay_rate ?? (object)DBNull.Value);
+                        ins.Parameters.AddWithValue("@job_rate", jt.job_rate ?? (object)DBNull.Value);
 
-                    cmd.Parameters.AddWithValue("@CreatedBy", jobTran.CreatedBy ?? "system");
-                    cmd.Parameters.AddWithValue("@UpdatedBy", jobTran.UpdatedBy ?? "system");
-                    cmd.Parameters.AddWithValue("@MovedOKToStock", jobTran.Uf_MovedOKToStock ?? 0);
+                        ins.Parameters.AddWithValue("@issue_parent", jt.issue_parent ?? 0);
+                        ins.Parameters.AddWithValue("@complete_op", jt.complete_op ?? 0);
+                        ins.Parameters.AddWithValue("@close_job", jt.close_job ?? 0);
+                        ins.Parameters.AddWithValue("@posted", jt.posted ?? 0);
 
-                    await cmd.ExecuteNonQueryAsync();
+                        ins.Parameters.AddWithValue("@SerialNo", jt.SerialNo);
+                        ins.Parameters.AddWithValue("@Status", "1"); // always status = 1 for running entries
+                        ins.Parameters.AddWithValue("@QCGroup", jt.qcgroup ?? (object)DBNull.Value);
+
+                        ins.Parameters.AddWithValue("@CreatedBy", "   1234");
+                        ins.Parameters.AddWithValue("@UpdatedBy", "   1234");
+                        ins.Parameters.AddWithValue("@MovedOKToStock", jt.Uf_MovedOKToStock ?? 0);
+
+                        // DEBUG: Print SQL as raw text with real values
+                        // Console.WriteLine("---- INSERT QUERY ----");
+                        // Console.WriteLine(insertSql);
+                        // Console.WriteLine("Parameters:");
+                        // foreach (SqlParameter p in ins.Parameters)
+                        // {
+                        //     Console.WriteLine($"{p.ParameterName} = {p.Value}");
+                        // }
+                        // Console.WriteLine("----------------------");
+
+
+                        await ins.ExecuteNonQueryAsync();
+                    }
                 }
 
                 await transaction.CommitAsync();
             }
         }
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine("Syteline Insert ERROR: " + ex.Message);
-    }
-}
 
 
 
-public async Task<bool> UpdateJobTranInSytelineAsync(UpdateJobLogDto dto)
+
+    public async Task<bool> UpdateJobTranInSytelineAsync(UpdateJobLogDto dto)
 {
     if (dto == null)
         throw new ArgumentNullException(nameof(dto));
@@ -383,9 +512,7 @@ VALUES
 }
 
 
-
-
-        public async Task InsertEmployeeAsync(EmployeeMst employee)
+    public async Task InsertEmployeeAsync(EmployeeMst employee)
         {
             if (employee == null)
                 throw new ArgumentNullException(nameof(employee));
@@ -455,7 +582,7 @@ VALUES
         }
 
 
-        public async Task<bool> InsertMachineWcAsync(WomWcMachine machineWc)
+    public async Task<bool> InsertMachineWcAsync(WomWcMachine machineWc)
         {
             try
             {
@@ -495,7 +622,7 @@ VALUES
             }
         }
 
-        public async Task<bool> InsertEmployeeWcAsync(WomWcEmployee employeeWc)
+    public async Task<bool> InsertEmployeeWcAsync(WomWcEmployee employeeWc)
         {
             try
             {
@@ -537,390 +664,65 @@ VALUES
             }
         }
 
-       public async Task<bool> DeleteJobFromSytelineAsync(string jobNumber, string serialNo, int oper_num)
-{
-    if (string.IsNullOrWhiteSpace(jobNumber))
-        throw new ArgumentException("Job number cannot be null or empty.", nameof(jobNumber));
-
-    if (string.IsNullOrWhiteSpace(serialNo))
-        throw new ArgumentException("Serial number cannot be null or empty.", nameof(serialNo));
-
-    if (oper_num <= 0)
-        throw new ArgumentException("Operation number must be greater than zero.", nameof(oper_num));
-
-    try
+    public async Task<bool> DeleteJobFromSytelineAsync(string jobNumber, string serialNo, int oper_num)
     {
-        using (var connection = new SqlConnection(_connectionString))
+        if (string.IsNullOrWhiteSpace(jobNumber))
+            throw new ArgumentException("Job number cannot be null or empty.", nameof(jobNumber));
+
+        if (string.IsNullOrWhiteSpace(serialNo))
+            throw new ArgumentException("Serial number cannot be null or empty.", nameof(serialNo));
+
+        if (oper_num <= 0)
+            throw new ArgumentException("Operation number must be greater than zero.", nameof(oper_num));
+
+        try
         {
-            await connection.OpenAsync();
-
-            string sql = @"
-                DELETE FROM jobtran_mst
-                WHERE job = @JobNumber
-                  AND Uf_MHSerialNo = @SerialNo
-                  AND oper_num = @OperNum
-            ";
-
-            using (var command = new SqlCommand(sql, connection))
+            using (var connection = new SqlConnection(_connectionString))
             {
-                command.Parameters.AddWithValue("@JobNumber", jobNumber);
-                command.Parameters.AddWithValue("@SerialNo", serialNo);
-                command.Parameters.AddWithValue("@OperNum", oper_num);
+                await connection.OpenAsync();
 
-                int rowsAffected = await command.ExecuteNonQueryAsync();
+                string sql = @"
+                    DELETE FROM jobtran_mst
+                    WHERE job = @JobNumber
+                    AND Uf_MHSerialNo = @SerialNo
+                    AND oper_num = @OperNum
+                ";
 
-                if (rowsAffected > 0)
+                using (var command = new SqlCommand(sql, connection))
                 {
-                    Console.WriteLine($"[SytelineService] Deleted {rowsAffected} jobtran_mst record(s) for Job={jobNumber}, SerialNo={serialNo}, OperNum={oper_num}");
-                    return true;
-                }
-                else
-                {
-                    Console.WriteLine($"[SytelineService] No matching jobtran_mst record found for Job={jobNumber}, SerialNo={serialNo}, OperNum={oper_num}");
-                    return false;
+                    command.Parameters.AddWithValue("@JobNumber", jobNumber);
+                    command.Parameters.AddWithValue("@SerialNo", serialNo);
+                    command.Parameters.AddWithValue("@OperNum", oper_num);
+
+                    int rowsAffected = await command.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        Console.WriteLine($"[SytelineService] Deleted {rowsAffected} jobtran_mst record(s) for Job={jobNumber}, SerialNo={serialNo}, OperNum={oper_num}");
+                        return true;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[SytelineService] No matching jobtran_mst record found for Job={jobNumber}, SerialNo={serialNo}, OperNum={oper_num}");
+                        return false;
+                    }
                 }
             }
         }
+        catch (SqlException sqlEx)
+        {
+            Console.WriteLine($"[SytelineService] SQL Delete failed: {sqlEx.Message}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SytelineService] Delete failed: {ex.Message}");
+            throw;
+        }
     }
-    catch (SqlException sqlEx)
-    {
-        Console.WriteLine($"[SytelineService] SQL Delete failed: {sqlEx.Message}");
-        throw;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[SytelineService] Delete failed: {ex.Message}");
-        throw;
-    }
-}
 
-//updated by mahima
-// public async Task InsertPauseJobTranAsync(JobTranMst lastJob)
-// {
-//     if (lastJob == null)
-//         throw new ArgumentNullException(nameof(lastJob));
- 
-//     try
-//     {
-//         using (SqlConnection conn = new SqlConnection(_connectionString))
-//         {
-//             await conn.OpenAsync();
- 
-//             // 1️⃣ Check if a pause row already exists for this job/oper/wc/serial
-//             string checkSql = @"
-//                 SELECT TOP 1 trans_num, a_hrs, a_$, start_time, end_time
-//                 FROM jobtran_mst
-//                 WHERE job = @Job
-//                   AND oper_num = @OperNum
-//                   AND wc = @WC
-//                   AND Uf_MHSerialNo = @SerialNo
-//                   AND Uf_MHStatus = '2'
-//                 ORDER BY trans_date DESC";
- 
-//             using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
-//             {
-//                 checkCmd.Parameters.AddWithValue("@Job", lastJob.job ?? (object)DBNull.Value);
-//                 checkCmd.Parameters.AddWithValue("@OperNum", lastJob.oper_num);
-//                 checkCmd.Parameters.AddWithValue("@WC", lastJob.wc ?? (object)DBNull.Value);
-//                 checkCmd.Parameters.AddWithValue("@SerialNo", lastJob.SerialNo ?? (object)DBNull.Value);
- 
-//                 using (var reader = await checkCmd.ExecuteReaderAsync())
-//                 {
-//                     if (await reader.ReadAsync())
-//                     {
-//                         // 2️⃣ Pause row exists — update it
-//                         var existingTransNum = reader.GetDecimal(0);
-//                         var existingAHrs = reader.IsDBNull(1) ? 0m : reader.GetDecimal(1);
-//                         var existingADollar = reader.IsDBNull(2) ? 0m : reader.GetDecimal(2);
-//                         int existingStart = reader.IsDBNull(3) ? 0 : reader.GetInt32(3);
- 
-//                         reader.Close();
- 
-//                         // Compute new totals
-//                         var now = DateTime.UtcNow;
-//                         DateTime startTime = lastJob.start_time ?? lastJob.trans_date ?? now;
-//                         decimal addedHours = (decimal)((lastJob.end_time ?? now) - startTime).TotalHours;
- 
-//                         decimal totalAHrs = existingAHrs + addedHours;
-//                         decimal totalADollar = existingADollar + ((lastJob.job_rate ?? 0m) * addedHours);
- 
-//                         int endTimeInt = ((lastJob.end_time ?? now).ToLocalTime().Hour * 100) +
-//                                          ((lastJob.end_time ?? now).ToLocalTime().Minute);
- 
-//                         string updateSql = @"
-//                             UPDATE jobtran_mst
-//                             SET a_hrs = @AHrs,
-//                                 a_$ = @ADollar,
-//                                 end_time = @EndTime,
-//                                 UpdatedBy = @UpdatedBy,
-//                                 recorddate = GETDATE()
-//                             WHERE trans_num = @TransNum";
- 
-//                         using (SqlCommand updateCmd = new SqlCommand(updateSql, conn))
-//                         {
-//                             updateCmd.Parameters.AddWithValue("@AHrs", totalAHrs);
-//                             updateCmd.Parameters.AddWithValue("@ADollar", totalADollar);
-//                             updateCmd.Parameters.AddWithValue("@EndTime", endTimeInt);
-//                             updateCmd.Parameters.AddWithValue("@UpdatedBy", lastJob.UpdatedBy ?? "system");
-//                             updateCmd.Parameters.AddWithValue("@TransNum", existingTransNum);
- 
-//                             await updateCmd.ExecuteNonQueryAsync();
-//                         }
- 
-//                         return; // ✅ updated existing pause row, exit method
-//                     }
-//                 }
-//             }
- 
-//             // 3️⃣ Pause row does not exist — insert first pause row
-//             string insertSql = @"
-//                 INSERT INTO jobtran_mst
-//                 (site_ref, job, suffix, oper_num, next_oper, trans_type,
-//                  trans_date, start_time, end_time, a_hrs, a_$,
-//                  qty_complete, qty_moved, qty_scrapped,
-//                  emp_num, wc, whse, shift, pay_rate, job_rate,
-//                  issue_parent, complete_op, close_job, posted,
-//                  Uf_MHSerialNo, Uf_MHStatus, Uf_QCGroup,
-//                  CreatedBy, UpdatedBy, Uf_MovedOKToStock)
-//                 VALUES
-//                 (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
-//                  @trans_date, @start_time, @end_time, @a_hrs, @a_dollar,
-//                  @qty_complete, @qty_moved, @qty_scrapped,
-//                  @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate,
-//                  @issue_parent, @complete_op, @close_job, @posted,
-//                  @Uf_MHSerialNo, @Uf_MHStatus, @Uf_QCGroup,
-//                  @CreatedBy, @UpdatedBy, @Uf_MovedOKToStock)";
- 
-//             using (SqlCommand cmd = new SqlCommand(insertSql, conn))
-//             {
-// DateTime stLocal = (lastJob.start_time ?? DateTime.UtcNow).ToLocalTime();
-//                 DateTime etLocal = (lastJob.end_time ?? DateTime.UtcNow).ToLocalTime();
- 
-//                 int startInt = stLocal.Hour * 100 + stLocal.Minute;
-// int endInt = etLocal.Hour * 100 + etLocal.Minute;
 
- 
-//                 cmd.Parameters.AddWithValue("@site_ref", lastJob.site_ref ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job", lastJob.job ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@suffix", lastJob.suffix);
-//                 cmd.Parameters.AddWithValue("@oper_num", lastJob.oper_num);
-//                 cmd.Parameters.AddWithValue("@next_oper", lastJob.next_oper ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@trans_type", lastJob.trans_type ?? "D");
-//                 cmd.Parameters.AddWithValue("@trans_date", (lastJob.trans_date ?? DateTime.UtcNow).ToLocalTime());
-//                 cmd.Parameters.AddWithValue("@start_time", startInt);
-//                 cmd.Parameters.AddWithValue("@end_time", endInt);
-//                 cmd.Parameters.AddWithValue("@a_hrs", lastJob.a_hrs ?? 0);
-//                 cmd.Parameters.AddWithValue("@a_dollar", lastJob.a_dollar ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_complete", lastJob.qty_complete ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_moved", lastJob.qty_moved ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_scrapped", lastJob.qty_scrapped ?? 0);
-//                 cmd.Parameters.AddWithValue("@emp_num", lastJob.emp_num ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@wc", lastJob.wc ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@whse", lastJob.whse ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@shift", lastJob.shift ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@pay_rate", lastJob.pay_rate ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job_rate", lastJob.job_rate ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@issue_parent", lastJob.issue_parent ?? 0);
-//                 cmd.Parameters.AddWithValue("@complete_op", lastJob.complete_op ?? 0);
-//                 cmd.Parameters.AddWithValue("@close_job", lastJob.close_job ?? 0);
-//                 cmd.Parameters.AddWithValue("@posted", lastJob.posted ?? 0);
-//                 cmd.Parameters.AddWithValue("@Uf_MHSerialNo", lastJob.SerialNo ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@Uf_MHStatus", "2"); // Pause row status
-//                 cmd.Parameters.AddWithValue("@Uf_QCGroup", lastJob.qcgroup ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@CreatedBy", lastJob.UpdatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@UpdatedBy", lastJob.UpdatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@Uf_MovedOKToStock", lastJob.Uf_MovedOKToStock ?? 0);
- 
-//                 await cmd.ExecuteNonQueryAsync();
-//             }
-//         }
-//     }
-//     catch (Exception ex)
-//     {
-//         Console.WriteLine($"[InsertPauseJobTranAsync] Error: {ex.Message}");
-//         throw;
-//     }
-// }   
-//-----------------------corrected with transnum but didturned stat tme and end time ------------------------
-// public async Task<string> InsertPauseJobTranAsync(JobTranMst lastJob)
-// {
-//     if (lastJob == null)
-//         throw new ArgumentNullException(nameof(lastJob));
-
-//     try
-//     {
-//         using (SqlConnection conn = new SqlConnection(_connectionString))
-//         {
-//             await conn.OpenAsync();
-//             string sytelineTransNum = "0";
-
-//             // Console.WriteLine("[DEBUG] Opened Syteline connection.");
-
-//             // 1️⃣ Check for existing pause row
-//             string checkSql = @"
-//                 SELECT TOP 1 trans_num, a_hrs, a_$, start_time, end_time
-//                 FROM jobtran_mst
-//                 WHERE job = @Job
-//                   AND oper_num = @OperNum
-//                   AND wc = @WC
-//                   AND Uf_MHSerialNo = @SerialNo
-//                   AND Uf_MHStatus = '2'
-//                 ORDER BY trans_date DESC";
-
-//             using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
-//             {
-//                 checkCmd.Parameters.AddWithValue("@Job", lastJob.job ?? (object)DBNull.Value);
-//                 checkCmd.Parameters.AddWithValue("@OperNum", lastJob.oper_num);
-//                 checkCmd.Parameters.AddWithValue("@WC", lastJob.wc ?? (object)DBNull.Value);
-//                 checkCmd.Parameters.AddWithValue("@SerialNo", lastJob.SerialNo ?? (object)DBNull.Value);
-
-//                 using (var reader = await checkCmd.ExecuteReaderAsync())
-//                 {
-//                     if (await reader.ReadAsync())
-//                     {
-//                         sytelineTransNum = reader.GetDecimal(0).ToString();
-//                         decimal existingAHrs = reader.IsDBNull(1) ? 0m : reader.GetDecimal(1);
-//                         decimal existingADollar = reader.IsDBNull(2) ? 0m : reader.GetDecimal(2);
-
-//                         // Console.WriteLine($"[DEBUG] Existing pause row found: trans_num={sytelineTransNum}, a_hrs={existingAHrs}, a_dollar={existingADollar}");
-
-//                         reader.Close();
-
-//                         // Calculate new totals
-//                         DateTime now = DateTime.UtcNow;
-//                         DateTime startTime = lastJob.start_time ?? lastJob.trans_date ?? now;
-//                         decimal addedHours = (decimal)((lastJob.end_time ?? now) - startTime).TotalHours;
-//                         decimal totalHours = existingAHrs + addedHours;
-//                         decimal totalAmount = existingADollar + ((lastJob.job_rate ?? 0m) * addedHours);
-
-//                         int endTimeInt = (lastJob.end_time ?? now).ToLocalTime().Hour * 100 +
-//                                          (lastJob.end_time ?? now).ToLocalTime().Minute;
-
-//                         string updateSql = @"
-//                             UPDATE jobtran_mst
-//                             SET a_hrs = @AHrs,
-//                                 a_$ = @ADollar,
-//                                 end_time = @EndTime,
-//                                 UpdatedBy = @UpdatedBy,
-//                                 recorddate = GETDATE()
-//                             WHERE trans_num = @TransNum";
-
-//                         using (SqlCommand updateCmd = new SqlCommand(updateSql, conn))
-//                         {
-//                             updateCmd.Parameters.AddWithValue("@AHrs", totalHours);
-//                             updateCmd.Parameters.AddWithValue("@ADollar", totalAmount);
-//                             updateCmd.Parameters.AddWithValue("@EndTime", endTimeInt);
-//                             updateCmd.Parameters.AddWithValue("@UpdatedBy", lastJob.UpdatedBy ?? "system");
-//                             updateCmd.Parameters.AddWithValue("@TransNum", Convert.ToDecimal(sytelineTransNum));
-
-//                             int rows = await updateCmd.ExecuteNonQueryAsync();
-//                             // Console.WriteLine($"[DEBUG] Updated existing Syteline pause row, affected rows={rows}");
-//                         }
-
-//                         return sytelineTransNum;
-//                     }
-//                 }
-//             }
-
-//             // 2️⃣ Insert new pause row
-//             // Console.WriteLine("[DEBUG] No existing pause row found. Inserting new row.");
-
-//             string insertSql = @"
-//                 INSERT INTO jobtran_mst
-//                 (site_ref, job, suffix, oper_num, next_oper, trans_type,
-//                  trans_date, start_time, end_time, a_hrs, a_$,
-//                  qty_complete, qty_moved, qty_scrapped,
-//                  emp_num, wc, whse, shift, pay_rate, job_rate,
-//                  issue_parent, complete_op, close_job, posted,
-//                  Uf_MHSerialNo, Uf_MHStatus, Uf_QCGroup,
-//                  CreatedBy, UpdatedBy, Uf_MovedOKToStock)
-//                 VALUES
-//                 (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
-//                  @trans_date, @start_time, @end_time, @a_hrs, @a_dollar,
-//                  @qty_complete, @qty_moved, @qty_scrapped,
-//                  @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate,
-//                  @issue_parent, @complete_op, @close_job, @posted,
-//                  @Uf_MHSerialNo, @Uf_MHStatus, @Uf_QCGroup,
-//                  @CreatedBy, @UpdatedBy, @Uf_MovedOKToStock)";
-
-//             using (SqlCommand cmd = new SqlCommand(insertSql, conn))
-//             {
-//                 DateTime stLocal = (lastJob.start_time ?? DateTime.UtcNow).ToLocalTime();
-//                 DateTime etLocal = (lastJob.end_time ?? DateTime.UtcNow).ToLocalTime();
-//                 int startInt = stLocal.Hour * 100 + stLocal.Minute;
-//                 int endInt = etLocal.Hour * 100 + etLocal.Minute;
-
-//                 cmd.Parameters.AddWithValue("@site_ref", lastJob.site_ref ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job", lastJob.job ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@suffix", lastJob.suffix);
-//                 cmd.Parameters.AddWithValue("@oper_num", lastJob.oper_num);
-//                 cmd.Parameters.AddWithValue("@next_oper", lastJob.next_oper ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@trans_type", lastJob.trans_type ?? "D");
-//                 cmd.Parameters.AddWithValue("@trans_date", (lastJob.trans_date ?? DateTime.UtcNow).ToLocalTime());
-//                 cmd.Parameters.AddWithValue("@start_time", startInt);
-//                 cmd.Parameters.AddWithValue("@end_time", endInt);
-//                 cmd.Parameters.AddWithValue("@a_hrs", lastJob.a_hrs ?? 0);
-//                 cmd.Parameters.AddWithValue("@a_dollar", lastJob.a_dollar ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_complete", lastJob.qty_complete ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_moved", lastJob.qty_moved ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_scrapped", lastJob.qty_scrapped ?? 0);
-//                 cmd.Parameters.AddWithValue("@emp_num", lastJob.emp_num ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@wc", lastJob.wc ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@whse", lastJob.whse ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@shift", lastJob.shift ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@pay_rate", lastJob.pay_rate ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job_rate", lastJob.job_rate ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@issue_parent", lastJob.issue_parent ?? 0);
-//                 cmd.Parameters.AddWithValue("@complete_op", lastJob.complete_op ?? 0);
-//                 cmd.Parameters.AddWithValue("@close_job", lastJob.close_job ?? 0);
-//                 cmd.Parameters.AddWithValue("@posted", lastJob.posted ?? 0);
-//                 cmd.Parameters.AddWithValue("@Uf_MHSerialNo", lastJob.SerialNo ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@Uf_MHStatus", "2");
-//                 cmd.Parameters.AddWithValue("@Uf_QCGroup", lastJob.qcgroup ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@CreatedBy", lastJob.UpdatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@UpdatedBy", lastJob.UpdatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@Uf_MovedOKToStock", lastJob.Uf_MovedOKToStock ?? 0);
-
-//                 await cmd.ExecuteNonQueryAsync();
-//                 // Console.WriteLine("[DEBUG] Inserted new Syteline pause row, now fetching trans_num...");
-
-//                 // Fetch inserted row's trans_num
-//                 string fetchSql = @"
-//                     SELECT TOP 1 trans_num
-//                     FROM jobtran_mst
-//                     WHERE job = @Job
-//                       AND oper_num = @OperNum
-//                       AND wc = @WC
-//                       AND Uf_MHSerialNo = @SerialNo
-//                       AND Uf_MHStatus = '2'
-//                     ORDER BY trans_date DESC";
-
-//                 using (SqlCommand fetchCmd = new SqlCommand(fetchSql, conn))
-//                 {
-//                     fetchCmd.Parameters.AddWithValue("@Job", lastJob.job ?? (object)DBNull.Value);
-//                     fetchCmd.Parameters.AddWithValue("@OperNum", lastJob.oper_num);
-//                     fetchCmd.Parameters.AddWithValue("@WC", lastJob.wc ?? (object)DBNull.Value);
-//                     fetchCmd.Parameters.AddWithValue("@SerialNo", lastJob.SerialNo ?? (object)DBNull.Value);
-
-//                     var fetchedTransNum = await fetchCmd.ExecuteScalarAsync();
-//                     if (fetchedTransNum != null)
-//                         sytelineTransNum = fetchedTransNum.ToString();
-
-//                     // Console.WriteLine($"[DEBUG] Fetched Syteline trans_num: {sytelineTransNum}");
-//                 }
-//             }
-
-//             return sytelineTransNum;
-//         }
-//     }
-//     catch (Exception ex)
-//     {
-//         Console.WriteLine($"[InsertPauseJobTranAsync] Error: {ex.Message}");
-//         throw;
-//     }
-// }
-//------------------------------------------------------------------------------------------
-public async Task<string> InsertPauseJobTranAsync(JobTranMst lastJob)
+    public async Task<string> InsertPauseJobTranAsync(JobTranMst lastJob)
 {
     if (lastJob == null)
         throw new ArgumentNullException(nameof(lastJob));
@@ -1102,386 +904,8 @@ public async Task<string> InsertPauseJobTranAsync(JobTranMst lastJob)
     }
 }
 
-//===========================================================================================
 
-
-
-
-//update end by mahima 
-
-// public async Task InsertPauseJobTranAsync(JobTranMst lastJob)
-// {
-//     if (lastJob == null)
-//         throw new ArgumentNullException(nameof(lastJob));
-
-//     // Convert DateTime → seconds (required by Syteline)
-//     int ToSeconds(DateTime dt) => (int)dt.TimeOfDay.TotalSeconds;
-
-//     // Normalize time if Kind = Utc
-//     DateTime Normalize(DateTime dt) =>
-//         dt.Kind == DateTimeKind.Utc ? dt.ToLocalTime() : dt;
-
-//     try
-//     {
-//         using (SqlConnection conn = new SqlConnection(_connectionString))
-//         {
-//             await conn.OpenAsync();
-
-//             // --------------------------------------------------------
-//             // 1️⃣ Check if a PAUSE row already exists (Uf_MHStatus = 2)
-//             // --------------------------------------------------------
-//             string checkSql = @"
-//                 SELECT TOP 1 
-//                     trans_num, a_hrs, a_$, start_time, end_time
-//                 FROM jobtran_mst
-//                 WHERE job = @Job
-//                   AND oper_num = @OperNum
-//                   AND wc = @WC
-//                   AND SerialNo = @SerialNo
-//                   AND Uf_MHStatus = '2'
-//                 ORDER BY trans_date DESC";
-
-//             decimal? existingTransNum = null;
-//             decimal existingAHrs = 0;
-//             decimal existingADollar = 0;
-//             DateTime? existingStart = null;
-
-//             using (SqlCommand check = new SqlCommand(checkSql, conn))
-//             {
-//                 check.Parameters.AddWithValue("@Job", lastJob.job ?? (object)DBNull.Value);
-//                 check.Parameters.AddWithValue("@OperNum", lastJob.oper_num ?? (object)DBNull.Value);
-//                 check.Parameters.AddWithValue("@WC", lastJob.wc ?? (object)DBNull.Value);
-//                 check.Parameters.AddWithValue("@SerialNo", lastJob.SerialNo ?? (object)DBNull.Value);
-
-//                 using (var rdr = await check.ExecuteReaderAsync())
-//                 {
-//                     if (await rdr.ReadAsync())
-//                     {
-//                         existingTransNum = rdr.GetDecimal(0);
-//                         existingAHrs = rdr.IsDBNull(1) ? 0 : rdr.GetDecimal(1);
-//                         existingADollar = rdr.IsDBNull(2) ? 0 : rdr.GetDecimal(2);
-
-//                         // Convert stored start_time which is in seconds → DateTime
-//                         if (!rdr.IsDBNull(3))
-//                         {
-//                             int s = rdr.GetInt32(3);
-//                             existingStart = DateTime.Today.AddSeconds(s);
-//                         }
-//                     }
-//                 }
-//             }
-
-//             // --------------------------------------------------------
-//             // PREPARE NEW START/END IN LOCAL & SYTELINE FORMAT
-//             // --------------------------------------------------------
-//             DateTime startLocal = Normalize(lastJob.start_time ?? DateTime.Now);
-//             DateTime endLocal = Normalize(lastJob.end_time ?? DateTime.Now);
-
-//             int startSeconds = ToSeconds(startLocal);
-//             int endSeconds = ToSeconds(endLocal);
-
-//             DateTime transDate = startLocal.Date;
-
-//             decimal addedHours = (decimal)(endLocal - startLocal).TotalHours;
-//             if (addedHours < 0) addedHours = 0;
-
-//             // ====================================================================
-//             // 2️⃣ UPDATE EXISTING PAUSE ROW (if exists)
-//             // ====================================================================
-//             if (existingTransNum.HasValue)
-//             {
-//                 decimal newTotalHours = existingAHrs + addedHours;
-//                 decimal newTotalDollar = existingADollar + ((lastJob.job_rate ?? 0) * addedHours);
-
-//                 string updateSql = @"
-//                     UPDATE jobtran_mst
-//                     SET 
-//                         a_hrs = @AHrs,
-//                         a_$ = @ADollar,
-//                         end_time = @EndTime,
-//                         UpdatedBy = @UpdatedBy,
-//                         recorddate = GETDATE()
-//                     WHERE trans_num = @TransNum";
-
-//                 using (SqlCommand upd = new SqlCommand(updateSql, conn))
-//                 {
-//                     upd.Parameters.AddWithValue("@AHrs", newTotalHours);
-//                     upd.Parameters.AddWithValue("@ADollar", newTotalDollar);
-//                     upd.Parameters.AddWithValue("@EndTime", endSeconds);
-//                     upd.Parameters.AddWithValue("@UpdatedBy", lastJob.UpdatedBy ?? "system");
-//                     upd.Parameters.AddWithValue("@TransNum", existingTransNum);
-
-//                     await upd.ExecuteNonQueryAsync();
-//                 }
-
-//                 return;
-//             }
-
-//             // ====================================================================
-//             // 3️⃣ INSERT NEW PAUSE ROW
-//             // ====================================================================
-//             string insertSql = @"
-//                 INSERT INTO jobtran_mst
-//                 (site_ref, job, suffix, oper_num, next_oper, trans_type,
-//                  trans_date, start_time, end_time, a_hrs, a_$,
-//                  qty_complete, qty_moved, qty_scrapped,
-//                  emp_num, wc, whse, shift, pay_rate, job_rate,
-//                  issue_parent, complete_op, close_job, posted,
-//                  SerialNo, Uf_MHStatus, qcgroup,
-//                  CreatedBy, UpdatedBy, Uf_MovedOKToStock)
-//                 VALUES
-//                 (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
-//                  @trans_date, @start_time, @end_time, @a_hrs, @a_dollar,
-//                  @qty_complete, @qty_moved, @qty_scrapped,
-//                  @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate,
-//                  @issue_parent, @complete_op, @close_job, @posted,
-//                  @SerialNo, @Uf_MHStatus, @qcgroup,
-//                  @CreatedBy, @UpdatedBy, @Uf_MovedOKToStock)";
-
-//             using (SqlCommand cmd = new SqlCommand(insertSql, conn))
-//             {
-//                 cmd.Parameters.AddWithValue("@site_ref", lastJob.site_ref ?? "MAIN");
-//                 cmd.Parameters.AddWithValue("@job", lastJob.job ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@suffix", lastJob.suffix ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@oper_num", lastJob.oper_num ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@next_oper", lastJob.next_oper ?? (object)DBNull.Value);
-
-//                 cmd.Parameters.AddWithValue("@trans_type", "D");
-//                 cmd.Parameters.AddWithValue("@trans_date", transDate);
-
-//                 cmd.Parameters.AddWithValue("@start_time", startSeconds);
-//                 cmd.Parameters.AddWithValue("@end_time", endSeconds);
-
-//                 cmd.Parameters.AddWithValue("@a_hrs", addedHours);
-//                 cmd.Parameters.AddWithValue("@a_dollar", (lastJob.job_rate ?? 0) * addedHours);
-
-//                 cmd.Parameters.AddWithValue("@qty_complete", lastJob.qty_complete ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_moved", lastJob.qty_moved ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_scrapped", lastJob.qty_scrapped ?? 0);
-
-//                 cmd.Parameters.AddWithValue("@emp_num", lastJob.emp_num ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@wc", lastJob.wc ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@whse", lastJob.whse ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@shift", lastJob.shift ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@pay_rate", lastJob.pay_rate ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job_rate", lastJob.job_rate ?? (object)DBNull.Value);
-
-//                 cmd.Parameters.AddWithValue("@issue_parent", lastJob.issue_parent ?? 0);
-//                 cmd.Parameters.AddWithValue("@complete_op", lastJob.complete_op ?? 0);
-//                 cmd.Parameters.AddWithValue("@close_job", lastJob.close_job ?? 0);
-//                 cmd.Parameters.AddWithValue("@posted", lastJob.posted ?? 0);
-
-//                 cmd.Parameters.AddWithValue("@SerialNo", lastJob.SerialNo ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@Uf_MHStatus", "2"); // PAUSE
-//                 cmd.Parameters.AddWithValue("@qcgroup", lastJob.qcgroup ?? (object)DBNull.Value);
-
-//                 cmd.Parameters.AddWithValue("@CreatedBy", lastJob.UpdatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@UpdatedBy", lastJob.UpdatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@Uf_MovedOKToStock", lastJob.Uf_MovedOKToStock ?? 0);
-
-//                 await cmd.ExecuteNonQueryAsync();
-//             }
-//         }
-//     }
-//     catch (Exception ex)
-//     {
-//         Console.WriteLine($"[InsertPauseJobTranAsync] ERROR → {ex.Message}");
-//         throw;
-//     }
-// }
-//--------------complwt job syteline --------------
-
-    // public async Task<string> InsertCompletedJobAsync(JobTranMst jobRow)
-    // {
-    //     if (jobRow == null) throw new ArgumentNullException(nameof(jobRow));
-
-    //     using (SqlConnection conn = new SqlConnection(_connectionString))
-    //     {
-    //         await conn.OpenAsync();
-    //         string transNum = "0";
-
-    //         // Optional: check if a completed row already exists in Syteline
-    //         string checkSql = @"
-    //             SELECT TOP 1 trans_num
-    //             FROM jobtran_mst
-    //             WHERE job = @Job
-    //             AND oper_num = @OperNum
-    //             AND wc = @WC
-    //             AND Uf_MHSerialNo = @SerialNo
-    //             AND Uf_MHStatus = '3'
-    //             ORDER BY trans_date DESC";
-
-    //         using (var cmd = new SqlCommand(checkSql, conn))
-    //         {
-    //             cmd.Parameters.AddWithValue("@Job", jobRow.job ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@OperNum", jobRow.oper_num);
-    //             cmd.Parameters.AddWithValue("@WC", jobRow.wc ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@SerialNo", jobRow.SerialNo ?? (object)DBNull.Value);
-
-    //             var result = await cmd.ExecuteScalarAsync();
-    //             if (result != null)
-    //             {
-    //                 transNum = result.ToString();
-    //                 return transNum; // Already exists
-    //             }
-    //         }
-
-    //         // Insert new completed job row in Syteline
-    //         string insertSql = @"
-    //             INSERT INTO jobtran_mst
-    //             (site_ref, job, suffix, oper_num, next_oper, trans_type,
-    //             trans_date, start_time, end_time, a_hrs, a_$,
-    //             emp_num, wc, shift, pay_rate, job_rate,
-    //             Uf_MHSerialNo, Uf_MHStatus, CreatedBy, UpdatedBy)
-    //             VALUES
-    //             (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
-    //             @trans_date, @start_time, @end_time, @a_hrs, @a_dollar,
-    //             @emp_num, @wc, @shift, @pay_rate, @job_rate,
-    //             @Uf_MHSerialNo, @Uf_MHStatus, @CreatedBy, @UpdatedBy);
-    //             SELECT CAST(SCOPE_IDENTITY() AS DECIMAL(18,0));";
-
-    //         using (var cmd = new SqlCommand(insertSql, conn))
-    //         {
-    //             DateTime stLocal = (jobRow.start_time ?? DateTime.UtcNow).ToLocalTime();
-    //             DateTime etLocal = (jobRow.end_time ?? DateTime.UtcNow).ToLocalTime();
-    //             int startSeconds = (stLocal.Hour * 3600) + (stLocal.Minute * 60) + stLocal.Second;
-    //             int endSeconds = (etLocal.Hour * 3600) + (etLocal.Minute * 60) + etLocal.Second;
-
-
-    //             cmd.Parameters.AddWithValue("@site_ref", jobRow.site_ref ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@job", jobRow.job ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@suffix", jobRow.suffix);
-    //             cmd.Parameters.AddWithValue("@oper_num", jobRow.oper_num);
-    //             cmd.Parameters.AddWithValue("@next_oper", jobRow.next_oper ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@trans_type", jobRow.trans_type ?? "R");
-    //             cmd.Parameters.AddWithValue("@trans_date", (jobRow.trans_date ?? DateTime.UtcNow).ToLocalTime());
-    //             cmd.Parameters.AddWithValue("@start_time", startSeconds);
-    //             cmd.Parameters.AddWithValue("@end_time", endSeconds);
-    //             cmd.Parameters.AddWithValue("@a_hrs", jobRow.a_hrs ?? 0);
-    //             cmd.Parameters.AddWithValue("@a_dollar", jobRow.a_dollar ?? 0);
-    //             cmd.Parameters.AddWithValue("@emp_num", jobRow.emp_num ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@wc", jobRow.wc ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@shift", jobRow.shift ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@pay_rate", jobRow.pay_rate ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@job_rate", jobRow.job_rate ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@Uf_MHSerialNo", jobRow.SerialNo ?? (object)DBNull.Value);
-    //             cmd.Parameters.AddWithValue("@Uf_MHStatus", "3"); // Completed
-    //             cmd.Parameters.AddWithValue("@CreatedBy", jobRow.CreatedBy ?? "system");
-    //             cmd.Parameters.AddWithValue("@UpdatedBy", jobRow.UpdatedBy ?? "system");
-
-    //             var insertedTransNum = await cmd.ExecuteScalarAsync();
-    //             if (insertedTransNum != null) transNum = insertedTransNum.ToString();
-    //         }
-
-    //         return transNum;
-    //     }
-    // }
-
-// public async Task<string> InsertCompletedJobAsync(JobTranMst jobRow)
-// {
-//     if (jobRow == null) throw new ArgumentNullException(nameof(jobRow));
-
-//     string transNum = "0";
-
-//     try
-//     {
-//         using (SqlConnection conn = new SqlConnection(_connectionString))
-//         {
-//             await conn.OpenAsync();
-
-//             // --- Check if completed job already exists ---
-//             string checkSql = @"
-//                 SELECT TOP 1 trans_num
-//                 FROM jobtran_mst
-//                 WHERE job = @Job
-//                 AND oper_num = @OperNum
-//                 AND wc = @WC
-//                 AND Uf_MHSerialNo = @SerialNo
-//                 AND Uf_MHStatus = '3'
-//                 ORDER BY trans_date DESC";
-
-//             using (var cmd = new SqlCommand(checkSql, conn))
-//             {
-//                 cmd.Parameters.AddWithValue("@Job", jobRow.job ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@OperNum", jobRow.oper_num);
-//                 cmd.Parameters.AddWithValue("@WC", jobRow.wc ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@SerialNo", jobRow.SerialNo ?? (object)DBNull.Value);
-
-//                 var result = await cmd.ExecuteScalarAsync();
-//                 if (result != null)
-//                 {
-//                     transNum = result.ToString();
-//                     Console.WriteLine($"[DEBUG] Completed job already exists: TransNum = {transNum}");
-//                     return transNum; // Already exists
-//                 }
-//             }
-
-//             // --- Convert start/end times to seconds ---
-//             DateTime stLocal = (jobRow.start_time ?? DateTime.UtcNow).ToLocalTime();
-//             DateTime etLocal = (jobRow.end_time ?? DateTime.UtcNow).ToLocalTime();
-
-//             int startSeconds = (stLocal.Hour * 3600) + (stLocal.Minute * 60) + stLocal.Second;
-//             int endSeconds = (etLocal.Hour * 3600) + (etLocal.Minute * 60) + etLocal.Second;
-
-//             // Debug output
-//             Console.WriteLine($"[DEBUG] StartTime: {stLocal} -> {startSeconds} seconds");
-//             Console.WriteLine($"[DEBUG] EndTime: {etLocal} -> {endSeconds} seconds");
-
-//             // --- Insert new completed job row ---
-//             string insertSql = @"
-//                 INSERT INTO jobtran_mst
-//                 (site_ref, job, suffix, oper_num, next_oper, trans_type,
-//                 trans_date, start_time, end_time, a_hrs, a_$,
-//                 emp_num, wc, shift, pay_rate, job_rate,
-//                 Uf_MHSerialNo, Uf_MHStatus, CreatedBy, UpdatedBy)
-//                 VALUES
-//                 (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
-//                 @trans_date, @start_time, @end_time, @a_hrs, @a_dollar,
-//                 @emp_num, @wc, @shift, @pay_rate, @job_rate,
-//                 @Uf_MHSerialNo, @Uf_MHStatus, @CreatedBy, @UpdatedBy);
-//                 SELECT CAST(SCOPE_IDENTITY() AS DECIMAL(18,0));";
-
-//             using (var cmd = new SqlCommand(insertSql, conn))
-//             {
-//                 cmd.Parameters.AddWithValue("@site_ref", jobRow.site_ref ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job", jobRow.job ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@suffix", jobRow.suffix);
-//                 cmd.Parameters.AddWithValue("@oper_num", jobRow.oper_num);
-//                 cmd.Parameters.AddWithValue("@next_oper", jobRow.next_oper ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@trans_type", jobRow.trans_type ?? "R");
-//                 cmd.Parameters.AddWithValue("@trans_date", (jobRow.trans_date ?? DateTime.UtcNow).ToLocalTime());
-//                 cmd.Parameters.AddWithValue("@start_time", startSeconds);
-//                 cmd.Parameters.AddWithValue("@end_time", endSeconds);
-//                 cmd.Parameters.AddWithValue("@a_hrs", jobRow.a_hrs ?? 0);
-//                 cmd.Parameters.AddWithValue("@a_dollar", jobRow.a_dollar ?? 0);
-//                 cmd.Parameters.AddWithValue("@emp_num", jobRow.emp_num ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@wc", jobRow.wc ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@shift", jobRow.shift ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@pay_rate", jobRow.pay_rate ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job_rate", jobRow.job_rate ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@Uf_MHSerialNo", jobRow.SerialNo ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@Uf_MHStatus", "3"); // Completed
-//                 cmd.Parameters.AddWithValue("@CreatedBy", jobRow.CreatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@UpdatedBy", jobRow.UpdatedBy ?? "system");
-
-//                 var insertedTransNum = await cmd.ExecuteScalarAsync();
-//                 if (insertedTransNum != null)
-//                 {
-//                     transNum = insertedTransNum.ToString();
-//                     Console.WriteLine($"[DEBUG] Inserted new completed job: TransNum = {transNum}");
-//                 }
-//             }
-//         }
-//     }
-//     catch (Exception ex)
-//     {
-//         Console.WriteLine($"[ERROR] InsertCompletedJobAsync failed: {ex.Message}");
-//         throw;
-//     }
-
-//     return transNum;
-// }
-public async Task<string> InsertCompletedJobAsync(JobTranMst jobRow)
+    public async Task<string> InsertCompletedJobAsync(JobTranMst jobRow)
 {
     if (jobRow == null) throw new ArgumentNullException(nameof(jobRow));
     string transNum = "0";
@@ -1602,187 +1026,8 @@ public async Task<string> InsertCompletedJobAsync(JobTranMst jobRow)
 }
 
 
-// public async Task<string> SyncToSytelineAsync(JobTranMst jobRow, string transType, decimal rate)
-// {
-//     if (jobRow == null)
-//         throw new ArgumentNullException(nameof(jobRow));
 
-//     string sytelineTransNum = "0";
-
-//     try
-//     {
-//         using (SqlConnection conn = new SqlConnection(_connectionString))
-//         {
-//             await conn.OpenAsync();
-
-//             // 1️⃣ Check if record already exists
-//             string checkSql = @"
-//                 SELECT TOP 1 trans_num, a_hrs, a_$, start_time, end_time
-//                 FROM jobtran_mst
-//                 WHERE job = @Job
-//                   AND oper_num = @OperNum
-//                   AND wc = @WC
-//                   AND Uf_MHSerialNo = @SerialNo
-//                   AND Uf_MHStatus = @Status
-//                 ORDER BY trans_date DESC";
-
-//             using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
-//             {
-//                 checkCmd.Parameters.AddWithValue("@Job", jobRow.job ?? (object)DBNull.Value);
-//                 checkCmd.Parameters.AddWithValue("@OperNum", jobRow.oper_num);
-//                 checkCmd.Parameters.AddWithValue("@WC", jobRow.wc ?? (object)DBNull.Value);
-//                 checkCmd.Parameters.AddWithValue("@SerialNo", jobRow.SerialNo ?? (object)DBNull.Value);
-//                 checkCmd.Parameters.AddWithValue("@Status", jobRow.status ?? "1");
-
-//                 using (var reader = await checkCmd.ExecuteReaderAsync())
-//                 {
-//                     if (await reader.ReadAsync())
-//                     {
-//                         // Found existing row
-//                         sytelineTransNum = reader.GetDecimal(0).ToString();
-//                         decimal existingAHrs = reader.IsDBNull(1) ? 0m : reader.GetDecimal(1);
-//                         decimal existingADollar = reader.IsDBNull(2) ? 0m : reader.GetDecimal(2);
-
-//                         reader.Close();
-
-//                         // Calculate new hours
-//                         DateTime startTime = jobRow.start_time ?? jobRow.trans_date ?? DateTime.UtcNow;
-//                         DateTime endTime = jobRow.end_time ?? DateTime.UtcNow;
-
-//                         decimal addedHours = (decimal)(endTime - startTime).TotalHours;
-//                         decimal totalHours = existingAHrs + addedHours;
-//                         decimal totalAmount = existingADollar + (rate * addedHours);
-
-//                         // Convert end time to seconds
-//                         DateTime etLocal = endTime.ToLocalTime();
-//                         int endTimeSeconds = (etLocal.Hour * 3600) + (etLocal.Minute * 60) + etLocal.Second;
-
-//                         string updateSql = @"
-//                             UPDATE jobtran_mst
-//                             SET a_hrs = @AHrs,
-//                                 a_$ = @ADollar,
-//                                 end_time = @EndTime,
-//                                 UpdatedBy = @UpdatedBy,
-//                                 recorddate = GETDATE()
-//                             WHERE trans_num = @TransNum";
-
-//                         using (SqlCommand updateCmd = new SqlCommand(updateSql, conn))
-//                         {
-//                             updateCmd.Parameters.AddWithValue("@AHrs", totalHours);
-//                             updateCmd.Parameters.AddWithValue("@ADollar", totalAmount);
-//                             updateCmd.Parameters.AddWithValue("@EndTime", endTimeSeconds);
-//                             updateCmd.Parameters.AddWithValue("@UpdatedBy", jobRow.UpdatedBy ?? "system");
-//                             updateCmd.Parameters.AddWithValue("@TransNum", Convert.ToDecimal(sytelineTransNum));
-
-//                             await updateCmd.ExecuteNonQueryAsync();
-//                         }
-
-//                         return sytelineTransNum; // ✔ return updated number
-//                     }
-//                 }
-//             }
-
-//             // 2️⃣ Insert new transaction
-//             string insertSql = @"
-//                 INSERT INTO jobtran_mst
-//                 (site_ref, job, suffix, oper_num, next_oper, trans_type,
-//                  trans_date, start_time, end_time, a_hrs, a_$,
-//                  qty_complete, qty_moved, qty_scrapped,
-//                  emp_num, wc, whse, shift, pay_rate, job_rate,
-//                  issue_parent, complete_op, close_job, posted,
-//                  Uf_MHSerialNo, Uf_MHStatus, Uf_QCGroup,
-//                  CreatedBy, UpdatedBy, Uf_MovedOKToStock)
-//                 VALUES
-//                 (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
-//                  @trans_date, @start_time, @end_time, @a_hrs, @a_dollar,
-//                  @qty_complete, @qty_moved, @qty_scrapped,
-//                  @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate,
-//                  @issue_parent, @complete_op, @close_job, @posted,
-//                  @Uf_MHSerialNo, @Uf_MHStatus, @Uf_QCGroup,
-//                  @CreatedBy, @UpdatedBy, @Uf_MovedOKToStock)";
-
-//             using (SqlCommand cmd = new SqlCommand(insertSql, conn))
-//             {
-//                 DateTime stLocal = (jobRow.start_time ?? jobRow.trans_date ?? DateTime.UtcNow).ToLocalTime();
-//                 DateTime etLocal = (jobRow.end_time ?? DateTime.UtcNow).ToLocalTime();
-
-//                 int startSeconds = (stLocal.Hour * 3600) + (stLocal.Minute * 60) + stLocal.Second;
-//                 int endSeconds = (etLocal.Hour * 3600) + (etLocal.Minute * 60) + etLocal.Second;
-
-//                 cmd.Parameters.AddWithValue("@site_ref", jobRow.site_ref ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job", jobRow.job ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@suffix", jobRow.suffix);
-//                 cmd.Parameters.AddWithValue("@oper_num", jobRow.oper_num);
-//                 cmd.Parameters.AddWithValue("@next_oper", jobRow.next_oper ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@trans_type", transType ?? "O");
-//                 cmd.Parameters.AddWithValue("@trans_date", (jobRow.trans_date ?? DateTime.UtcNow).ToLocalTime());
-//                 cmd.Parameters.AddWithValue("@start_time", startSeconds);
-//                 cmd.Parameters.AddWithValue("@end_time", endSeconds);
-//                 cmd.Parameters.AddWithValue("@a_hrs", jobRow.a_hrs ?? 0);
-//                 cmd.Parameters.AddWithValue("@a_dollar", jobRow.a_dollar ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_complete", jobRow.qty_complete ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_moved", jobRow.qty_moved ?? 0);
-//                 cmd.Parameters.AddWithValue("@qty_scrapped", jobRow.qty_scrapped ?? 0);
-//                 cmd.Parameters.AddWithValue("@emp_num", jobRow.emp_num ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@wc", jobRow.wc ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@whse", jobRow.whse ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@shift", jobRow.shift ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@pay_rate", jobRow.pay_rate ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@job_rate", rate);
-//                 cmd.Parameters.AddWithValue("@issue_parent", jobRow.issue_parent ?? 0);
-//                 cmd.Parameters.AddWithValue("@complete_op", jobRow.complete_op ?? 0);
-//                 cmd.Parameters.AddWithValue("@close_job", jobRow.close_job ?? 0);
-//                 cmd.Parameters.AddWithValue("@posted", jobRow.posted ?? 0);
-//                 cmd.Parameters.AddWithValue("@Uf_MHSerialNo", jobRow.SerialNo ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@Uf_MHStatus", jobRow.status ?? "1");
-//                 cmd.Parameters.AddWithValue("@Uf_QCGroup", jobRow.qcgroup ?? (object)DBNull.Value);
-//                 cmd.Parameters.AddWithValue("@CreatedBy", jobRow.UpdatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@UpdatedBy", jobRow.UpdatedBy ?? "system");
-//                 cmd.Parameters.AddWithValue("@Uf_MovedOKToStock", jobRow.Uf_MovedOKToStock ?? 0);
-
-//                 await cmd.ExecuteNonQueryAsync();
-//             }
-
-//             // 3️⃣ Fetch inserted trans_num so caller gets correct transaction reference
-//             string fetchSql = @"
-//                 SELECT TOP 1 trans_num
-//                 FROM jobtran_mst
-//                 WHERE job = @Job
-//                   AND oper_num = @OperNum
-//                   AND wc = @WC
-//                   AND Uf_MHSerialNo = @SerialNo
-//                   AND Uf_MHStatus = @Status
-//                 ORDER BY trans_date DESC";
-
-//             using (SqlCommand fetchCmd = new SqlCommand(fetchSql, conn))
-//             {
-//                 fetchCmd.Parameters.AddWithValue("@Job", jobRow.job ?? (object)DBNull.Value);
-//                 fetchCmd.Parameters.AddWithValue("@OperNum", jobRow.oper_num);
-//                 fetchCmd.Parameters.AddWithValue("@WC", jobRow.wc ?? (object)DBNull.Value);
-//                 fetchCmd.Parameters.AddWithValue("@SerialNo", jobRow.SerialNo ?? (object)DBNull.Value);
-//                 fetchCmd.Parameters.AddWithValue("@Status", jobRow.status ?? "1");
-
-//                 var fetchedTransNum = await fetchCmd.ExecuteScalarAsync();
-//                 if (fetchedTransNum != null)
-//                     sytelineTransNum = fetchedTransNum.ToString();
-//             }
-
-//             return sytelineTransNum;
-//         }
-//     }
-//     catch (Exception ex)
-//     {
-//         Console.WriteLine($"[ERROR] SyncToSytelineAsync: {ex.Message}");
-//         throw;
-//     }
-// }
-
-
-
-
-
-//     }
-}
+  }
 
 
 }

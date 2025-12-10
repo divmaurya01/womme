@@ -164,442 +164,6 @@ public class PostController : ControllerBase
     }
 
 
- 
-
-   //updated by womme team 
-    // [HttpPost("PauseJob")]
-    // public async Task<IActionResult> PauseJob([FromBody] StartJobRequestDto dto)
-    // {
-    //     if (dto == null)
-    //         return BadRequest("Invalid request");
-    
-    //     try
-    //     {
-    //         // Get last active job (status = 1)
-    //         var lastJob = await _context.JobTranMst
-    //             .Where(j => j.job == dto.JobNumber
-    //                     && j.oper_num == dto.OperationNumber
-    //                     && j.wc == dto.Wc
-    //                     && j.SerialNo == dto.SerialNo
-    //                     && j.status == "1")
-    //             .OrderByDescending(j => j.trans_date)
-    //             .FirstOrDefaultAsync();
-    
-    //     if (lastJob == null)
-    //         return BadRequest(new { message = "No active job found to pause." });
- 
-    //     var now = DateTime.Now;
-    //     var startTime = lastJob.start_time ?? lastJob.trans_date ?? now;
- 
-    //     // Calculate duration and amount
-    //     TimeSpan duration = now - startTime;
-    //     decimal totalHoursDecimal = (decimal)duration.TotalHours;
- 
-    //     var jobRate = await _context.EmployeeMst
-    //         .Where(e => e.emp_num == dto.EmpNum)
-    //         .Select(e => e.mfg_reg_rate)
-    //         .FirstOrDefaultAsync() ?? 0m;
- 
-    //     decimal a_dollar = totalHoursDecimal * jobRate;
- 
-    //     // Update last active job (status=1) before pausing
-    //     lastJob.a_hrs = totalHoursDecimal;
-    //     lastJob.a_dollar = a_dollar;
-    //     lastJob.end_time = now;
-    //     lastJob.job_rate = jobRate;
-    //     lastJob.UpdatedBy = dto.loginuser;
- 
-    //     _context.JobTranMst.Update(lastJob);
-    //     await _context.SaveChangesAsync(); // Save before sending to SyteLine
-        
- 
-    //     // Local DB pause row (status = 2) handling
-    //     var pausedJob = await _context.JobTranMst
-    //         .Where(j => j.job == lastJob.job
-    //                 && j.SerialNo == lastJob.SerialNo
-    //                 && j.oper_num == lastJob.oper_num
-    //                 && j.wc == lastJob.wc
-    //                 && j.status == "2")
-    //         .OrderByDescending(j => j.trans_date)
-    //         .FirstOrDefaultAsync();
- 
-    //     if (pausedJob != null)
-    //     {
-    //         // Update existing local pause row
-    //         pausedJob.end_time = now;
-    //         pausedJob.a_hrs = (pausedJob.a_hrs ?? 0) + totalHoursDecimal;
-    //         pausedJob.a_dollar = (pausedJob.a_dollar ?? 0) + a_dollar;
-    //         pausedJob.UpdatedBy = dto.loginuser;
- 
-    //         _context.JobTranMst.Update(pausedJob);
-    //     }
-    //     else
-    //     {
-    //         // Create new local pause row
-    //         decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
- 
-    //         pausedJob = new JobTranMst
-    //         {
-    //             site_ref = lastJob.site_ref,
-    //             trans_num = nextTransNum,
-    //             job = lastJob.job,
-    //             SerialNo = lastJob.SerialNo,
-    //             wc = lastJob.wc,
-    //             machine_id = lastJob.machine_id,
-    //             emp_num = lastJob.emp_num,
-    //             qty_complete = lastJob.qty_complete,
-    //             oper_num = lastJob.oper_num,
-    //             next_oper = lastJob.next_oper,
-    //             trans_date = now,
-    //             RecordDate = now,
-    //             CreateDate = now,
-    //             CreatedBy = dto.loginuser,
-    //             UpdatedBy = dto.loginuser,
-    //             completed_flag = false,
-    //             suffix = lastJob.suffix,
-    //             trans_type = lastJob.trans_type,
-    //             qty_scrapped = lastJob.qty_scrapped,
-    //             qty_moved = lastJob.qty_moved,
-    //             pay_rate = lastJob.pay_rate,
-    //             whse = lastJob.whse,
-    //             close_job = lastJob.close_job,
-    //             issue_parent = lastJob.issue_parent,
-    //             complete_op = lastJob.complete_op,
-    //             shift = lastJob.shift,
-    //             posted = lastJob.posted,
-    //             job_rate = jobRate,
-    //             a_hrs = totalHoursDecimal,
-    //             a_dollar = a_dollar,
-    //             start_time = lastJob.end_time,
-    //             end_time = null,
-    //             status = "2",
-    //             RowPointer = Guid.NewGuid(),
-    //             trans_class = lastJob.trans_class,
-    //             item = lastJob.item,
-    //             qcgroup = lastJob.qcgroup,
-    //             Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock
-    //         };
- 
-    //         _context.JobTranMst.Add(pausedJob);
-    //     }
- 
-    //     await _context.SaveChangesAsync();
- 
-    //     return Ok(new
-    //     {
-    //         success = true,
-    //         message = "Job paused successfully.",
-    //         workedHours = totalHoursDecimal,
-    //         amount = a_dollar
-    //     });
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         return StatusCode(500, new
-    //         {
-    //             success = false,
-    //             message = "Error while pausing job",
-    //             error = ex.Message
-    //         });
-    //     }
-    // }
-//--------------------------changes by  mahima
-// [HttpPost("PauseJob")]
-// public async Task<IActionResult> PauseJob([FromBody] StartJobRequestDto dto)
-// {
-//     if (dto == null)
-//         return BadRequest("Invalid request");
-
-//     try
-//     {
-//         // Fetch last active job (status = 1)
-//         var lastJob = await _context.JobTranMst
-//             .Where(j => j.job == dto.JobNumber
-//                     && j.oper_num == dto.OperationNumber
-//                     && j.wc == dto.Wc
-//                     && j.SerialNo == dto.SerialNo
-//                     && j.status == "1")
-//             .OrderByDescending(j => j.trans_date)
-//             .FirstOrDefaultAsync();
-
-//         if (lastJob == null)
-//             return BadRequest(new { message = "No active job found to pause." });
-
-//         var nowUTC = DateTime.Now;
-//         var nowLocal = nowUTC.ToLocalTime();
-
-//         DateTime startTime = lastJob.start_time ?? lastJob.trans_date ?? nowUTC;
-
-//         // Duration calculation
-//         TimeSpan duration = nowUTC - startTime;
-//         decimal workedHours = (decimal)duration.TotalHours;
-
-//         // Fetch employee rate
-//         decimal jobRate = await _context.EmployeeMst
-//             .Where(e => e.emp_num == dto.EmpNum)
-//             .Select(e => e.mfg_reg_rate)
-//             .FirstOrDefaultAsync() ?? 0m;
-
-//         decimal a_dollar = workedHours * jobRate;
-
-//         // Update local active job
-//         lastJob.a_hrs = workedHours;
-//         lastJob.a_dollar = a_dollar;
-//         lastJob.end_time = nowUTC;
-//         lastJob.job_rate = jobRate;
-//         lastJob.UpdatedBy = dto.loginuser;
-
-//         _context.JobTranMst.Update(lastJob);
-//         await _context.SaveChangesAsync();   // Save local update first
-
-
-//         // ----------------------------------------------------------------------
-//         // 🔥 SYTELINE INSERT/UPDATE FOR PAUSE ROW
-//         // ----------------------------------------------------------------------
-
-// await _sytelineService.InsertPauseJobTranAsync(lastJob);
-
-
-//         // ----------------------------------------------------------------------
-//         // LOCAL Pause table handling
-//         // ----------------------------------------------------------------------
-
-//         var pausedJob = await _context.JobTranMst
-//             .Where(j => j.job == lastJob.job
-//                      && j.SerialNo == lastJob.SerialNo
-//                      && j.oper_num == lastJob.oper_num
-//                      && j.wc == lastJob.wc
-//                      && j.status == "2")
-//             .OrderByDescending(j => j.trans_date)
-//             .FirstOrDefaultAsync();
-
-//         if (pausedJob != null)
-//         {
-//             pausedJob.end_time = nowUTC;
-//             pausedJob.a_hrs = (pausedJob.a_hrs ?? 0) + workedHours;
-//             pausedJob.a_dollar = (pausedJob.a_dollar ?? 0) + a_dollar;
-//             pausedJob.UpdatedBy = dto.loginuser;
-
-//             _context.JobTranMst.Update(pausedJob);
-//         }
-//         else
-//         {
-//             decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
-
-//             pausedJob = new JobTranMst
-//             {
-//                 site_ref = lastJob.site_ref,
-//                 trans_num = nextTransNum,
-//                 job = lastJob.job,
-//                 SerialNo = lastJob.SerialNo,
-//                 wc = lastJob.wc,
-//                 machine_id = lastJob.machine_id,
-//                 emp_num = lastJob.emp_num,
-//                 qty_complete = lastJob.qty_complete,
-//                 oper_num = lastJob.oper_num,
-//                 next_oper = lastJob.next_oper,
-//                 trans_date = nowUTC,
-//                 RecordDate = nowUTC,
-//                 CreateDate = nowUTC,
-//                 CreatedBy = dto.loginuser,
-//                 UpdatedBy = dto.loginuser,
-//                 completed_flag = false,
-//                 suffix = lastJob.suffix,
-//                 trans_type = lastJob.trans_type,
-//                 qty_scrapped = lastJob.qty_scrapped,
-//                 qty_moved = lastJob.qty_moved,
-//                 pay_rate = lastJob.pay_rate,
-//                 whse = lastJob.whse,
-//                 close_job = lastJob.close_job,
-//                 issue_parent = lastJob.issue_parent,
-//                 complete_op = lastJob.complete_op,
-//                 shift = lastJob.shift,
-//                 posted = lastJob.posted,
-//                 job_rate = jobRate,
-//                 a_hrs = workedHours,
-//                 a_dollar = a_dollar,
-//                 start_time = lastJob.end_time, // Last end_time becomes pause start
-//                 end_time = null,
-//                 status = "2",
-//                 RowPointer = Guid.NewGuid(),
-//                 trans_class = lastJob.trans_class,
-//                 item = lastJob.item,
-//                 qcgroup = lastJob.qcgroup,
-//                 Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock
-//             };
-
-//             _context.JobTranMst.Add(pausedJob);
-//         }
-
-//         await _context.SaveChangesAsync();
-
-//         return Ok(new
-//         {
-//             success = true,
-//             message = "Job paused successfully.",
-//             workedHours = workedHours,
-//             amount = a_dollar
-//         });
-//     }
-//     catch (Exception ex)
-//     {
-//         return StatusCode(500, new
-//         {
-//             success = false,
-//             message = "Error while pausing job",
-//             error = ex.Message
-//         });
-//     }
-// }
-// [HttpPost("PauseJob")]
-// public async Task<IActionResult> PauseJob([FromBody] StartJobRequestDto dto)
-// {
-//     if (dto == null)
-//         return BadRequest("Invalid request");
-
-//     try
-//     {
-//         // Fetch last active job (status = 1)
-//         var lastJob = await _context.JobTranMst
-//             .Where(j => j.job == dto.JobNumber
-//                     && j.oper_num == dto.OperationNumber
-//                     && j.wc == dto.Wc
-//                     && j.SerialNo == dto.SerialNo
-//                     && j.status == "1")
-//             .OrderByDescending(j => j.trans_date)
-//             .FirstOrDefaultAsync();
-
-//         if (lastJob == null)
-//             return BadRequest(new { message = "No active job found to pause." });
-
-//         var nowUTC = DateTime.Now;
-
-//         DateTime startTime = lastJob.start_time ?? lastJob.trans_date ?? nowUTC;
-
-//         TimeSpan duration = nowUTC - startTime;
-//         decimal workedHours = (decimal)duration.TotalHours;
-
-//         // Fetch employee rate
-//         decimal jobRate = await _context.EmployeeMst
-//             .Where(e => e.emp_num == dto.EmpNum)
-//             .Select(e => e.mfg_reg_rate)
-//             .FirstOrDefaultAsync() ?? 0m;
-
-//         decimal a_dollar = workedHours * jobRate;
-
-//         // Update local active job
-//         lastJob.a_hrs = workedHours;
-//         lastJob.a_dollar = a_dollar;
-//         lastJob.end_time = nowUTC;
-//         lastJob.job_rate = jobRate;
-//         lastJob.UpdatedBy = dto.loginuser;
-
-//         _context.JobTranMst.Update(lastJob);
-//         await _context.SaveChangesAsync();   
-
-//         //  -------------------------------------------------------
-//         //       🔥 SYTELINE INSERT/UPDATE (RETURNS TRANS_NUM)
-//         //  -------------------------------------------------------
-
-//         decimal sytelineTransNum = await _sytelineService.InsertPauseJobTranAsync(lastJob);
-
-//         // -------------------------------------------------------
-//         //       🔥 LOCAL PAUSE TABLE UPDATE (STATUS = 2)
-//         // -------------------------------------------------------
-
-//         var pausedJob = await _context.JobTranMst
-//             .Where(j => j.job == lastJob.job
-//                      && j.SerialNo == lastJob.SerialNo
-//                      && j.oper_num == lastJob.oper_num
-//                      && j.wc == lastJob.wc
-//                      && j.status == "2")
-//             .OrderByDescending(j => j.trans_date)
-//             .FirstOrDefaultAsync();
-
-//         if (pausedJob != null)
-//         {
-//             pausedJob.end_time = nowUTC;
-//             pausedJob.a_hrs = (pausedJob.a_hrs ?? 0) + workedHours;
-//             pausedJob.a_dollar = (pausedJob.a_dollar ?? 0) + a_dollar;
-//             pausedJob.import_doc_id = sytelineTransNum;   // 🔥 Save Syteline trans num 
-//             pausedJob.UpdatedBy = dto.loginuser;
-
-//             _context.JobTranMst.Update(pausedJob);
-//         }
-//         else
-//         {
-//             decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
-
-//             pausedJob = new JobTranMst
-//             {
-//                 site_ref = lastJob.site_ref,
-//                 trans_num = nextTransNum,
-//                 job = lastJob.job,
-//                 SerialNo = lastJob.SerialNo,
-//                 wc = lastJob.wc,
-//                 machine_id = lastJob.machine_id,
-//                 emp_num = lastJob.emp_num,
-//                 qty_complete = lastJob.qty_complete,
-//                 oper_num = lastJob.oper_num,
-//                 next_oper = lastJob.next_oper,
-//                 trans_date = nowUTC,
-//                 RecordDate = nowUTC,
-//                 CreateDate = nowUTC,
-//                 CreatedBy = dto.loginuser,
-//                 UpdatedBy = dto.loginuser,
-//                 completed_flag = false,
-//                 suffix = lastJob.suffix,
-//                 trans_type = lastJob.trans_type,
-//                 qty_scrapped = lastJob.qty_scrapped,
-//                 qty_moved = lastJob.qty_moved,
-//                 pay_rate = lastJob.pay_rate,
-//                 whse = lastJob.whse,
-//                 close_job = lastJob.close_job,
-//                 issue_parent = lastJob.issue_parent,
-//                 complete_op = lastJob.complete_op,
-//                 shift = lastJob.shift,
-//                 posted = lastJob.posted,
-//                 job_rate = jobRate,
-//                 a_hrs = workedHours,
-//                 a_dollar = a_dollar,
-//                 start_time = lastJob.end_time,
-//                 end_time = null,
-//                 status = "2",
-//                 RowPointer = Guid.NewGuid(),
-//                 trans_class = lastJob.trans_class,
-//                 item = lastJob.item,
-//                 qcgroup = lastJob.qcgroup,
-//                 Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
-
-//                 import_doc_id = sytelineTransNum   // 🔥 Save Syteline trans num
-//             };
-
-//             _context.JobTranMst.Add(pausedJob);
-//         }
-
-//         await _context.SaveChangesAsync();
-
-//         return Ok(new
-//         {
-//             success = true,
-//             message = "Job paused successfully.",
-//             workedHours,
-//             amount = a_dollar,
-//             sytelineTransNum
-//         });
-//     }
-//     catch (Exception ex)
-//     {
-//         return StatusCode(500, new
-//         {
-//             success = false,
-//             message = "Error while pausing job",
-//             error = ex.Message
-//         });
-//     }
-// }
-
-
 
    [HttpPost("StartJob")]
     public async Task<IActionResult> StartJob([FromBody] StartJobRequestDto dto)
@@ -722,9 +286,6 @@ public class PostController : ControllerBase
     }
 
 
-
-
-
     [HttpPost("PauseJob")]
     public async Task<IActionResult> PauseJob([FromBody] StartJobRequestDto dto)
     {
@@ -733,7 +294,7 @@ public class PostController : ControllerBase
 
         try
         {
-            // Get last active job
+            //  Get last active job
             var lastJob = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
                             && j.oper_num == dto.OperationNumber
@@ -752,6 +313,7 @@ public class PostController : ControllerBase
             TimeSpan duration = now - startTime;
             decimal totalHoursDecimal = (decimal)duration.TotalHours;
 
+            // Get employee rate
             var jobRate = await _context.EmployeeMst
                 .Where(e => e.emp_num == dto.EmpNum)
                 .Select(e => e.mfg_reg_rate)
@@ -759,7 +321,7 @@ public class PostController : ControllerBase
 
             decimal a_dollar = totalHoursDecimal * jobRate;
 
-            // Update last active job
+            // Update last active job (status 1)
             lastJob.a_hrs = totalHoursDecimal;
             lastJob.a_dollar = a_dollar;
             lastJob.end_time = now;
@@ -768,84 +330,52 @@ public class PostController : ControllerBase
 
             await _context.SaveChangesAsync();
 
-        
-            // Find pause row
-            var pausedJob = await _context.JobTranMst
-                .Where(j => j.job == lastJob.job
-                            && j.SerialNo == lastJob.SerialNo
-                            && j.oper_num == lastJob.oper_num
-                            && j.wc == lastJob.wc
-                            && j.status == "2")
-                .OrderByDescending(j => j.trans_date)
-                .FirstOrDefaultAsync();
+            //  Always create a new paused row
+            decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
 
-            if (pausedJob != null)
+            var pausedJob = new JobTranMst
             {
-                pausedJob.end_time = now;
-                // pausedJob.a_hrs = (pausedJob.a_hrs ?? 0) + totalHoursDecimal;
-                pausedJob.a_hrs = totalHoursDecimal;  
-
-                // pausedJob.a_dollar = (pausedJob.a_dollar ?? 0) + a_dollar;
-                pausedJob.a_dollar = a_dollar;
-
-                pausedJob.UpdatedBy = dto.loginuser;
-
-                // 🔵 SAVE SYTELINE TRANS NUM IN LOCAL
-                //pausedJob.import_doc_id = syteTransNum;
-
-                _context.JobTranMst.Update(pausedJob);
-            }
-            else
-            {
-                decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
-
-                pausedJob = new JobTranMst
-                {
-                    site_ref = lastJob.site_ref,
-                    trans_num = nextTransNum,
-                    job = lastJob.job,
-                    SerialNo = lastJob.SerialNo,
-                    wc = lastJob.wc,
-                    machine_id = lastJob.machine_id,
-                    emp_num = lastJob.emp_num,
-                    qty_complete = lastJob.qty_complete,
-                    oper_num = lastJob.oper_num,
-                    next_oper = lastJob.next_oper,
-                    trans_date = now,
-                    RecordDate = now,
-                    CreateDate = now,
-                    CreatedBy = dto.loginuser,
-                    UpdatedBy = dto.loginuser,
-                    completed_flag = false,
-                    suffix = lastJob.suffix,
-                    trans_type = lastJob.trans_type,
-                    qty_scrapped = lastJob.qty_scrapped,
-                    qty_moved = lastJob.qty_moved,
-                    pay_rate = lastJob.pay_rate,
-                    whse = lastJob.whse,
-                    close_job = lastJob.close_job,
-                    issue_parent = lastJob.issue_parent,
-                    complete_op = lastJob.complete_op,
-                    shift = lastJob.shift,
-                    posted = lastJob.posted,
-                    job_rate = jobRate,
-                    a_hrs = totalHoursDecimal,
-                    a_dollar = a_dollar,
+                site_ref = lastJob.site_ref,
+                trans_num = nextTransNum,
+                job = lastJob.job,
+                SerialNo = lastJob.SerialNo,
+                wc = lastJob.wc,
+                machine_id = lastJob.machine_id,
+                emp_num = lastJob.emp_num,
+                qty_complete = lastJob.qty_complete,
+                oper_num = lastJob.oper_num,
+                next_oper = lastJob.next_oper,
+                trans_date = now,
+                RecordDate = now,
+                CreateDate = now,
+                CreatedBy = dto.loginuser,
+                UpdatedBy = dto.loginuser,
+                completed_flag = false,
+                suffix = lastJob.suffix,
+                trans_type = lastJob.trans_type,
+                qty_scrapped = lastJob.qty_scrapped,
+                qty_moved = lastJob.qty_moved,
+                pay_rate = lastJob.pay_rate,
+                whse = lastJob.whse,
+                close_job = lastJob.close_job,
+                issue_parent = lastJob.issue_parent,
+                complete_op = lastJob.complete_op,
+                shift = lastJob.shift,
+                posted = lastJob.posted,
+                job_rate = jobRate,
+                a_hrs = 0,         // paused row starts fresh
+                a_dollar = 0,      // paused row starts fresh
                 start_time = now,
+                end_time = null,
+                status = "2",
+                RowPointer = Guid.NewGuid(),
+                trans_class = lastJob.trans_class,
+                item = lastJob.item,
+                qcgroup = lastJob.qcgroup,
+                Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock
+            };
 
-                    end_time = null,
-                    status = "2",
-                    RowPointer = Guid.NewGuid(),
-                    trans_class = lastJob.trans_class,
-                    item = lastJob.item,
-                    qcgroup = lastJob.qcgroup,
-                    Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
-                    //import_doc_id = syteTransNum
-                };
-
-                _context.JobTranMst.Add(pausedJob);
-            }
-
+            _context.JobTranMst.Add(pausedJob);
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -853,8 +383,7 @@ public class PostController : ControllerBase
                 success = true,
                 message = "Job paused successfully.",
                 workedHours = totalHoursDecimal,
-                amount = a_dollar,
-                //sytelineTransNum = syteTransNum
+                amount = a_dollar
             });
         }
         catch (Exception ex)
@@ -873,9 +402,9 @@ public class PostController : ControllerBase
 
 //changes end by mahima
 
-
+  //CompleteJob
   [HttpPost("CompleteJob")]
-    public async Task<IActionResult> CompleteJob([FromBody] StartJobRequestDto dto)
+  public async Task<IActionResult> CompleteJob([FromBody] StartJobRequestDto dto)
     {
         if (dto == null)
             return BadRequest("Invalid request");
@@ -1006,21 +535,16 @@ public class PostController : ControllerBase
             _context.JobTranMst.Add(completedJob);
             await _context.SaveChangesAsync();
 
-    
-
-
-                    var rowsToPush = await _context.JobTranMst
-                        .Where(j => j.job == dto.JobNumber
-                            && j.oper_num == dto.OperationNumber
+            var rowsToPush = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                        && j.oper_num == dto.OperationNumber
                         && j.wc == dto.Wc
                         && j.SerialNo == dto.SerialNo
                         && j.status == "1")
-                        .ToListAsync();
+                .OrderBy(j => j.start_time)
+                .ToListAsync();
 
-                foreach (var r in rowsToPush)
-                        {
-                            await _sytelineService.InsertJobTranAsync(r);
-                            }
+            await _sytelineService.InsertJobTransBulkAsync(rowsToPush);      
 
 
             // If OT exists → insert OT row
@@ -1071,8 +595,18 @@ public class PostController : ControllerBase
                 _context.JobTranMst.Add(otJob);
                 await _context.SaveChangesAsync();
 
-                // ⭐ PUSH OT ROW TO SYTELINE
-                await _sytelineService.InsertJobTranAsync(otJob);
+                 rowsToPush = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                        && j.oper_num == dto.OperationNumber
+                        && j.wc == dto.Wc
+                        && j.SerialNo == dto.SerialNo
+                        && j.status == "1")
+                .OrderBy(j => j.start_time)
+                .ToListAsync();
+
+                await _sytelineService.InsertJobTransBulkAsync(rowsToPush);
+
+                
             }
 
             return Ok(new { success = true, message = "Job completed successfully." });
@@ -1089,546 +623,199 @@ public class PostController : ControllerBase
         }
     }
 
-// [HttpPost("CompleteJob")]
-// public async Task<IActionResult> CompleteJob([FromBody] StartJobRequestDto dto)
-// {
-//     if (dto == null)
-//         return BadRequest("Invalid request");
 
-//     try
-//     {
-//         var now = DateTime.Now;
-
-//         // ------------------------------
-//         // 1. FETCH LAST JOB ROW
-//         // ------------------------------
-//         var lastJob = await _context.JobTranMst
-//             .Where(j => j.job == dto.JobNumber
-//                         && j.oper_num == dto.OperationNumber
-//                         && j.wc == dto.Wc
-//                         && j.SerialNo == dto.SerialNo)
-//             .OrderByDescending(j => j.trans_date)
-//             .FirstOrDefaultAsync();
-
-//         if (lastJob == null)
-//             return NotFound(new { message = "No job found to complete." });
-
-//         Console.WriteLine($"[DEBUG] LastJob => TransNum:{lastJob.trans_num}, Status:{lastJob.status}, Start:{lastJob.start_time}, End:{lastJob.end_time}");
-
-//         if (lastJob.status == "3")
-//             return BadRequest(new { message = "Job is already completed." });
-
-//         // ------------------------------
-//         // 2. FETCH EMPLOYEE RATES
-//         // ------------------------------
-//         var empRates = await _context.EmployeeMst
-//             .Where(e => e.emp_num == dto.EmpNum)
-//             .Select(e => new { e.mfg_reg_rate, e.mfg_ot_rate })
-//             .FirstOrDefaultAsync();
-
-//         decimal regRate = empRates?.mfg_reg_rate ?? 0m;
-//         decimal otRate = empRates?.mfg_ot_rate ?? 0m;
-
-//         // ------------------------------
-//         // 3. CLOSE LAST RUNNING/PAUSE ROW
-//         // ------------------------------
-//         if (lastJob.status == "2") // Paused
-//         {
-//             if (lastJob.end_time == null)
-//                 lastJob.end_time = now;
-
-//             lastJob.a_hrs = (decimal)(lastJob.end_time.Value - lastJob.start_time.Value).TotalHours;
-//             lastJob.UpdatedBy = dto.loginuser;
-
-//             _context.JobTranMst.Update(lastJob);
-//             await _context.SaveChangesAsync();
-
-//             Console.WriteLine($"[DEBUG] Paused job closed => Hours:{lastJob.a_hrs}");
-//         }
-//         else if (lastJob.status == "1") // Running
-//         {
-//             lastJob.end_time = now;
-//             lastJob.a_hrs = (decimal)(now - lastJob.start_time.Value).TotalHours;
-//             lastJob.a_dollar = lastJob.a_hrs * regRate;
-
-//             _context.JobTranMst.Update(lastJob);
-//             await _context.SaveChangesAsync();
-
-//             Console.WriteLine($"[DEBUG] Running job closed => Hours:{lastJob.a_hrs}");
-//         }
-
-//         // ------------------------------
-//         // 4. START TIME FOR COMPLETED ROW
-//         // ------------------------------
-//         var firstJobRow = await _context.JobTranMst
-//             .Where(j => j.job == dto.JobNumber
-//                         && j.oper_num == dto.OperationNumber
-//                         && j.wc == dto.Wc
-//                         && j.SerialNo == dto.SerialNo)
-//             .OrderBy(j => j.trans_date)
-//             .FirstOrDefaultAsync();
-
-//         DateTime startFrom = firstJobRow?.trans_date ?? now;
-
-//         // ------------------------------
-//         // 5. CALCULATE TOTAL HOURS
-//         // ------------------------------
-//         var runningRows = await _context.JobTranMst
-//             .Where(j => j.job == dto.JobNumber
-//                      && j.oper_num == dto.OperationNumber
-//                      && j.wc == dto.Wc
-//                      && j.SerialNo == dto.SerialNo
-//                      && j.status == "1"
-//                      && j.a_hrs > 0)
-//             .ToListAsync();
-
-//         decimal totalHours = runningRows.Sum(r => r.a_hrs ?? 0m);
-//         decimal regularHours = totalHours;
-//         decimal otHours = 0m;
-
-//         if (totalHours > 8)
-//         {
-//             regularHours = 8m;
-//             otHours = totalHours - 8m;
-//         }
-
-//         // ------------------------------
-//         // 6. GENERATE LOCAL TRANS_NUM
-//         // ------------------------------
-//         decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
-//         Console.WriteLine($"[DEBUG] Local generated trans_num = {nextTransNum}");
-
-//         // ------------------------------
-//         // 7. INSERT COMPLETED ROW (REGULAR)
-//         // ------------------------------
-//         var completedJob = new JobTranMst
-//         {
-//             site_ref = lastJob.site_ref,
-//             trans_num = nextTransNum,
-//             job = lastJob.job,
-//             SerialNo = lastJob.SerialNo,
-//             wc = lastJob.wc,
-//             machine_id = lastJob.machine_id,
-//             emp_num = lastJob.emp_num,
-//             qty_complete = 1,
-//             oper_num = lastJob.oper_num,
-//             next_oper = lastJob.next_oper,
-//             trans_date = now,
-//             RecordDate = now,
-//             CreateDate = now,
-//             CreatedBy = dto.loginuser,
-//             UpdatedBy = dto.loginuser,
-//             completed_flag = true,
-//             suffix = lastJob.suffix,
-//             trans_type = "R",
-//             pay_rate = lastJob.pay_rate,
-//             whse = lastJob.whse,
-//             job_rate = regRate,
-//             a_hrs = regularHours,
-//             a_dollar = regularHours * regRate,
-//             start_time = startFrom,
-//             end_time = now,
-//             status = "3",
-//             RowPointer = Guid.NewGuid(),
-//             trans_class = lastJob.trans_class,
-//             item = lastJob.item,
-//             qcgroup = lastJob.qcgroup
-//         };
-
-//         _context.JobTranMst.Add(completedJob);
-//         await _context.SaveChangesAsync();
-
-//         Console.WriteLine($"[DEBUG] Completed row inserted => TransNum:{nextTransNum}");
-
-//         // ------------------------------
-//         // 8. INSERT OT ROW IF APPLICABLE
-//         // ------------------------------
-//         if (otHours > 0)
-//         {
-//             var otJob = new JobTranMst
-//             {
-//                 site_ref = lastJob.site_ref,
-//                 trans_num = nextTransNum + 1,
-//                 job = lastJob.job,
-//                 SerialNo = lastJob.SerialNo,
-//                 wc = lastJob.wc,
-//                 machine_id = lastJob.machine_id,
-//                 emp_num = lastJob.emp_num,
-//                 qty_complete = 1,
-//                 oper_num = lastJob.oper_num,
-//                 next_oper = lastJob.next_oper,
-//                 trans_date = now,
-//                 RecordDate = now,
-//                 CreateDate = now,
-//                 CreatedBy = dto.loginuser,
-//                 UpdatedBy = dto.loginuser,
-//                 completed_flag = true,
-//                 suffix = lastJob.suffix,
-//                 trans_type = "O",
-//                 pay_rate = lastJob.pay_rate,
-//                 whse = lastJob.whse,
-//                 job_rate = otRate,
-//                 a_hrs = otHours,
-//                 a_dollar = otHours * otRate,
-//                 start_time = startFrom.AddHours((double)regularHours),
-//                 end_time = now,
-//                 status = "3",
-//                 RowPointer = Guid.NewGuid(),
-//                 trans_class = lastJob.trans_class,
-//                 item = lastJob.item,
-//                 qcgroup = lastJob.qcgroup
-//             };
-
-//             _context.JobTranMst.Add(otJob);
-//             await _context.SaveChangesAsync();
-
-//             Console.WriteLine($"[DEBUG] OT row inserted => TransNum:{nextTransNum + 1}");
-//         }
-
-//         return Ok(new { success = true, message = "Job completed successfully." });
-//     }
-//     catch (Exception ex)
-//     {
-//         return StatusCode(500, new
-//         {
-//             success = false,
-//             message = "Error while completing job",
-//             error = ex.Message,
-//             inner = ex.InnerException?.Message
-//         });
-//     }
-// }
-
-    
-
-[HttpPost("UpdateJobLog")]
-public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
-{
-    if (dto == null)
-        return BadRequest("Invalid request data.");
-
-    try
+    [HttpPost("UpdateJobLog")]
+    public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
     {
-        // 1. Fetch existing local row
-        var existingLog = await _context.JobTranMst
-            .FirstOrDefaultAsync(j =>
-                j.trans_num == dto.TransNum &&
-                j.job == dto.Job &&
-                j.SerialNo == dto.SerialNumber);
+        if (dto == null)
+            return BadRequest("Invalid request data.");
 
-        if (existingLog == null)
-            return NotFound($"No job found with Job={dto.Job}, SerialNo={dto.SerialNumber}, TransNum={dto.TransNum}");
-
-        // 2. Get rates
-        var empRates = await _context.EmployeeMst
-            .Where(e => e.emp_num == dto.EmpNum)
-            .Select(e => new { RegRate = e.mfg_reg_rate, OtRate = e.mfg_ot_rate })
-            .FirstOrDefaultAsync();
-
-        decimal regRate = empRates?.RegRate ?? 0m;
-        decimal otRate = empRates?.OtRate ?? 0m;
-
-        // 3. Update basic fields on existingLog
-        existingLog.SerialNo = dto.SerialNumber;
-        existingLog.job = dto.Job;
-        existingLog.oper_num = dto.OperationNumber;
-        existingLog.wc = dto.WorkCenter;
-        existingLog.status = dto.Status;
-        existingLog.job_rate = dto.JobRate;
-        existingLog.shift = dto.Shift;
-        existingLog.emp_num = dto.EmpNum;
-        existingLog.machine_id = dto.MachineNum;
-        existingLog.UpdatedBy = dto.UpdatedBy;
-
-        if (dto.StartTime.HasValue)
-            existingLog.start_time = dto.StartTime;
-
-        if (dto.EndTime.HasValue)
-            existingLog.end_time = dto.EndTime;
-
-        // 4. Pause-case (status 3 -> 2) — keep as-is but do not zero-out unless intended.
-        if (existingLog.status?.Trim() == "2" && dto.Status == "2" && dto.EndTime == null)
+        try
         {
-            // if your business requires zeroing hours here, keep; otherwise comment out these lines.
-            existingLog.a_hrs = 0;
-            existingLog.a_dollar = 0;
-            _context.JobTranMst.Update(existingLog);
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Status changed to Pause successfully (no hour change)." });
-        }
+            // 1. Fetch existing local row
+            var existingLog = await _context.JobTranMst
+                .FirstOrDefaultAsync(j =>
+                    j.trans_num == dto.TransNum &&
+                    j.job == dto.Job &&
+                    j.SerialNo == dto.SerialNumber);
 
-        // 5. If both start & end exist -> compute hours and split into REG/OT
-        if (existingLog.start_time.HasValue && existingLog.end_time.HasValue)
-        {
-            decimal totalHours = (decimal)(existingLog.end_time.Value - existingLog.start_time.Value).TotalHours;
-            totalHours = Math.Round(totalHours, 4);
+            if (existingLog == null)
+                return NotFound($"No job found with Job={dto.Job}, SerialNo={dto.SerialNumber}, TransNum={dto.TransNum}");
 
-            decimal regularHours = totalHours <= 8 ? totalHours : 8m;
-            decimal otHours = totalHours > 8 ? totalHours - 8m : 0m;
+            // 2. Get rates
+            var empRates = await _context.EmployeeMst
+                .Where(e => e.emp_num == dto.EmpNum)
+                .Select(e => new { RegRate = e.mfg_reg_rate, OtRate = e.mfg_ot_rate })
+                .FirstOrDefaultAsync();
 
-            // Update regular row: a_hrs capped at 8 and end_time set to start + regularHours
-            existingLog.a_hrs = regularHours;
-            existingLog.a_dollar = regularHours * regRate;
-            existingLog.end_time = existingLog.start_time.Value.AddHours((double)regularHours);
+            decimal regRate = empRates?.RegRate ?? 0m;
+            decimal otRate = empRates?.OtRate ?? 0m;
 
-            _context.JobTranMst.Update(existingLog);
+            // 3. Update basic fields on existingLog
+            existingLog.SerialNo = dto.SerialNumber;
+            existingLog.job = dto.Job;
+            existingLog.oper_num = dto.OperationNumber;
+            existingLog.wc = dto.WorkCenter;
+            existingLog.status = dto.Status;
+            existingLog.job_rate = dto.JobRate;
+            existingLog.shift = dto.Shift;
+            existingLog.emp_num = dto.EmpNum;
+            existingLog.machine_id = dto.MachineNum;
+            existingLog.UpdatedBy = dto.UpdatedBy;
 
-            // Prepare to create OT row if needed
-            JobTranMst otRow = null;
-            if (otHours > 0)
+            if (dto.StartTime.HasValue)
+                existingLog.start_time = dto.StartTime;
+
+            if (dto.EndTime.HasValue)
+                existingLog.end_time = dto.EndTime;
+
+            // 4. Pause-case (status 3 -> 2) — keep as-is but do not zero-out unless intended.
+            if (existingLog.status?.Trim() == "2" && dto.Status == "2" && dto.EndTime == null)
             {
-                // compute next trans_num locally (avoid collision using local max)
-                decimal nextTrans = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
-
-                otRow = new JobTranMst
-                {
-                    site_ref = existingLog.site_ref,
-                    trans_num = nextTrans,
-                    job = existingLog.job,
-                    SerialNo = existingLog.SerialNo,
-                    wc = existingLog.wc,
-                    machine_id = existingLog.machine_id,
-                    emp_num = existingLog.emp_num,
-                    qty_complete = existingLog.qty_complete,
-                    qty_scrapped = existingLog.qty_scrapped,
-                    oper_num = existingLog.oper_num,
-                    next_oper = existingLog.next_oper,
-                    trans_date = DateTime.Now,
-                    RecordDate = DateTime.Now,
-                    CreateDate = DateTime.Now,
-                    CreatedBy = dto.UpdatedBy,
-                    UpdatedBy = dto.UpdatedBy,
-                    completed_flag = existingLog.completed_flag,
-                    suffix = existingLog.suffix,
-                    trans_type = "O",
-                    job_rate = otRate,
-                    a_hrs = otHours,
-                    a_dollar = otHours * otRate,
-                    start_time = existingLog.end_time, // immediately after REG hours
-                    end_time = dto.EndTime,            // original manual end time
-                    status = existingLog.status,
-                    shift = existingLog.shift,
-                    posted = existingLog.posted ?? 0,
-                    RowPointer = Guid.NewGuid(),
-                    trans_class = existingLog.trans_class,
-                    item = existingLog.item,
-                    qcgroup = existingLog.qcgroup
-                };
-
-                _context.JobTranMst.Add(otRow);
+                // if your business requires zeroing hours here, keep; otherwise comment out these lines.
+                existingLog.a_hrs = 0;
+                existingLog.a_dollar = 0;
+                _context.JobTranMst.Update(existingLog);
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Status changed to Pause successfully (no hour change)." });
             }
 
-            // 6. Save local changes (REG and OT) as a single DB transaction
-            await _context.SaveChangesAsync();
-
-            // 7. Sync to Syteline: update REG first, then insert/update OT
-            // Build REG dto with TransNum set
-            var regDto = new UpdateJobLogDto
+            // 5. If both start & end exist -> compute hours and split into REG/OT
+            if (existingLog.start_time.HasValue && existingLog.end_time.HasValue)
             {
-                TransNum = existingLog.trans_num,
-                Job = existingLog.job,
-                SerialNumber = existingLog.SerialNo,
-                OperationNumber = existingLog.oper_num ?? 0,
-                WorkCenter = existingLog.wc,
-                EmpNum = existingLog.emp_num,
-                Shift = existingLog.shift,
-                StartTime = existingLog.start_time,
-                EndTime = existingLog.end_time,
-                JobRate = existingLog.job_rate,
-                Status = existingLog.status,
-                UpdatedBy = existingLog.UpdatedBy,
-                Item = existingLog.item,
-                Suffix = existingLog.suffix,
-                NextOper = existingLog.next_oper,
-                QtyComplete = existingLog.qty_complete,
-                QtyScrapped = existingLog.qty_scrapped
-            };
+                decimal totalHours = (decimal)(existingLog.end_time.Value - existingLog.start_time.Value).TotalHours;
+                totalHours = Math.Round(totalHours, 4);
 
-            // Update REG in Syteline (best-effort)
-            var regOk = await _sytelineService.UpdateJobTranInSytelineAsync(regDto);
+                decimal regularHours = totalHours <= 8 ? totalHours : 8m;
+                decimal otHours = totalHours > 8 ? totalHours - 8m : 0m;
 
-            // If OT row created, map and sync it
-            if (otRow != null)
-            {
-                var otDto = new UpdateJobLogDto
+                // Update regular row: a_hrs capped at 8 and end_time set to start + regularHours
+                existingLog.a_hrs = regularHours;
+                existingLog.a_dollar = regularHours * regRate;
+                existingLog.end_time = existingLog.start_time.Value.AddHours((double)regularHours);
+
+                _context.JobTranMst.Update(existingLog);
+
+                // Prepare to create OT row if needed
+                JobTranMst otRow = null;
+                if (otHours > 0)
                 {
-                    TransNum = otRow.trans_num,   // CRITICAL: include trans_num
-                    Job = otRow.job,
-                    SerialNumber = otRow.SerialNo,
-                    OperationNumber = otRow.oper_num ?? 0,
-                    WorkCenter = otRow.wc,
-                    EmpNum = otRow.emp_num,
-                    Shift = otRow.shift,
-                    StartTime = otRow.start_time,
-                    EndTime = otRow.end_time,
-                    JobRate = otRow.job_rate,
-                    Status = otRow.status,
-                    UpdatedBy = otRow.UpdatedBy,
-                    Item = otRow.item,
-                    TransType = "O",
-                    Suffix = otRow.suffix,
-                    NextOper = otRow.next_oper,
-                    QtyComplete = otRow.qty_complete,
-                    QtyScrapped = otRow.qty_scrapped
+                    // compute next trans_num locally (avoid collision using local max)
+                    decimal nextTrans = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
+
+                    otRow = new JobTranMst
+                    {
+                        site_ref = existingLog.site_ref,
+                        trans_num = nextTrans,
+                        job = existingLog.job,
+                        SerialNo = existingLog.SerialNo,
+                        wc = existingLog.wc,
+                        machine_id = existingLog.machine_id,
+                        emp_num = existingLog.emp_num,
+                        qty_complete = existingLog.qty_complete,
+                        qty_scrapped = existingLog.qty_scrapped,
+                        oper_num = existingLog.oper_num,
+                        next_oper = existingLog.next_oper,
+                        trans_date = DateTime.Now,
+                        RecordDate = DateTime.Now,
+                        CreateDate = DateTime.Now,
+                        CreatedBy = dto.UpdatedBy,
+                        UpdatedBy = dto.UpdatedBy,
+                        completed_flag = existingLog.completed_flag,
+                        suffix = existingLog.suffix,
+                        trans_type = "O",
+                        job_rate = otRate,
+                        a_hrs = otHours,
+                        a_dollar = otHours * otRate,
+                        start_time = existingLog.end_time, // immediately after REG hours
+                        end_time = dto.EndTime,            // original manual end time
+                        status = existingLog.status,
+                        shift = existingLog.shift,
+                        posted = existingLog.posted ?? 0,
+                        RowPointer = Guid.NewGuid(),
+                        trans_class = existingLog.trans_class,
+                        item = existingLog.item,
+                        qcgroup = existingLog.qcgroup
+                    };
+
+                    _context.JobTranMst.Add(otRow);
+                }
+
+                // 6. Save local changes (REG and OT) as a single DB transaction
+                await _context.SaveChangesAsync();
+
+                // 7. Sync to Syteline: update REG first, then insert/update OT
+                // Build REG dto with TransNum set
+                var regDto = new UpdateJobLogDto
+                {
+                    TransNum = existingLog.trans_num,
+                    Job = existingLog.job,
+                    SerialNumber = existingLog.SerialNo,
+                    OperationNumber = existingLog.oper_num ?? 0,
+                    WorkCenter = existingLog.wc,
+                    EmpNum = existingLog.emp_num,
+                    Shift = existingLog.shift,
+                    StartTime = existingLog.start_time,
+                    EndTime = existingLog.end_time,
+                    JobRate = existingLog.job_rate,
+                    Status = existingLog.status,
+                    UpdatedBy = existingLog.UpdatedBy,
+                    Item = existingLog.item,
+                    Suffix = existingLog.suffix,
+                    NextOper = existingLog.next_oper,
+                    QtyComplete = existingLog.qty_complete,
+                    QtyScrapped = existingLog.qty_scrapped
                 };
 
-                var otOk = await _sytelineService.UpdateJobTranInSytelineAsync(otDto);
+                // Update REG in Syteline (best-effort)
+                //var regOk = await _sytelineService.UpdateJobTranInSytelineAsync(regDto);
+
+                // If OT row created, map and sync it
+                if (otRow != null)
+                {
+                    var otDto = new UpdateJobLogDto
+                    {
+                        TransNum = otRow.trans_num,   // CRITICAL: include trans_num
+                        Job = otRow.job,
+                        SerialNumber = otRow.SerialNo,
+                        OperationNumber = otRow.oper_num ?? 0,
+                        WorkCenter = otRow.wc,
+                        EmpNum = otRow.emp_num,
+                        Shift = otRow.shift,
+                        StartTime = otRow.start_time,
+                        EndTime = otRow.end_time,
+                        JobRate = otRow.job_rate,
+                        Status = otRow.status,
+                        UpdatedBy = otRow.UpdatedBy,
+                        Item = otRow.item,
+                        TransType = "O",
+                        Suffix = otRow.suffix,
+                        NextOper = otRow.next_oper,
+                        QtyComplete = otRow.qty_complete,
+                        QtyScrapped = otRow.qty_scrapped
+                    };
+
+                    //var otOk = await _sytelineService.UpdateJobTranInSytelineAsync(otDto);
+                }
+
+                return Ok(new
+                {
+                    message = "Updated successfully (REG + OT split)",
+                    regularHours = regularHours,
+                    otHours = otHours
+                });
             }
 
-            return Ok(new
-            {
-                message = "Updated successfully (REG + OT split)",
-                regularHours = regularHours,
-                otHours = otHours
-            });
+            // no start/end change
+            _context.JobTranMst.Update(existingLog);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Record updated successfully (no hour change)." });
         }
-
-        // no start/end change
-        _context.JobTranMst.Update(existingLog);
-        await _context.SaveChangesAsync();
-        return Ok(new { message = "Record updated successfully (no hour change)." });
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
-    catch (Exception ex)
-    {
-        return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
-    }
-}
-
-
-// [HttpPost("UpdateJobLog")]
-// public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
-// {
-//     if (dto == null)
-//         return BadRequest("Invalid request data.");
-
-//     try
-//     {
-//         // --- Fetch existing log row ---
-//         var existingLog = await _context.JobTranMst
-//             .FirstOrDefaultAsync(j =>
-//                 j.trans_num == dto.TransNum &&
-//                 j.job == dto.Job &&
-//                 j.SerialNo == dto.SerialNumber);
-
-//         if (existingLog == null)
-//             return NotFound($"No job found with Job={dto.Job}, SerialNo={dto.SerialNumber}, TransNum={dto.TransNum}");
-
-//         // --- Fetch employee rates ---
-//         var empRates = await _context.EmployeeMst
-//             .Where(e => e.emp_num == dto.EmpNum)
-//             .Select(e => new { RegRate = e.mfg_reg_rate, OtRate = e.mfg_ot_rate })
-//             .FirstOrDefaultAsync();
-
-//         decimal regRate = empRates?.RegRate ?? 0m;
-//         decimal otRate = empRates?.OtRate ?? 0m;
-
-//         // --- Update basic fields ---
-//         existingLog.SerialNo = dto.SerialNumber;
-//         existingLog.job = dto.Job;
-//         existingLog.oper_num = dto.OperationNumber;
-//         existingLog.wc = dto.WorkCenter;
-//         existingLog.status = dto.Status;
-//         existingLog.job_rate = dto.JobRate;
-//         existingLog.shift = dto.Shift;
-//         existingLog.emp_num = dto.EmpNum;
-//         existingLog.machine_id = dto.MachineNum;
-//         existingLog.UpdatedBy = dto.UpdatedBy;
-
-//         if (dto.StartTime.HasValue)
-//             existingLog.start_time = dto.StartTime;
-
-//         if (dto.EndTime.HasValue)
-//             existingLog.end_time = dto.EndTime;
-
-//         // --- Calculate total seconds ---
-//         if (existingLog.start_time.HasValue && existingLog.end_time.HasValue)
-//         {
-//             double totalSeconds = (existingLog.end_time.Value - existingLog.start_time.Value).TotalSeconds;
-
-//             // --- REG and OT in seconds ---
-//             double regSeconds = Math.Min(totalSeconds, 8 * 3600); // 8 hours max for REG
-//             double otSeconds = totalSeconds > 8 * 3600 ? totalSeconds - 8 * 3600 : 0;
-
-//             // --- Update REG row ---
-//             existingLog.end_time = existingLog.start_time.Value.AddSeconds(regSeconds);
-//             existingLog.a_hrs = (decimal)(regSeconds / 3600.0);
-//             existingLog.a_dollar = existingLog.a_hrs * regRate;
-
-//             _context.JobTranMst.Update(existingLog);
-//             await _context.SaveChangesAsync();
-
-//             // --- Push REG to Syteline ---
-// await _sytelineService.SyncToSytelineAsync(existingLog, "R", regRate);
-
-//             // --- Create OT row if needed ---
-//             if (otSeconds > 0)
-//             {
-//                 var otStart = existingLog.end_time.Value;  // REG end_time
-//                 var otEnd = dto.EndTime.Value;            // original end_time
-//                 double actualOtSeconds = (otEnd - otStart).TotalSeconds;
-
-//                 var nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
-
-//                 var otRow = new JobTranMst
-//                 {
-//                     site_ref = existingLog.site_ref,
-//                     trans_num = nextTransNum,
-//                     job = existingLog.job,
-//                     SerialNo = existingLog.SerialNo,
-//                     wc = existingLog.wc,
-//                     machine_id = existingLog.machine_id,
-//                     emp_num = existingLog.emp_num,
-//                     qty_complete = existingLog.qty_complete,
-//                     qty_scrapped = existingLog.qty_scrapped,
-//                     oper_num = existingLog.oper_num,
-//                     next_oper = existingLog.next_oper,
-//                     trans_date = DateTime.Now,
-//                     RecordDate = DateTime.Now,
-//                     CreateDate = DateTime.Now,
-//                     CreatedBy = dto.UpdatedBy,
-//                     UpdatedBy = dto.UpdatedBy,
-//                     completed_flag = existingLog.completed_flag,
-//                     suffix = existingLog.suffix,
-//                     trans_type = "O",
-//                     job_rate = otRate,
-//                     a_hrs = (decimal)(actualOtSeconds / 3600.0),
-//                     a_dollar = (decimal)(actualOtSeconds / 3600.0) * otRate,
-//                     start_time = otStart,
-//                     end_time = otEnd,
-//                     status = existingLog.status,
-//                     shift = existingLog.shift,
-//                     posted = existingLog.posted ?? 0,
-//                     RowPointer = Guid.NewGuid(),
-//                     trans_class = existingLog.trans_class,
-//                     item = existingLog.item,
-//                     qcgroup = existingLog.qcgroup
-//                 };
-
-//                 _context.JobTranMst.Add(otRow);
-//                 await _context.SaveChangesAsync();
-
-//                 // --- Push OT to Syteline ---
-// await _sytelineService.SyncToSytelineAsync(otRow, "O", otRate);
-//             }
-
-//             return Ok(new
-//             {
-//                 message = "Updated successfully (REG + OT split with seconds precision)",
-//                 regularHours = existingLog.a_hrs,
-//                 otHours = otSeconds / 3600.0
-//             });
-//         }
-
-//         return Ok(new { message = "Record updated successfully (no hour change)." });
-//     }
-//     catch (Exception ex)
-//     {
-//         return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
-//     }
-// }
-
-
-
 
 
     [HttpPost("EmpMechCodeChecker")]
@@ -2343,8 +1530,7 @@ public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
             _context.JobTranMst.Add(jobTran);
             await _context.SaveChangesAsync();
 
-            // var sytelineService = new SytelineService(_configuration);
-            // await sytelineService.InsertJobTranAsync(jobTran, null, true);
+           
 
             return Ok(new
             {
@@ -2517,7 +1703,7 @@ public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
                     _context.JobTranMst.Add(jobTran);
                     addedJobs.Add(nextTransNum);
 
-                    // await sytelineService.InsertJobTranAsync(jobTran, null, true);
+                    
 
                     nextTransNum++;
                 }
@@ -2640,16 +1826,7 @@ public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
             // 🔹 Save all changes
             await _context.SaveChangesAsync();
 
-            // 🔹 Sync paused row to Syteline
-            // try
-            // {
-            //     var sytelineService = new SytelineService(_configuration);
-            //     await sytelineService.InsertJobTranAsync(pausedJob, lastJob, true);
-            // }
-            // catch (Exception syncEx)
-            // {
-            //     Console.WriteLine($"[Warning] Syteline sync failed for paused job: {syncEx.Message}");
-            // }
+           
 
             return Ok(new
             {
@@ -2671,7 +1848,7 @@ public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
         }
     }
 
-
+    //CompleteJob
     [HttpPost("CompleteSingleQCJob")]
     public async Task<IActionResult> CompleteSingleQCJob([FromBody] StartJobRequestDto dto)
     {
@@ -2809,22 +1986,17 @@ public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
             _context.JobTranMst.Add(completedJob);
             await _context.SaveChangesAsync();
 
-            // 🔹 Post completed QC job to Syteline
-           var rowsToPush = await _context.JobTranMst
-                         .Where(j => j.job == dto.JobNumber
-                            && j.oper_num == dto.OperationNumber
-                           && j.wc == dto.Wc
-                           && j.SerialNo == dto.SerialNo
-                            && j.qcgroup == latestJob.qcgroup
-                             && j.status == "1")     // ❗ removed a_hrs > 0
-                              .ToListAsync();
+            var rowsToPush = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                        && j.oper_num == dto.OperationNumber
+                        && j.wc == dto.Wc
+                        && j.SerialNo == dto.SerialNo
+                        && j.status == "1")
+                .OrderBy(j => j.start_time)
+                .ToListAsync();
 
+            await _sytelineService.InsertJobTransBulkAsync(rowsToPush);
 
-
-             foreach (var r in rowsToPush)
-                        {
-                            await _sytelineService.InsertJobTranAsync(r);
-                            }
 
             return Ok(new
             {
@@ -2970,6 +2142,7 @@ public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
     }
 
 
+    //CompleteJob
     [HttpPost("CompleteGroupQCJobs")]
     public async Task<IActionResult> CompleteGroupQCJobs([FromBody] StartGroupQCJobRequestDto dto)
     {
@@ -3080,6 +2253,25 @@ public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
             }
 
             await _context.SaveChangesAsync();
+
+             var rowsToPush = new List<JobTranMst>();
+
+            foreach (var j in dto.Jobs)
+            {
+                var groupRows = await _context.JobTranMst
+                    .Where(x => x.job == j.JobNumber
+                            && x.oper_num == j.OperationNumber
+                            && x.wc == j.Wc
+                            && x.SerialNo == j.SerialNo
+                            && x.status == "1")
+                    .OrderBy(x => x.start_time)
+                    .ToListAsync();
+
+                rowsToPush.AddRange(groupRows);
+            }
+
+            await _sytelineService.InsertJobTransBulkAsync(rowsToPush);
+
 
             return Ok(new
             {
