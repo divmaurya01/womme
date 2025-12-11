@@ -378,6 +378,33 @@ public class PostController : ControllerBase
             _context.JobTranMst.Add(pausedJob);
             await _context.SaveChangesAsync();
 
+            // Get last 2 rows
+            var lastTwoRows = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                        && j.oper_num == dto.OperationNumber
+                        && j.wc == dto.Wc
+                        && j.SerialNo == dto.SerialNo)
+                .OrderByDescending(j => j.trans_num)
+                .Take(2)
+                .ToListAsync();
+
+            var latestRow = lastTwoRows.FirstOrDefault();               // status 3
+            var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault();   // status 1
+
+            // Check your condition
+            if (latestRow?.status == "2" && secondLastRow?.status == "1")
+            {
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow);
+
+                if (sytelineTransNum != null)
+                {
+                    secondLastRow.import_doc_id = sytelineTransNum.Value.ToString();
+                    _context.JobTranMst.Update(secondLastRow);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+
             return Ok(new
             {
                 success = true,
@@ -535,16 +562,33 @@ public class PostController : ControllerBase
             _context.JobTranMst.Add(completedJob);
             await _context.SaveChangesAsync();
 
-            var rowsToPush = await _context.JobTranMst
+            // Get last 2 rows
+            var lastTwoRows = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
                         && j.oper_num == dto.OperationNumber
                         && j.wc == dto.Wc
-                        && j.SerialNo == dto.SerialNo
-                        && j.status == "1")
-                .OrderBy(j => j.start_time)
+                        && j.SerialNo == dto.SerialNo)
+                .OrderByDescending(j => j.trans_num)
+                .Take(2)
                 .ToListAsync();
 
-            await _sytelineService.InsertJobTransBulkAsync(rowsToPush);      
+            var latestRow = lastTwoRows.FirstOrDefault();               // status 3
+            var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault();   // status 1
+
+            // Check your condition
+            if (latestRow?.status == "3" && secondLastRow?.status == "1")
+            {
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow);
+
+                if (sytelineTransNum != null)
+                {
+                    secondLastRow.import_doc_id = sytelineTransNum.Value.ToString();
+                    _context.JobTranMst.Update(secondLastRow);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+               
 
 
             // If OT exists → insert OT row
@@ -595,16 +639,30 @@ public class PostController : ControllerBase
                 _context.JobTranMst.Add(otJob);
                 await _context.SaveChangesAsync();
 
-                 rowsToPush = await _context.JobTranMst
-                .Where(j => j.job == dto.JobNumber
-                        && j.oper_num == dto.OperationNumber
-                        && j.wc == dto.Wc
-                        && j.SerialNo == dto.SerialNo
-                        && j.status == "1")
-                .OrderBy(j => j.start_time)
-                .ToListAsync();
+                 // Find only LAST RUNNING row
+                var lastRunningRow = await _context.JobTranMst
+                    .Where(j => j.job == dto.JobNumber
+                            && j.oper_num == dto.OperationNumber
+                            && j.wc == dto.Wc
+                            && j.SerialNo == dto.SerialNo
+                            && j.status == "1")
+                    .OrderByDescending(j => j.start_time)
+                    .FirstOrDefaultAsync();
 
-                await _sytelineService.InsertJobTransBulkAsync(rowsToPush);
+                if (lastRunningRow != null)
+                {
+                    // Insert into Syteline (single row)
+                    var sytelineTransNum = await _sytelineService.InsertJobTranAsync(lastRunningRow);
+
+                    // Save import_doc_id to local DB
+                    if (sytelineTransNum != null)
+                    {
+                        lastRunningRow.import_doc_id = sytelineTransNum.Value.ToString();
+                        _context.JobTranMst.Update(lastRunningRow);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
 
                 
             }
@@ -1823,9 +1881,34 @@ public class PostController : ControllerBase
 
             _context.JobTranMst.Add(pausedJob);
 
-            // 🔹 Save all changes
+            // Save all changes
             await _context.SaveChangesAsync();
 
+            // Get last 2 rows
+            var lastTwoRows = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                        && j.oper_num == dto.OperationNumber
+                        && j.wc == dto.Wc
+                        && j.SerialNo == dto.SerialNo)
+                .OrderByDescending(j => j.trans_num)
+                .Take(2)
+                .ToListAsync();
+
+            var latestRow = lastTwoRows.FirstOrDefault();               // status 2
+            var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault();   // status 1
+
+            // Check your condition
+            if (latestRow?.status == "2" && secondLastRow?.status == "1")
+            {
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow);
+
+                if (sytelineTransNum != null)
+                {
+                    secondLastRow.import_doc_id = sytelineTransNum.Value.ToString();
+                    _context.JobTranMst.Update(secondLastRow);
+                    await _context.SaveChangesAsync();
+                }
+            }
            
 
             return Ok(new
@@ -1986,16 +2069,32 @@ public class PostController : ControllerBase
             _context.JobTranMst.Add(completedJob);
             await _context.SaveChangesAsync();
 
-            var rowsToPush = await _context.JobTranMst
+           // Get last 2 rows
+            var lastTwoRows = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
                         && j.oper_num == dto.OperationNumber
                         && j.wc == dto.Wc
-                        && j.SerialNo == dto.SerialNo
-                        && j.status == "1")
-                .OrderBy(j => j.start_time)
+                        && j.SerialNo == dto.SerialNo)
+                .OrderByDescending(j => j.trans_num)
+                .Take(2)
                 .ToListAsync();
 
-            await _sytelineService.InsertJobTransBulkAsync(rowsToPush);
+            var latestRow = lastTwoRows.FirstOrDefault();               // status 3
+            var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault();   // status 1
+
+            // Check your condition
+            if (latestRow?.status == "3" && secondLastRow?.status == "1")
+            {
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow);
+
+                if (sytelineTransNum != null)
+                {
+                    secondLastRow.import_doc_id = sytelineTransNum.Value.ToString();
+                    _context.JobTranMst.Update(secondLastRow);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
 
 
             return Ok(new

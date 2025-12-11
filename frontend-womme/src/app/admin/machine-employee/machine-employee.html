@@ -14,57 +14,39 @@
       </div>
 
       <!-- Dialog Box -->
-      <p-dialog
-        header="Add Machine to WC"
-        [(visible)]="showForm"
-        [modal]="true"
-        [closable]="true"
-        [dismissableMask]="true"
-        [style]="{ width: '600px' }"
-        [baseZIndex]="10000"
-        (onHide)="resetForm()"
-        [contentStyle]="{ overflow: 'visible' }"
-        [styleClass]="'custom-dialog'">
+      <p-dialog header="Add Machine to WC" [(visible)]="showForm" [modal]="true" [closable]="true"
+        [dismissableMask]="true" [style]="{ width: '600px' }" [baseZIndex]="10000" (onHide)="resetForm()"
+        [contentStyle]="{ overflow: 'visible' }" [styleClass]="'custom-dialog'">
 
         <form #machineForm="ngForm" (ngSubmit)="submitForm(machineForm)" class="p-fluid">
           <div class="row g-3">
 
-      <!-- Machine Dropdown -->
-<div class="col-md-12">
-  <label for="machineName" class="form-label">
-    Machine <span class="text-danger">*</span>
-  </label>
-  <select
-  class="form-control"
-  [(ngModel)]="selectedMachine"
-  name="machineName"
-  required
-  #machineName="ngModel"
-  (change)="onMachineSelect()">
-  <option [ngValue]="null" disabled>-- Select any one --</option>
-  <option *ngFor="let machine of machinesList" [ngValue]="machine">
-    {{ machine.machineName }} ({{ machine.machineNumber }})
-  </option>
-</select>
+            <!-- Machine Dropdown -->
+            <div class="col-md-12">
+              <label for="machineName" class="form-label">
+                Machine <span class="text-danger">*</span>
+              </label>
+              <select class="form-control" [(ngModel)]="selectedMachine" name="machineName" required
+                #machineName="ngModel" (change)="onMachineSelect()">
+                <option [ngValue]="null" disabled>-- Select any one --</option>
+                <option *ngFor="let machine of machinesList" [ngValue]="machine">
+                  {{ machine.machineName }} ({{ machine.machineNumber }})
+                </option>
+              </select>
 
-  <!-- Validation -->
-  <div *ngIf="!!machineName?.invalid && (!!machineName?.touched || !!machineForm?.submitted)" class="text-danger small mt-1">
-    Machine is required.
-  </div>
-</div>
+              <!-- Validation -->
+              <div *ngIf="!!machineName?.invalid && (!!machineName?.touched || !!machineForm?.submitted)"
+                class="text-danger small mt-1">
+                Machine is required.
+              </div>
+            </div>
 
             <!-- Work Center Dropdown -->
             <div class="col-md-12">
               <label for="wcName" class="form-label">
                 Work Center <span class="text-danger">*</span>
               </label>
-              <select
-                id="wcName"
-                class="form-control"
-                [(ngModel)]="selectedWc"
-                name="wcName"
-                required
-                #wcName="ngModel"
+              <select id="wcName" class="form-control" [(ngModel)]="selectedWc" name="wcName" required #wcName="ngModel"
                 (change)="onWcSelect()">
                 <option [ngValue]="null" disabled>-- Select any one --</option>
                 <option *ngFor="let wc of wcList" [ngValue]="wc">
@@ -95,18 +77,9 @@
       <!-- Machines Table -->
       <div class="card p-1 mt-3 shadow-sm">
         <div class="card-body p-1">
-          <p-table
-            #dt
-            [value]="machines"
-            [paginator]="true"
-            [rows]="15"
-            [responsiveLayout]="'scroll'"
-            [scrollable]="true"
-            scrollHeight="400px"
-            [resizableColumns]="true"
-            [autoLayout]="true"
-            columnResizeMode="expand"
-            [showCurrentPageReport]="true"
+          <p-table #dt [value]="machines" [paginator]="true" [rows]="15" [responsiveLayout]="'scroll'"
+            [scrollable]="true" scrollHeight="400px" [resizableColumns]="true" [autoLayout]="true"
+            columnResizeMode="expand" [showCurrentPageReport]="true"
             currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
             class="p-datatable-sm p-datatable-striped custom-p-table">
 
@@ -131,10 +104,8 @@
                 <td>{{ machine.machineNumber }}</td>
                 <td>{{ machine.machineDescription }}</td>
                 <td class="text-nowrap">
-                  <a href="#"
-                     class="btn btn-danger btn-sm mx-1 delete-job"
-                     title="Delete"
-                     (click)="deleteMachineWC($event, machine.machineNumber, machine.wc)">
+                  <a href="#" class="btn btn-danger btn-sm mx-1 delete-job" title="Delete"
+                    (click)="deleteMachineWC($event, machine.machineNumber, machine.wc)">
                     <i class="fa-solid fa-trash"></i>
                   </a>
                 </td>

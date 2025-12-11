@@ -53,6 +53,20 @@ public class GetController : ControllerBase
     }
 
 
+    [HttpGet]
+    public IActionResult GetWorkCenterMaster()
+    {
+        var data = _context.WcMst
+            .Select(wc => new 
+            {
+                Wc = wc.wc,
+                Description = wc.description
+            })
+            .OrderBy(w => w.Wc)
+            .ToList();
+
+        return Ok(new { data });
+    }
 
     
 

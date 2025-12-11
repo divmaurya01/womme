@@ -19,7 +19,7 @@ import { DropdownModule } from 'primeng/dropdown';
   standalone: true,
   imports: [
     CommonModule,
-     NgIf,
+    NgIf,
     FormsModule,
     HeaderComponent,
     SidenavComponent,
@@ -50,12 +50,12 @@ export class workcenter implements OnInit {
   syncMessage = '';
   isError = false;
 
-  constructor(private jobService: JobService, private loader: LoaderService) {}
+  constructor(private jobService: JobService, private loader: LoaderService) { }
 
   ngOnInit(): void {
     this.loadWorkCenters();
     this.loadEmployees();
-   // this.loadWorkCenterDropdown();
+    this.loadWorkCenterDropdown();
   }
 
   toggleSidebar(): void {
@@ -79,7 +79,7 @@ export class workcenter implements OnInit {
           this.syncMessage = 'WorkCenter synced successfully';
           this.isError = false;
           this.loadWorkCenters();
-        //  this.loadWorkCenterDropdown();
+          this.loadWorkCenterDropdown();
         },
         error: () => {
           this.isLoading = false;
@@ -89,52 +89,51 @@ export class workcenter implements OnInit {
       });
   }
 
-  // Load table WorkCenters
- // Load WorkCenters
-// Load WorkCenters
-loadWorkCenters(event?: any): void {
-  this.isOperationLoading = true;
-  const page = event?.first ? event.first / (event?.rows || 50) : 0;
-  const size = event?.rows || 50;
-
-  this.loader.show();
-
-  this.jobService.GetWorkCenters(page, size, this.searchTerm)
-    .pipe(finalize(() => {
-      this.loader.hide();
-      this.isOperationLoading = false;
-    }))
-    .subscribe({
-      next: (res) => {
-        if (res && res.data) {
-          // Table data
-          this.workCenters = res.data.map((wc: any, index: number) => ({
-            entryNo: page * size + index + 1,
-            wc: wc.wc,
-            empNum: wc.empNum,
-            description: wc.description,
-            name: wc.name
-          }));
-
-          // ✅ Dropdown data (like employees)
-          this.workCenterDropdown = res.data.map((wc: any) => ({
-            ...wc,
-            displayText: `${wc.wc} (${wc.description})`
-          }));
-
-          this.totalOperations = res.total || 0;
-        } else {
-          this.workCenters = [];
-          this.workCenterDropdown = [];
-          this.totalOperations = 0;
+  loadWorkCenterDropdown(): void {
+    this.jobService.GetWorkCenterMaster()
+      .subscribe({
+        next: (res) => {
+          if (res && res.data) {
+            this.workCenterDropdown = res.data.map((wc: any) => ({
+              ...wc,
+              displayText: `${wc.wc} (${wc.description})`
+            }));
+          }
         }
-      },
-      error: (err) => {
-        Swal.fire('Error', 'Failed to load work centers', 'error');
-        console.error('Error loading work centers:', err);
-      }
-    });
-}
+      });
+  }
+
+
+  // Load WorkCenters
+  loadWorkCenters(event?: any): void {
+    this.isOperationLoading = true;
+    const page = event?.first ? event.first / (event?.rows || 50) : 0;
+    const size = event?.rows || 50;
+
+    this.loader.show();
+
+    this.jobService.GetWorkCenters(page, size, this.searchTerm)
+      .pipe(finalize(() => {
+        this.loader.hide();
+        this.isOperationLoading = false;
+      }))
+      .subscribe({
+        next: (res) => {
+          if (res && res.data) {
+            this.workCenters = res.data.map((wc: any, index: number) => ({
+              entryNo: page * size + index + 1,
+              wc: wc.wc,
+              empNum: wc.empNum,
+              description: wc.description,
+              name: wc.name
+            }));
+
+            this.totalOperations = res.total || 0;
+          }
+        }
+      });
+  }
+
 
 
 
@@ -159,36 +158,40 @@ loadWorkCenters(event?: any): void {
   }
 
   // Assign Employee-WC
- assignEmployeeWC(): void {
-  if (!this.selectedEmployee || !this.selectedWorkCenter) {
-    Swal.fire('Validation', 'Please select both Employee and WorkCenter', 'warning');
-    return;
+  assignEmployeeWC(): void {
+    if (!this.selectedEmployee || !this.selectedWorkCenter) {
+      Swal.fire('Validation', 'Please select both Employee and WorkCenter', 'warning');
+      return;
+    }
+
+    const payload = {
+      empNum: this.selectedEmployee.emp_num,   // ✅ correct
+      wc: this.selectedWorkCenter.wc,          // ✅ correct
+      name: this.selectedEmployee.name,        // ✅ correct
+      description: this.selectedWorkCenter.description
+    };
+
+    this.loader.show();
+    this.jobService.addEmployeeWc(payload)
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: () => {
+          Swal.fire('Success', 'Employee-WC assigned successfully', 'success');
+          this.showAssignDialog = false;
+          this.selectedEmployee = null;       // ✅ clear selection
+          this.selectedWorkCenter = null;     // ✅ clear selection
+          this.loadWorkCenters();
+        },
+        error: (err) => {          
+          const backendMsg =
+            err?.error?.message ||
+            err?.message ||
+            "Failed to assign Employee-WC";
+          Swal.fire('Error', backendMsg, 'error');
+          console.error('Error assigning Employee-WC:', err);
+        }
+      });
   }
-
-  const payload = {
-    empNum: this.selectedEmployee.emp_num,   // ✅ correct
-    wc: this.selectedWorkCenter.wc,          // ✅ correct
-    name: this.selectedEmployee.name,        // ✅ correct
-    description: this.selectedWorkCenter.description
-  };
-
-  this.loader.show();
-  this.jobService.addEmployeeWc(payload)
-    .pipe(finalize(() => this.loader.hide()))
-    .subscribe({
-      next: () => {
-        Swal.fire('Success', 'Employee-WC assigned successfully', 'success');
-        this.showAssignDialog = false;
-        this.selectedEmployee = null;       // ✅ clear selection
-        this.selectedWorkCenter = null;     // ✅ clear selection
-        this.loadWorkCenters();
-      },
-      error: (err) => {
-        Swal.fire('Error', 'Failed to assign Employee-WC', 'error');
-        console.error('Error assigning Employee-WC:', err);
-      }
-    });
-}
 
 
   // Delete Employee-WC mapping

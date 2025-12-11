@@ -949,3 +949,8 @@
 [2025-12-10 18:00:28] API: GET /api/Get/GetActiveJobTransactions Status: 200
 [2025-12-10 18:00:28] API: GET /api/Get/GetUnpostedTransactions?page=0&size=50&search=&emp_num=EMP101 Status: 200
 [2025-12-10 18:00:29] API: GET /api/Get/GetActiveJobTransactions Status: 200
+[2025-12-10 18:39:05] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2025-12-10 18:39:05] API: GET /api/Get/GetUnpostedTransactions?page=0&size=50&search=&emp_num=EMP101 Status: 200
+[2025-12-10 18:39:08] API: GET /api/Get/GetActiveJobTransactions Status: 200
+[2025-12-10 18:39:08] API: GET /api/Get/GetUnpostedTransactions?page=0&size=50&search=&emp_num=EMP101 Status: 200
+[2025-12-10 18:39:09] API: GET /api/Get/GetActiveJobTransactions Status: 200

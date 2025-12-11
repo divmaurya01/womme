@@ -13,20 +13,8 @@
   background-color: #e5b870;
 }
 
-.custom-badge-completed {
-  background-color: #ECC391 !important;
-  color: #1a1a1a; /* dark text for contrast */
-  padding: 5px 5px;
-  border-radius: 0.75em;
-  font-weight: 600;
-  font-size: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
 .custom-submit-btn {
-  background-color: #ECC391;
+  background-color: #5CB78E;
   color: white;
   border: none;
   cursor: pointer;
@@ -37,7 +25,7 @@
 }
 
 .custom-submit-btn:hover {
-  background-color: #ECC391; /* Slightly darker shade for hover */
+  background-color: #4aa879; /* Slightly darker shade for hover */
 }
 
 
@@ -63,7 +51,7 @@
     }
 
     .btn-add {
-      background-color: #ECC391;
+      background-color: #28a745;
       color: white;
       border-radius: 0pxx;
     }
@@ -80,6 +68,11 @@
     color: white;
     font-size: 8px;
     background-color: #FF646D!important;
+}
+.download-job{
+    color: white;
+    font-size: 8px;
+    background-color: #4AA879!important;
 }
 
 .custom-p-table th,

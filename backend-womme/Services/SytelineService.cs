@@ -18,7 +18,7 @@ namespace WommeAPI.Services
         }
 
        
-    public async Task InsertJobTranAsync(JobTranMst jobTran, JobTranMst? firstStartRow = null, bool isQCJob = false)
+   public async Task<int?> InsertJobTranAsync(JobTranMst jobTran, JobTranMst? firstStartRow = null, bool isQCJob = false)
     {
         if (jobTran == null)
             throw new ArgumentNullException(nameof(jobTran));
@@ -32,34 +32,15 @@ namespace WommeAPI.Services
                 using (var transaction = conn.BeginTransaction())
                 {
                     // --------------------------------------------------------
-                    // STEP 1: DELETE Duplicates from Syteline BEFORE INSERT
+                    // STEP 1: PROCESS TIMES
                     // --------------------------------------------------------
-                    string deleteSql = @"
-                        DELETE FROM jobtran_mst
-                        WHERE job = @job
-                        AND oper_num = @oper_num
-                        AND wc = @wc
-                        AND Uf_MHSerialNo = @SerialNo
-                        AND Uf_MHStatus = '1'";  
-                    
-                    using (SqlCommand deleteCmd = new SqlCommand(deleteSql, conn, transaction))
-                    {
-                        deleteCmd.Parameters.AddWithValue("@job", jobTran.job);
-                        deleteCmd.Parameters.AddWithValue("@oper_num", jobTran.oper_num);
-                        deleteCmd.Parameters.AddWithValue("@wc", jobTran.wc ?? (object)DBNull.Value);
-                        deleteCmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
-
-                        await deleteCmd.ExecuteNonQueryAsync();
-                    }
-
-                    // --------------------------------------------------------
-                    // STEP 2: INSERT NEW ROW TO SYTELINE (existing code)
-                    // --------------------------------------------------------
-
                     int startTimeInt = (int)jobTran.start_time.Value.TimeOfDay.TotalSeconds;
                     int elapsedSeconds = (int)Math.Round((jobTran.a_hrs ?? 0) * 3600);
                     int endTimeInt = (startTimeInt + elapsedSeconds) % 86400;
 
+                    // --------------------------------------------------------
+                    // STEP 2: INSERT ROW (NO OUTPUT — SAFE WITH TRIGGERS)
+                    // --------------------------------------------------------
                     string insertSql = @"
                         INSERT INTO jobtran_mst
                         (site_ref, job, suffix, oper_num, next_oper, trans_type,
@@ -72,7 +53,8 @@ namespace WommeAPI.Services
                         @trans_date, @start_time, @end_time, @a_hrs, @a_dollar, @qty_complete, @qty_moved, @qty_scrapped,
                         @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate, @issue_parent, @complete_op,
                         @close_job, @posted, @SerialNo, @Status, @QCGroup,
-                        @CreatedBy, @UpdatedBy, @MovedOKToStock)";
+                        @CreatedBy, @UpdatedBy, @MovedOKToStock);
+                    ";
 
                     using (SqlCommand cmd = new SqlCommand(insertSql, conn, transaction))
                     {
@@ -94,7 +76,7 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@qty_moved", jobTran.qty_moved ?? 0);
                         cmd.Parameters.AddWithValue("@qty_scrapped", jobTran.qty_scrapped ?? 0);
 
-                        cmd.Parameters.AddWithValue("@emp_num", jobTran.emp_num);
+                        cmd.Parameters.AddWithValue("@emp_num", "   1234");
                         cmd.Parameters.AddWithValue("@wc", jobTran.wc ?? (object)DBNull.Value);
                         cmd.Parameters.AddWithValue("@whse", jobTran.whse ?? (object)DBNull.Value);
                         cmd.Parameters.AddWithValue("@shift", jobTran.shift ?? (object)DBNull.Value);
@@ -111,20 +93,51 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@Status", "1");
                         cmd.Parameters.AddWithValue("@QCGroup", isQCJob ? jobTran.qcgroup : (object)DBNull.Value);
 
-                        cmd.Parameters.AddWithValue("@CreatedBy", jobTran.CreatedBy ?? "system");
-                        cmd.Parameters.AddWithValue("@UpdatedBy", jobTran.UpdatedBy ?? "system");
+                        cmd.Parameters.AddWithValue("@CreatedBy", "   1234");
+                        cmd.Parameters.AddWithValue("@UpdatedBy", "   1234");
                         cmd.Parameters.AddWithValue("@MovedOKToStock", jobTran.Uf_MovedOKToStock ?? 0);
 
                         await cmd.ExecuteNonQueryAsync();
                     }
 
+                    // --------------------------------------------------------
+                    // STEP 3: FETCH NEWLY INSERTED trans_num
+                    // --------------------------------------------------------
+                    string fetchSql = @"
+                        SELECT TOP 1 trans_num
+                        FROM jobtran_mst
+                        WHERE job = @job
+                        AND oper_num = @oper_num
+                        AND wc = @wc
+                        AND Uf_MHSerialNo = @SerialNo
+                        AND trans_date = @trans_date
+                        ORDER BY CreateDate DESC, trans_num DESC;
+                    ";
+
+                    int? transNum = null;
+
+                    using (SqlCommand fetchCmd = new SqlCommand(fetchSql, conn, transaction))
+                    {
+                        fetchCmd.Parameters.AddWithValue("@job", jobTran.job);
+                        fetchCmd.Parameters.AddWithValue("@oper_num", jobTran.oper_num);
+                        fetchCmd.Parameters.AddWithValue("@wc", jobTran.wc);
+                        fetchCmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
+                        fetchCmd.Parameters.AddWithValue("@trans_date", jobTran.trans_date ?? DateTime.Now);
+
+                        object result = await fetchCmd.ExecuteScalarAsync();
+                        if (result != null && result != DBNull.Value)
+                            transNum = Convert.ToInt32(result);
+                            Console.WriteLine("FETCH RESULT trans_num = " + (transNum?.ToString() ?? "NULL"));
+                    }
                     await transaction.CommitAsync();
+                    return transNum;
                 }
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine("Syteline Insert ERROR: " + ex.Message);
+            return null;
         }
     }
 

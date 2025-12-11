@@ -11,9 +11,7 @@
 
         <!-- + Work Center Button (Top Left) -->
         <div class="d-flex justify-content-start">
-          <button
-            class="btn custom-assign-btn px-4 py-2"
-            style="height: 40px; white-space: nowrap;"
+          <button class="btn custom-assign-btn px-4 py-2" style="height: 40px; white-space: nowrap;"
             (click)="showAssignDialog = true">
             + Work Center
           </button>
@@ -23,33 +21,22 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
           <!-- Search Input (Left Side) -->
           <div class="d-flex align-items-center flex-grow-1" style="max-width: 500px;">
-            <input
-              type="text"
-              pInputText
-              placeholder="Search Work Center"
-              [(ngModel)]="searchTerm"
-              (ngModelChange)="onSearchChange($event)"
-              class="form-control ps-5 pe-5 rounded-pill shadow-sm"
-              style="height: 45px; transition: all 0.3s;"
-            />
+            <input type="text" pInputText placeholder="Search Work Center" [(ngModel)]="searchTerm"
+              (ngModelChange)="onSearchChange($event)" class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+              style="height: 45px; transition: all 0.3s;" />
           </div>
 
           <!-- Sync Button (Right Side) -->
           <div class="ms-auto">
-            <button
-              type="button"
-              class="btn custom-assign-btn rounded-pill px-4 py-2 sync-btn"
-              style="background-color: aquamarine;"
-              (click)="SyncWcMst()"
-              [disabled]="isLoading">
+            <button type="button" class="btn custom-assign-btn rounded-pill px-4 py-2 sync-btn"
+              style="background-color: aquamarine;" (click)="SyncWcMst()" [disabled]="isLoading">
               <i class="fas fa-sync-alt mx-2"></i>
               <span *ngIf="!isLoading">Sync Work Centers From SyteLine</span>
               <span *ngIf="isLoading">Syncing... <i class="fas fa-spinner fa-spin ms-1"></i></span>
             </button>
 
             <!-- Sync Message -->
-            <div *ngIf="syncMessage" class="mt-2"
-                [ngClass]="{ 'text-success': !isError, 'text-danger': isError }">
+            <div *ngIf="syncMessage" class="mt-2" [ngClass]="{ 'text-success': !isError, 'text-danger': isError }">
               {{ syncMessage }}
             </div>
           </div>
@@ -58,27 +45,19 @@
 
 
       <!-- Sync Message -->
-      <div *ngIf="syncMessage" class="mb-2"
-           [ngClass]="{ 'text-success': !isError, 'text-danger': isError }">
+      <div *ngIf="syncMessage" class="mb-2" [ngClass]="{ 'text-success': !isError, 'text-danger': isError }">
         {{ syncMessage }}
       </div>
 
       <!-- Workcenter Table -->
       <div class="card p-1 mt-3 shadow-sm">
         <div class="card-body p-1">
-          <p-table #dt [value]="workCenters"
-                   [paginator]="true" [rows]="15" [lazy]="true"
-                   (onLazyLoad)="loadWorkCenters($event)"
-                   [totalRecords]="totalOperations"
-                   [responsiveLayout]="'scroll'"
-                   [scrollable]="true"
-                   scrollHeight="400px"
-                   [resizableColumns]="true"
-                   [autoLayout]="true"
-                   columnResizeMode="expand"
-                   [showCurrentPageReport]="true"
-                   currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
-                   class="p-datatable-sm p-datatable-striped custom-p-table">
+          <p-table #dt [value]="workCenters" [paginator]="true" [rows]="15" [lazy]="true"
+            (onLazyLoad)="loadWorkCenters($event)" [totalRecords]="totalOperations" [responsiveLayout]="'scroll'"
+            [scrollable]="true" scrollHeight="400px" [resizableColumns]="true" [autoLayout]="true"
+            columnResizeMode="expand" [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            class="p-datatable-sm p-datatable-striped custom-p-table">
 
             <ng-template pTemplate="header">
               <tr>
@@ -105,10 +84,8 @@
                   </button>
                 </td> -->
                 <td class="text-nowrap">
-                  <a href="#"
-                     class="btn btn-danger btn-sm mx-1 delete-job"
-                     title="Delete"
-                     (click)="deleteEmployeeWC(wc.empNum, wc.wc)">
+                  <a href="#" class="btn btn-danger btn-sm mx-1 delete-job" title="Delete"
+                    (click)="deleteEmployeeWC(wc.empNum, wc.wc)">
                     <i class="fa-solid fa-trash"></i>
                   </a>
                 </td>
@@ -117,44 +94,43 @@
           </p-table>
         </div>
       </div>
+     
+      <!-- Assign WorkCenter Dialog -->
+      <p-dialog header="Assign Employee to WorkCenter" [(visible)]="showAssignDialog" [modal]="true" [closable]="true"
+        [dismissableMask]="true" [style]="{ width: '600px' }" [baseZIndex]="10000"
+        [contentStyle]="{ overflow: 'visible' }" [styleClass]="'custom-dialog'">
 
-      <!-- Assign Dialog -->
-      <p-dialog header="Assign WorkCenter"
-                [(visible)]="showAssignDialog"
-                [modal]="true"
-                [style]="{ width: '600px' }"> 
+        <div class="p-fluid">
 
-        <div class="mb-3">
-          <label class="form-label">Select Employee</label>
-          <p-dropdown [options]="employees"
-                      [(ngModel)]="selectedEmployee"
-                      optionLabel="displayText"
-                      placeholder="-- Select Employee --"
-                      class="w-100">
-          </p-dropdown>
+          <!-- Employee Dropdown -->
+          <div class="mb-3">
+            <label class="form-label">Select Employee</label>
+
+            <p-dropdown [options]="employees" [(ngModel)]="selectedEmployee" optionLabel="displayText"
+              placeholder="-- Select Employee --" class="w-100">
+            </p-dropdown>
+          </div>
+
+          <!-- WorkCenter Dropdown -->
+          <div class="mb-3">
+            <label class="form-label">Select WorkCenter</label>
+
+            <p-dropdown [options]="workCenterDropdown" [(ngModel)]="selectedWorkCenter" optionLabel="displayText"
+              placeholder="-- Select WorkCenter --" class="w-100" appendTo="body">
+            </p-dropdown>
+
+          </div>
+
         </div>
-
-       <div class="mb-3">
-  <label class="form-label">Select WorkCenter</label>
-  <p-dropdown 
-      [options]="workCenterDropdown"
-      [(ngModel)]="selectedWorkCenter"
-      optionLabel="displayText"
-      placeholder="-- Select WorkCenter --"
-      class="w-100">
-  </p-dropdown>
-</div>
-
-
+        <!-- Dialog Footer -->
         <ng-template pTemplate="footer">
-          <button type="button" class="btn btn-secondary" (click)="showAssignDialog=false">
-            Cancel
-          </button>
           <button type="button" class="btn btn-primary" (click)="assignEmployeeWC()">
             Save
           </button>
         </ng-template>
+
       </p-dialog>
+
 
     </section>
   </main>

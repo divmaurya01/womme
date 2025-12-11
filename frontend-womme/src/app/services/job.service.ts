@@ -481,6 +481,12 @@ CheckPrevJob(jobData: any): Observable<any> {
     });
   }
 
+  GetWorkCenterMaster(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/Get/GetWorkCenterMaster`, {
+      headers: this.getHeaders()
+    });
+  }
+
 
 
   createAssignedJob(data: {
