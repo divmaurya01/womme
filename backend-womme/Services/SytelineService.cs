@@ -18,7 +18,7 @@ namespace WommeAPI.Services
         }
 
        
-   public async Task<int?> InsertJobTranAsync(JobTranMst jobTran, JobTranMst? firstStartRow = null, bool isQCJob = false)
+   public async Task<int?> InsertJobTranAsync(JobTranMst jobTran,int comjob)
     {
         if (jobTran == null)
             throw new ArgumentNullException(nameof(jobTran));
@@ -76,7 +76,7 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@qty_moved", jobTran.qty_moved ?? 0);
                         cmd.Parameters.AddWithValue("@qty_scrapped", jobTran.qty_scrapped ?? 0);
 
-                        cmd.Parameters.AddWithValue("@emp_num", "   1234");
+                        cmd.Parameters.AddWithValue("@emp_num", jobTran.emp_num);
                         cmd.Parameters.AddWithValue("@wc", jobTran.wc ?? (object)DBNull.Value);
                         cmd.Parameters.AddWithValue("@whse", jobTran.whse ?? (object)DBNull.Value);
                         cmd.Parameters.AddWithValue("@shift", jobTran.shift ?? (object)DBNull.Value);
@@ -85,16 +85,16 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@job_rate", jobTran.job_rate ?? (object)DBNull.Value);
 
                         cmd.Parameters.AddWithValue("@issue_parent", jobTran.issue_parent ?? 0);
-                        cmd.Parameters.AddWithValue("@complete_op", jobTran.complete_op ?? 0);
-                        cmd.Parameters.AddWithValue("@close_job", jobTran.close_job ?? 0);
+                        cmd.Parameters.AddWithValue("@complete_op", comjob);
+                        cmd.Parameters.AddWithValue("@close_job", comjob);
                         cmd.Parameters.AddWithValue("@posted", jobTran.posted ?? 0);
 
                         cmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
                         cmd.Parameters.AddWithValue("@Status", "1");
-                        cmd.Parameters.AddWithValue("@QCGroup", isQCJob ? jobTran.qcgroup : (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@QCGroup", jobTran.qcgroup);
 
-                        cmd.Parameters.AddWithValue("@CreatedBy", "   1234");
-                        cmd.Parameters.AddWithValue("@UpdatedBy", "   1234");
+                        cmd.Parameters.AddWithValue("@CreatedBy", jobTran.emp_num);
+                        cmd.Parameters.AddWithValue("@UpdatedBy", jobTran.emp_num);
                         cmd.Parameters.AddWithValue("@MovedOKToStock", jobTran.Uf_MovedOKToStock ?? 0);
 
                         await cmd.ExecuteNonQueryAsync();
@@ -128,6 +128,7 @@ namespace WommeAPI.Services
                         if (result != null && result != DBNull.Value)
                             transNum = Convert.ToInt32(result);
                             Console.WriteLine("FETCH RESULT trans_num = " + (transNum?.ToString() ?? "NULL"));
+                            Console.WriteLine("FETCH RESULT comjob = " + (comjob));
                     }
                     await transaction.CommitAsync();
                     return transNum;
@@ -138,6 +139,40 @@ namespace WommeAPI.Services
         {
             Console.WriteLine("Syteline Insert ERROR: " + ex.Message);
             return null;
+        }
+    }
+
+
+
+    public async Task<bool> UpdateJobTranCompletionAsync(int transNum, int completeFlag)
+    {
+        try
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                string updateSql = @"
+                    UPDATE jobtran_mst
+                    SET complete_op = @completeFlag,
+                        close_job = @completeFlag
+                    WHERE trans_num = @transNum
+                ";
+
+                using (SqlCommand cmd = new SqlCommand(updateSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@completeFlag", completeFlag);
+                    cmd.Parameters.AddWithValue("@transNum", transNum);
+
+                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                    return rowsAffected > 0;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Syteline Update ERROR: " + ex.Message);
+            return false;
         }
     }
 

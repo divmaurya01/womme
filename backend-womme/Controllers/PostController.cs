@@ -394,7 +394,7 @@ public class PostController : ControllerBase
             // Check your condition
             if (latestRow?.status == "2" && secondLastRow?.status == "1")
             {
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow);
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow,0);
 
                 if (sytelineTransNum != null)
                 {
@@ -578,7 +578,7 @@ public class PostController : ControllerBase
             // Check your condition
             if (latestRow?.status == "3" && secondLastRow?.status == "1")
             {
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow);
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 1);
 
                 if (sytelineTransNum != null)
                 {
@@ -588,7 +588,47 @@ public class PostController : ControllerBase
                 }
             }
 
-               
+            // CASE 2: latestRow = 3, secondLastRow = 2
+            if (latestRow?.status == "3" && secondLastRow?.status == "2")
+            {
+                // Find the 3rd last row which MUST be status = 1
+                var thirdLastRow = await _context.JobTranMst
+                    .Where(j => j.job == dto.JobNumber
+                            && j.oper_num == dto.OperationNumber
+                            && j.wc == dto.Wc
+                            && j.SerialNo == dto.SerialNo
+                            && j.status == "1")
+                    .OrderByDescending(j => j.trans_num)
+                    .FirstOrDefaultAsync();
+
+                if (thirdLastRow == null)
+                {
+                    Console.WriteLine("No third last running row found with status 1.");
+                }
+                else
+                {
+                    Console.WriteLine($"ThirdLastRow Found => trans_num={thirdLastRow.trans_num}, import_doc_id={thirdLastRow.import_doc_id}");
+
+                    // import_doc_id is the Syteline trans number
+                    if (!string.IsNullOrEmpty(thirdLastRow.import_doc_id))
+                    {
+                        int sytelineTransnumber = int.Parse(thirdLastRow.import_doc_id);
+
+                        // Call SYTELINE to update the row as completed
+                        var updateResult = await _sytelineService.UpdateJobTranCompletionAsync(sytelineTransnumber, 1);
+
+                        if (updateResult)
+                        {
+                            Console.WriteLine("Syteline row updated to complete=1 successfully.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Failed to update Syteline row.");
+                        }
+                    }
+                }
+            }
+
 
 
             // If OT exists → insert OT row
@@ -652,7 +692,7 @@ public class PostController : ControllerBase
                 if (lastRunningRow != null)
                 {
                     // Insert into Syteline (single row)
-                    var sytelineTransNum = await _sytelineService.InsertJobTranAsync(lastRunningRow);
+                    var sytelineTransNum = await _sytelineService.InsertJobTranAsync(lastRunningRow, 0);
 
                     // Save import_doc_id to local DB
                     if (sytelineTransNum != null)
@@ -1900,7 +1940,7 @@ public class PostController : ControllerBase
             // Check your condition
             if (latestRow?.status == "2" && secondLastRow?.status == "1")
             {
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow);
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow,0);
 
                 if (sytelineTransNum != null)
                 {
@@ -2085,13 +2125,54 @@ public class PostController : ControllerBase
             // Check your condition
             if (latestRow?.status == "3" && secondLastRow?.status == "1")
             {
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow);
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 1);
 
                 if (sytelineTransNum != null)
                 {
                     secondLastRow.import_doc_id = sytelineTransNum.Value.ToString();
                     _context.JobTranMst.Update(secondLastRow);
                     await _context.SaveChangesAsync();
+                }
+            }
+
+            // CASE 2: latestRow = 3, secondLastRow = 2
+            if (latestRow?.status == "3" && secondLastRow?.status == "2")
+            {
+                // Find the 3rd last row which MUST be status = 1
+                var thirdLastRow = await _context.JobTranMst
+                    .Where(j => j.job == dto.JobNumber
+                            && j.oper_num == dto.OperationNumber
+                            && j.wc == dto.Wc
+                            && j.SerialNo == dto.SerialNo
+                            && j.status == "1")
+                    .OrderByDescending(j => j.trans_num)
+                    .FirstOrDefaultAsync();
+
+                if (thirdLastRow == null)
+                {
+                    Console.WriteLine("No third last running row found with status 1.");
+                }
+                else
+                {
+                    Console.WriteLine($"ThirdLastRow Found => trans_num={thirdLastRow.trans_num}, import_doc_id={thirdLastRow.import_doc_id}");
+
+                    // import_doc_id is the Syteline trans number
+                    if (!string.IsNullOrEmpty(thirdLastRow.import_doc_id))
+                    {
+                        int sytelineTransnumber = int.Parse(thirdLastRow.import_doc_id);
+
+                        // Call SYTELINE to update the row as completed
+                        var updateResult = await _sytelineService.UpdateJobTranCompletionAsync(sytelineTransnumber, 1);
+
+                        if (updateResult)
+                        {
+                            Console.WriteLine("Syteline row updated to complete=1 successfully.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Failed to update Syteline row.");
+                        }
+                    }
                 }
             }
 
