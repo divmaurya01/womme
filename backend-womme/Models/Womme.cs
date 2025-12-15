@@ -2401,6 +2401,18 @@ public string? TransType { get; set; }
         public string QcGroup { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool IsNextJobActive { get; set; }
+
+    }
+
+    public class NextJobActiveDto
+    {
+        public string Job { get; set; }
+        public string SerialNo { get; set; }
+        public string Wc { get; set; }
+        public int OperNum { get; set; }
+        public int? NextOper { get; set; }
+        public bool IsNextJobActive { get; set; }
     }
 
     [Table("wom_wc_machine")]

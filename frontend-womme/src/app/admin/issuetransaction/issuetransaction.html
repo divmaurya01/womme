@@ -1,0 +1,76 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <!-- Search -->
+      <div class="dashboard-control-bar d-flex justify-content-between align-items-center mb-3"
+           style="gap: 1rem; padding-top: 2em;">
+        <div class="flex-grow-1 position-relative" style="min-width: 250px; max-width: 400px;">
+          <input
+            type="text"
+            pInputText
+            placeholder="Search Job"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange($event)"
+            class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+            style="height: 45px;"
+          />
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+
+          <p-table
+            [value]="transactions"
+            [lazy]="true"
+            [paginator]="true"
+            [rows]="50"
+            [totalRecords]="totalRecords"
+            (onLazyLoad)="loadJobs($event)"
+            [loading]="isLoading"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color: #ECC391; padding: 10px;">S.No</th>
+                <th style="background-color: #ECC391; padding: 10px;">Job</th>
+                <th style="background-color: #ECC391; padding: 10px;">Serial No</th>
+                <th style="background-color: #ECC391; padding: 10px;">Qty</th>
+                <th style="background-color: #ECC391; padding: 10px;">Opr No.</th>                
+                <th style="background-color: #ECC391; padding: 10px;">Action</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td>{{ job.jobNumber }}</td>
+                <td>{{ job.serialNo }}</td>
+                <td>{{ job.qtyReleased }}</td>
+                <td>{{ job.operationNumber }}</td>               
+                <td>
+                    <button class="btn btn-success rounded-circle d-flex align-items-center justify-content-center issue-btn" (click)="startIssueJob(job)">
+                        <i class="pi pi-arrow-right"></i>
+                    </button>
+                </td>
+
+              </tr>
+            </ng-template>
+          </p-table>
+
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>

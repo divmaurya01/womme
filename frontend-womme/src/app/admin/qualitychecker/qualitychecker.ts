@@ -102,35 +102,37 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
           }))
           .subscribe({
             next: (res: any) => {
-              const jobs = (res.data ?? [])
-                .filter((job: any) => {
-                  return !activeJobs.some((active: any) =>
-                    active.job === job.job &&
-                    active.serialNo === job.serialNo &&
-                    active.oper_num === +job.operNum &&
-                    active.wc === job.wcCode &&
-                    active.item === job.item
-                  );
-                })
-                .map((x: any, index: number) => ({
-                  uniqueRowId: `${x.serialNo}-${x.operNum}-${x.wcCode}-${index}`,
-                  serialNo: x.serialNo.trim(),
-                  jobNumber: x.job.trim(),
-                  qtyReleased: x.qtyReleased,
-                  item: x.item.trim(),
-                  jobYear: x.jobYear,
-                  operationNumber: x.operNum,
-                  wcCode: x.wcCode.trim(),
-                  wcDescription: x.wcDescription.trim(),
-                  empNum: x.emp_num,
-                  status: x.status,
-                  isActive: x.isActive
-                }));
-               console.log("Loaded jobs:", jobs);
+            const jobs = (res.data ?? [])
+              .filter((job: any) => {
+                return !activeJobs.some((active: any) =>
+                  active.job === job.job &&
+                  active.serialNo === job.serialNo &&
+                  active.oper_num === +job.operNum &&
+                  active.wc === job.wcCode &&
+                  active.item === job.item
+                );
+              })
+              .map((x: any, index: number) => ({
+                uniqueRowId: `${x.serialNo}-${x.operNum}-${x.wcCode}-${index}`,
+                serialNo: x.serialNo.trim(),
+                jobNumber: x.job.trim(),
+                qtyReleased: x.qtyReleased,
+                item: x.item.trim(),
+                jobYear: x.jobYear,
+                operationNumber: Number(x.operNum), // 🔥 ensure number
+                wcCode: x.wcCode.trim(),
+                wcDescription: x.wcDescription.trim(),
+                empNum: x.emp_num,
+                status: x.status,
+                isActive: x.isActive
+              }));
 
-              this.transactions = jobs;
-              this.totalRecords = jobs.length;
-            },
+            // temporarily assign
+            this.transactions = jobs;
+
+            // 🔥 NOW APPLY NEXT-JOB FILTER
+            this.applyNextJobActiveFilter();
+          },
             error: (err) => console.error('Error fetching job transactions:', err)
           });
       },
@@ -526,6 +528,35 @@ completeQCJob(job: any) {
     });
 }
 
+  applyNextJobActiveFilter() {
+    this.jobService.getIsNextJobActive().subscribe({
+      next: (res: any) => {
+
+        // Map: job|serial -> [nextOper...]
+        const nextOpMap = new Map<string, number[]>();
+
+        (res.data ?? []).forEach((x: any) => {
+          const key = `${x.job}|${x.serialNo}`;
+          if (!nextOpMap.has(key)) {
+            nextOpMap.set(key, []);
+          }
+          nextOpMap.get(key)!.push(Number(x.nextOper));
+        });
+
+        // ✅ FILTER QC JOBS BASED ON MATCH
+        this.transactions = this.transactions.filter(job => {
+          const key = `${job.jobNumber}|${job.serialNo}`;
+          const nextOps = nextOpMap.get(key) ?? [];
+          return nextOps.includes(Number(job.operationNumber));
+        });
+
+        this.totalRecords = this.transactions.length;
+
+        console.log('QC jobs after Next-Op match:', this.transactions);
+      },
+      error: err => console.error('Error fetching next job active:', err)
+    });
+  }
 
  
   loadCompletedJobs() {

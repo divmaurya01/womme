@@ -427,7 +427,6 @@ public class PostController : ControllerBase
 
 
 
-//changes end by mahima
 
   //CompleteJob
   [HttpPost("CompleteJob")]
@@ -538,14 +537,14 @@ public class PostController : ControllerBase
                 suffix = lastJob.suffix,
                 trans_type = "R",
                 qty_scrapped = lastJob.qty_scrapped,
-                qty_moved = lastJob.qty_moved,
+                qty_moved = 1,
                 pay_rate = lastJob.pay_rate,
                 whse = lastJob.whse,
                 close_job = lastJob.close_job,
                 issue_parent = lastJob.issue_parent,
-                complete_op = lastJob.complete_op,
-                shift = lastJob.shift,
-                posted = lastJob.posted,
+                complete_op = 1,
+                shift = "1",
+                posted = 1,
                 job_rate = regRate,
                 Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
                 a_hrs = regularHours,
@@ -1491,6 +1490,158 @@ public class PostController : ControllerBase
         return Ok(new { message = "Machine-WC mapping added successfully to local and Syteline." });
     }
 
+    
+    
+    [HttpPost("startIssueJob")]
+    public async Task<IActionResult> StartIssueJob([FromBody] StartJobRequestDto jobDto)
+    {
+        if (jobDto == null)
+            return BadRequest("Invalid request");
+
+        try
+        {        
+
+            int? nextOper = await _context.JobRouteMst
+                .Where(r => r.Job == jobDto.JobNumber
+                        && r.OperNum > jobDto.OperationNumber)
+                .OrderBy(r => r.OperNum)
+                .Select(r => (int?)r.OperNum)
+                .FirstOrDefaultAsync();        
+
+            decimal startTransNum =
+                (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
+
+            decimal completeTransNum = startTransNum + 1;
+
+            // --------------------------------------------------
+            // 2️⃣ START ROW (STATUS = 1)
+            // --------------------------------------------------
+            var startTran = new JobTranMst
+            {
+                    site_ref = "DEFAULT",
+                    trans_num = startTransNum,
+                    job = jobDto.JobNumber,
+                    SerialNo = jobDto.SerialNo,                
+                    wc = jobDto.Wc,
+                    emp_num = jobDto.EmpNum,
+                    qty_complete = 0,
+                    oper_num = jobDto.OperationNumber,
+                    next_oper = nextOper,
+                    trans_date = DateTime.Now,
+                    RecordDate = DateTime.Now,
+                    CreateDate = DateTime.Now,
+                    CreatedBy = jobDto.loginuser,
+                    UpdatedBy = jobDto.loginuser,
+                    completed_flag = false,
+                    suffix = 0,
+                    trans_type = "D",
+                    qty_scrapped = 0,
+                    qty_moved = 0,
+                    pay_rate = "R",
+                    whse = "MAIN",
+                    close_job = 0,
+                    issue_parent = 0,
+                    complete_op = 0,
+                    shift = "1",
+                    posted = 1,
+                    job_rate = 0,
+                    Uf_MovedOKToStock = 0,
+                    start_time = DateTime.Now,
+                    end_time = DateTime.Now,
+                    status = "1",
+                    qcgroup = "",
+                    RowPointer = Guid.NewGuid()
+            };
+
+            _context.JobTranMst.Add(startTran);
+            await _context.SaveChangesAsync();
+
+            // --------------------------------------------------
+            // 3️⃣ COMPLETE ROW (STATUS = 3)
+            // --------------------------------------------------
+            var completeTran = new JobTranMst
+            {
+                    site_ref = "DEFAULT",
+                    trans_num = completeTransNum,
+                    job = jobDto.JobNumber,
+                    SerialNo = jobDto.SerialNo,                
+                    wc = jobDto.Wc,
+                    emp_num = jobDto.EmpNum,
+                    qty_complete = 1,
+                    oper_num = jobDto.OperationNumber,
+                    next_oper = nextOper,
+                    trans_date = DateTime.Now,
+                    RecordDate = DateTime.Now,
+                    CreateDate = DateTime.Now,
+                    CreatedBy = jobDto.loginuser,
+                    UpdatedBy = jobDto.loginuser,
+                    completed_flag = true,
+                    suffix = 0,
+                    trans_type = "D",
+                    qty_scrapped = 0,
+                    qty_moved = 1,
+                    pay_rate = "R",
+                    whse = "MAIN",
+                    close_job = 0,
+                    issue_parent = 0,
+                    complete_op = 1,                
+                    shift = "1",
+                    posted = 1,
+                    job_rate = 0,
+                    Uf_MovedOKToStock = 0,
+                    start_time = DateTime.Now,
+                    end_time = DateTime.Now,
+                    status = "3",
+                    qcgroup = "",
+                    RowPointer = Guid.NewGuid()
+            };
+
+            _context.JobTranMst.Add(completeTran);
+            await _context.SaveChangesAsync();
+
+            var lastTwoRows = await _context.JobTranMst
+                .Where(j => j.job == jobDto.JobNumber
+                        && j.oper_num == jobDto.OperationNumber
+                        && j.wc == jobDto.Wc
+                        && j.SerialNo == jobDto.SerialNo)
+                .OrderByDescending(j => j.trans_num)
+                .Take(2)
+                .ToListAsync();
+
+            var latestRow = lastTwoRows.FirstOrDefault();               // status 2
+            var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault();   // status 1
+
+            // Check your condition
+            if (latestRow?.status == "2" && secondLastRow?.status == "1")
+            {
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow,0);
+
+                if (sytelineTransNum != null)
+                {
+                    secondLastRow.import_doc_id = sytelineTransNum.Value.ToString();
+                    _context.JobTranMst.Update(secondLastRow);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Issue job processed successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "Error while issuing job",
+                error = ex.Message
+            });
+        }
+    }
+
+
 
     [HttpPost("StartSingleQCJob")]
     public async Task<IActionResult> StartSingleQCJob([FromBody] StartJobRequestDto jobDto)
@@ -1516,25 +1667,34 @@ public class PostController : ControllerBase
                 return NotFound(new { message = "Operation not found in job route." });
 
             // ✅ Find previous operation
-            var prevOperNum = jobDto.OperationNumber - 10;
-            var prevOper = jobRoutes.FirstOrDefault(r => r.OperNum == prevOperNum);
-
+            // 🔥 Find current operation index in the job route list
+            var prevIndex  = jobRoutes.FindIndex(r => r.OperNum == jobDto.OperationNumber);
+ 
+            // 🔥 Determine previous operation dynamically
+            var prevOper = prevIndex  > 0 ? jobRoutes[prevIndex  - 1] : null;
+ 
             if (prevOper != null)
             {
-                // ✅ Bypass condition: if previous dept == "OPR" and WC contains "issue"
+                // Bypass rule: if previous dept == "OPR" and WC contains "issue"
                 if (!(prevOper.dept == "OPR" && prevOper.Wc.ToLower().Contains("issue")))
                 {
-                    // otherwise, check if previous operation completed (status = 3)
+                    // Check if previous operation completed (status = 3)
                     var prevStatus = await _context.JobTranMst
-                        .Where(t => t.job == jobDto.JobNumber && t.oper_num == prevOperNum)
+                        .Where(t => t.job == jobDto.JobNumber && t.oper_num == prevOper.OperNum)
                         .OrderByDescending(t => t.trans_date)
                         .Select(t => t.status)
                         .FirstOrDefaultAsync();
-
+ 
                     if (prevStatus != "3")
-                        return BadRequest(new { message = $"Previous operation ({prevOperNum}) not completed. Please complete before starting QC." });
+                    {
+                        return BadRequest(new
+                        {
+                            message = $"Previous operation ({prevOper.OperNum}) not completed."
+                        });
+                    }
                 }
             }
+            // 🔥 If no previous operation exists, bypass the check (this is valid)
             else
             {
                 return BadRequest(new { message = "Previous operation not found — cannot start QC." });
@@ -2087,10 +2247,10 @@ public class PostController : ControllerBase
                 suffix = 0,
                 trans_type = "M",
                 qty_scrapped = 0,
-                qty_moved = 0,
+                qty_moved = 1,
                 pay_rate = "R",
                 whse = "MAIN",
-                close_job = 1,
+                close_job = 0,
                 issue_parent = 0,
                 complete_op = 1,
                 shift = shiftToUse,

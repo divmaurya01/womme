@@ -52,6 +52,8 @@ export class UnpostedJobTransaction implements OnInit {
   scannedData: string | null = null;
   stepValid: boolean = false;
 
+  nextJobActiveMap = new Map<string, boolean>();
+
   selectedJob: any = null;
   qrReader = new BrowserQRCodeReader();
   availableMachines: string[] = [];  // fill from API when needed
@@ -70,6 +72,7 @@ export class UnpostedJobTransaction implements OnInit {
 
   ngOnInit(): void {
     this.loadJobs();
+    this.loadIsNextJobActive();
   }
 
   ngOnDestroy() {
@@ -93,7 +96,7 @@ export class UnpostedJobTransaction implements OnInit {
       }))
       .subscribe({
         next: (res: any) => {
-          this.transactions = (res.data ?? []).map((x: any) => ({
+         this.transactions = (res.data ?? []).map((x: any) => ({
             serialNo: (x.serialNo ?? '').toString().trim(),
             jobNumber: (x.job ?? '').toString().trim(),
             qtyReleased: x.qtyReleased,
@@ -106,6 +109,7 @@ export class UnpostedJobTransaction implements OnInit {
             
           }));
           this.totalRecords = res.totalRecords ?? 0;
+          this.loadIsNextJobActive();
           this.loadActiveJobTransactions();
           console.log("Backend rows:", res.data.length);
           console.log("Transactions after mapping:", this.transactions.length);
@@ -152,7 +156,37 @@ export class UnpostedJobTransaction implements OnInit {
   }
 
 
+  loadIsNextJobActive() {
+  this.jobService.getIsNextJobActive().subscribe({
+    next: (res: any) => {
+      // Build a Map of active next operations per job|serial
+      const activeNextOps = new Map<string, number[]>();
 
+      (res.data ?? []).forEach((x: any) => {
+        const key = `${x.job}|${x.serialNo}`;
+        const ops = activeNextOps.get(key) ?? [];
+        ops.push(Number(x.nextOper)); // ensure number type
+        activeNextOps.set(key, ops);
+      });
+
+      // Only mark transactions for role 4
+      if (this.role_id === 4 && this.transactions.length) {
+        this.transactions = this.transactions.map(job => {
+          const key = `${job.jobNumber}|${job.serialNo}`;
+          const nextOps = activeNextOps.get(key) ?? [];
+          return {
+            ...job,
+            isNextJobActive: nextOps.includes(Number(job.operationNumber)) // ensure number type
+          };
+        })
+        .filter(job => job.isNextJobActive); // show only active next jobs
+      }
+
+      console.log('Transactions after nextJobActive mapping:', this.transactions);
+    },
+    error: err => console.error('Error fetching next job active:', err)
+  });
+}
 
 
 

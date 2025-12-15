@@ -140,6 +140,14 @@ export class JobService {
     );
   }
 
+
+  GetIssuedTransactions(page: number, size: number, search: string, employeeCode:string) {
+    return this.http.get<{ data: any[], total: number }>(
+      `${this.baseUrl}/Get/GetIssuedTransactions?page=${page}&size=${size}&search=${search}&emp_num=${employeeCode}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
   canStartJob(jobNumber: string, serialNo: string, operationNumber: number) {
     return this.http.get<{ success: boolean; message: string; canStart: boolean }>(
       `${this.baseUrl}/Get/canStartJob`,
@@ -152,6 +160,12 @@ export class JobService {
         }
       }
     );
+  }
+
+  getIsNextJobActive(): Observable<AssignedJob[]> {
+    return this.http.get<AssignedJob[]>(`${this.baseUrl}/Get/IsNextJobActive`, {
+      headers: this.getHeaders()
+    });
   }
 
 
@@ -187,8 +201,7 @@ export class JobService {
   
   
 
-
-
+  
 
 
   
@@ -547,6 +560,10 @@ CheckPrevJob(jobData: any): Observable<any> {
     return this.http.post(url, payload, { headers: this.getHeaders() });
   }
 
+  startIssueJob(payload: any): Observable<any> {
+    const url = `${this.baseUrl}/Post/startIssueJob`;
+    return this.http.post(url, payload, { headers: this.getHeaders() });
+  }
 
   startQCJob(payload: any): Observable<any> {
     const url = `${this.baseUrl}/Post/StartSingleQCJob`;

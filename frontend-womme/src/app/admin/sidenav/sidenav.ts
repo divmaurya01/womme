@@ -47,6 +47,7 @@ export class SidenavComponent implements OnInit {
        
         //{ label: 'Dashboard', link:'/dashboard', icon: faTachometerAlt, color: '#3E7CB1' },        
         { label: 'Job Sync', link: '/jobs', icon: faSyncAlt, color: '#00A6A6' },
+        { label: 'Issue Transaction', link: '/issuejobtransaction', icon: faRepeat, color: '#d015e9ff' },
         { label: 'Unposted Transaction', link: '/unpostedjobtransaction', icon: faRepeat, color: '#E9A115' },
         { label: 'Posted Transaction', link: '/postedjobtransaction', icon: faUpload, color: '#4AA96C' },
         { label: 'Quality check', link: '/qualitychecker', icon: faTicket, color: '#70eaadff' },

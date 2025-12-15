@@ -29,6 +29,7 @@ import { LoaderComponent } from './home/loader/loader';
 import { DashboardOverviewComponent } from './admin/dashboard_admin/dashboard_admin';
 import { ProductionQcDashboardComponent } from './admin/dashboard_emp/dashboard_emp';
 import { QcDashboardComponent } from './admin/dashboard_qc/dashboard_qc';
+import { Issuetransaction } from './admin/issuetransaction/issuetransaction';
  
 export const routes: Routes = [
  
@@ -36,6 +37,7 @@ export const routes: Routes = [
   { path: 'dashboard', component: AdminDashboardComponent, canActivate: [AuthGuard] },
   { path: 'forgot-password', component: ForgotPasswordComponent, canActivate: [AuthGuard] },
   { path: 'jobs', component: JobSyncComponent, canActivate: [AuthGuard] },
+  { path: 'issuejobtransaction', component: Issuetransaction, canActivate: [AuthGuard] },
   { path: 'unpostedjobtransaction', component: UnpostedJobTransaction, canActivate: [AuthGuard] },
   { path: 'postedjobtransaction', component: PostedJobTransaction, canActivate: [AuthGuard] },
   { path: 'reports', component: ReportsViewComponent, canActivate: [AuthGuard] },
