@@ -83,62 +83,102 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
     this.loadJobs({ first: 0, rows: this.size });
   }
 
-  /** Load New Jobs */
   loadJobs(pageEvent?: any) {
-    this.isLoading = true;
-    this.loader.show();
+  this.isLoading = true;
+  this.loader.show();
 
-    const page = pageEvent?.first ? pageEvent.first / pageEvent.rows : this.page;
-    const size = pageEvent?.rows ?? this.size;
+  const page = pageEvent?.first ? pageEvent.first / pageEvent.rows : this.page;
+  const size = pageEvent?.rows ?? this.size;
 
-    this.jobService.GetActiveQCJobs().subscribe({
-      next: (activeRes: any) => {
-        const activeJobs = activeRes?.data ?? [];
+  // Fetch Active + QC + NextJobActive together
+  this.jobService.GetActiveQCJobs().subscribe({
+    next: (activeRes: any) => {
+      const activeJobs = activeRes?.data ?? [];
 
-        this.jobService.GetQC(page, size, this.searchTerm)
-          .pipe(finalize(() => {
-            this.isLoading = false;
-            this.loader.hide();
-          }))
-          .subscribe({
-            next: (res: any) => {
-            const jobs = (res.data ?? [])
-              .filter((job: any) => {
-                return !activeJobs.some((active: any) =>
-                  active.job === job.job &&
-                  active.serialNo === job.serialNo &&
-                  active.oper_num === +job.operNum &&
-                  active.wc === job.wcCode &&
-                  active.item === job.item
-                );
-              })
-              .map((x: any, index: number) => ({
-                uniqueRowId: `${x.serialNo}-${x.operNum}-${x.wcCode}-${index}`,
-                serialNo: x.serialNo.trim(),
-                jobNumber: x.job.trim(),
-                qtyReleased: x.qtyReleased,
-                item: x.item.trim(),
-                jobYear: x.jobYear,
-                operationNumber: Number(x.operNum), // 🔥 ensure number
-                wcCode: x.wcCode.trim(),
-                wcDescription: x.wcDescription.trim(),
-                empNum: x.emp_num,
-                status: x.status,
-                isActive: x.isActive
-              }));
+      this.jobService.GetQC(page, size, this.searchTerm).subscribe({
+        next: (qcRes: any) => {
+          const qcJobs = qcRes?.data ?? [];
 
-            // temporarily assign
-            this.transactions = jobs;
+          this.jobService.getIsNextJobActive().subscribe({
+            next: (nextRes: any) => {
 
-            // 🔥 NOW APPLY NEXT-JOB FILTER
-            this.applyNextJobActiveFilter();
-          },
-            error: (err) => console.error('Error fetching job transactions:', err)
+              // --------------------------------
+              // Build NEXT OP MAP
+              // --------------------------------
+              const nextOpMap = new Map<string, number[]>();
+
+              (nextRes.data ?? []).forEach((x: any) => {
+                const key = `${x.job}|${x.serialNo}`;
+                if (!nextOpMap.has(key)) nextOpMap.set(key, []);
+                nextOpMap.get(key)!.push(Number(x.nextOper));
+              });
+
+              // --------------------------------
+              // FINAL FILTER (ALL CONDITIONS)
+              // --------------------------------
+              const filteredJobs = qcJobs
+                
+                .filter((job: any) => {
+                  return !activeJobs.some((active: any) =>
+                    active.job === job.job &&
+                    active.serialNo === job.serialNo &&
+                    active.oper_num === +job.operNum &&
+                    active.wc === job.wcCode &&
+                    active.item === job.item
+                  );
+                })
+               
+                .filter((job: any) => {
+                  const key = `${job.job}|${job.serialNo}`;
+                  const nextOps = nextOpMap.get(key) ?? [];
+                  return nextOps.includes(Number(job.operNum));
+                })
+                
+                .map((x: any, index: number) => ({
+                  uniqueRowId: `${x.serialNo}-${x.operNum}-${x.wcCode}-${index}`,
+                  serialNo: x.serialNo.trim(),
+                  jobNumber: x.job.trim(),
+                  qtyReleased: x.qtyReleased,
+                  item: x.item.trim(),
+                  jobYear: x.jobYear,
+                  operationNumber: Number(x.operNum),
+                  wcCode: x.wcCode.trim(),
+                  wcDescription: x.wcDescription.trim(),
+                  empNum: x.emp_num,
+                  status: x.status,
+                  isActive: x.isActive
+                }));
+
+             
+              this.transactions = filteredJobs;
+              this.totalRecords = filteredJobs.length;
+
+              this.isLoading = false;
+              this.loader.hide();
+            },
+            error: err => this.handleError(err)
           });
-      },
-      error: err => console.error('Error fetching active job transactions:', err)
-    });
-  }
+        },
+        error: err => this.handleError(err)
+      });
+    },
+    error: err => this.handleError(err)
+  });
+}
+
+private handleError(err: any) {
+  console.error('API Error:', err);
+
+  this.isLoading = false;
+  this.loader.hide();
+
+  Swal.fire({
+    icon: 'error',
+    title: 'Error',
+    text: err?.error?.message || 'Something went wrong. Please try again.',
+  });
+}
+
 
   /** Start Single Job */
   startQCJob(job: any) {
@@ -233,99 +273,92 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
  
 
   loadOngoingJobs() {
-    this.isLoading = true;
-    this.loader.show();
+  this.isLoading = true;
+  this.loader.show();
 
-    this.jobService.GetActiveQCJobs().subscribe({
-      next: (res: any) => {
-        const allJobs = res?.data ?? [];
+  this.jobService.GetActiveQCJobs().subscribe({
+    next: (res: any) => {
+      const allJobs = res?.data ?? [];
 
-        Object.values(this.jobTimers).forEach(timer => clearInterval(timer));
-        this.jobTimers = {};
+      // Clear old timers
+      Object.values(this.jobTimers).forEach(timer => clearInterval(timer));
+      this.jobTimers = {};
 
-        const activeJobs = allJobs.filter((x: any) => x.status === "1" || x.status === "2");
+      const activeJobs = allJobs.filter(
+        (x: any) => x.status === "1" || x.status === "2"
+      );
 
-        this.ongoingJobs = activeJobs.map((x: any, index: number) => {
-          const jobKey = `${x.job}-${x.serialNo}-${x.oper_num}-${x.wc}-${index}`;
+      this.ongoingJobs = activeJobs.map((x: any, index: number) => {
 
-          let elapsedSeconds = 0;
+        const jobKey = `${x.job}-${x.serialNo}-${x.oper_num}-${x.wc}-${index}`;
 
-          const startTime = x.start_time ? new Date(x.start_time) : null;
-          const totalASeconds = x.total_a_hrs ? x.total_a_hrs * 3600 : 0;
-          const now = new Date();
+        // Parse backend time AS-IS (local/server time)
+        const startTime = x.start_time ? new Date(x.start_time) : null;
+        const now = new Date();
 
-          // --------------------------------------
-          // CASE 1 → Running fresh (no total hours)
-          // --------------------------------------
-          if (x.status === "1" && !x.total_a_hrs) {
-            elapsedSeconds = startTime ? Math.floor((now.getTime() - startTime.getTime()) / 1000): 0;
-            
-          }
+        let elapsedSeconds = 0;
 
-          // ----------------------------------------------------------
-          // CASE 2 → Resumed running (status 1 + has total previous hrs)
-          // ----------------------------------------------------------
-          else if (x.status === "1" && x.total_a_hrs > 0) {
-            const currentRunSec = startTime
-            ? Math.floor((now.getTime() - startTime.getTime()) / 1000)
-            : 0;
+        // Calculate elapsed from backend start_time
+        if (startTime) {
+          elapsedSeconds = Math.floor(
+            (now.getTime() - startTime.getTime()) / 1000
+          );
+        }
 
-            elapsedSeconds = totalASeconds + currentRunSec;
-          }
+        // Add previously accumulated hours (resume case)
+        if (x.total_a_hrs && x.total_a_hrs > 0) {
+          elapsedSeconds += Math.floor(x.total_a_hrs * 3600);
+        }
 
-          // --------------------------------------
-          // CASE 3 → Paused (status 2)
-          // --------------------------------------
-          else if (x.status === "2") {
-            elapsedSeconds = totalASeconds;
-          }
+        // Safety
+        if (elapsedSeconds < 0) elapsedSeconds = 0;
 
-          const jobObj: any = {
-            uniqueRowId: jobKey,
-            jobNumber: x.job,
-            serialNo: x.serialNo,
-            operationNumber: x.oper_num,
-            wcCode: x.wc,
-            item: x.item,
-            empNum: x.emp_num,
-            trans_num: x.trans_num ?? x.trans_number ?? null,
+        const jobObj: any = {
+          uniqueRowId: jobKey,
+          jobNumber: x.job,
+          serialNo: x.serialNo,
+          operationNumber: x.oper_num,
+          wcCode: x.wc,
+          item: x.item,
+          empNum: x.emp_num,
+          trans_num: x.trans_num ?? x.trans_number ?? null,
 
-            qtyReleased: 1,
-            startTime: startTime,
-            endTime: x.end_time ? new Date(x.end_time) : null,
+          startTime,
+          endTime: x.end_time ? new Date(x.end_time) : null,
 
-            elapsedSeconds: elapsedSeconds,
-            elapsedTime: this.formatElapsedTime(elapsedSeconds),
+          elapsedSeconds,
+          elapsedTime: this.formatElapsedTime(elapsedSeconds),
 
-            isPaused: x.status === "2",
-            remark: x.remark ?? "",
-            qcGroup: x.qcgroup ?? null
-          };
+          isPaused: x.status === "2",
+          remark: x.remark ?? "",
+          qcGroup: x.qcgroup ?? null,
+          timerInterval: null
+        };
 
-          // Start timer ONLY if status = 1 (active)
-          if (!jobObj.isPaused) {
-            jobObj.timerInterval = this.ngZone.run(() => {
-              return setInterval(() => {
-                jobObj.elapsedSeconds++;
-                jobObj.elapsedTime = this.formatElapsedTime(jobObj.elapsedSeconds);
-              }, 1000);
-            });
-            this.jobTimers[jobKey] = jobObj.timerInterval;
-          }
+        // ▶️ Start ticking ONLY if running
+        if (x.status === "1") {
+          jobObj.timerInterval = setInterval(() => {
+            jobObj.elapsedSeconds++;
+            jobObj.elapsedTime = this.formatElapsedTime(jobObj.elapsedSeconds);
+          }, 1000);
 
-          return jobObj;
-        });
+          this.jobTimers[jobKey] = jobObj.timerInterval;
+        }
 
-        this.isLoading = false;
-        this.loader.hide();
-      },
-      error: (err) => {
-        console.error("Error fetching active jobs:", err);
-        this.isLoading = false;
-        this.loader.hide();
-      }
-    });
-  }
+        return jobObj;
+      });
+
+      this.isLoading = false;
+      this.loader.hide();
+    },
+    error: err => {
+      console.error('Error fetching active jobs:', err);
+      this.isLoading = false;
+      this.loader.hide();
+    }
+  });
+}
+
 
 
   /** Format elapsed time */
@@ -528,36 +561,7 @@ completeQCJob(job: any) {
     });
 }
 
-  applyNextJobActiveFilter() {
-    this.jobService.getIsNextJobActive().subscribe({
-      next: (res: any) => {
-
-        // Map: job|serial -> [nextOper...]
-        const nextOpMap = new Map<string, number[]>();
-
-        (res.data ?? []).forEach((x: any) => {
-          const key = `${x.job}|${x.serialNo}`;
-          if (!nextOpMap.has(key)) {
-            nextOpMap.set(key, []);
-          }
-          nextOpMap.get(key)!.push(Number(x.nextOper));
-        });
-
-        // ✅ FILTER QC JOBS BASED ON MATCH
-        this.transactions = this.transactions.filter(job => {
-          const key = `${job.jobNumber}|${job.serialNo}`;
-          const nextOps = nextOpMap.get(key) ?? [];
-          return nextOps.includes(Number(job.operationNumber));
-        });
-
-        this.totalRecords = this.transactions.length;
-
-        console.log('QC jobs after Next-Op match:', this.transactions);
-      },
-      error: err => console.error('Error fetching next job active:', err)
-    });
-  }
-
+  
  
   loadCompletedJobs() {
     this.isLoading = true;
@@ -569,15 +573,19 @@ completeQCJob(job: any) {
         next: (res: any) => {
           let jobs = res.data ?? [];
 
-          // Optional: Role-based filtering
           const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-          const employeeCode = userDetails.employeeCode || '';
-          const roleid = userDetails.roleID || '';
-          if (roleid === 4 || roleid === 5) {
-            jobs = jobs.filter((job: any) => (job.empNum || '').trim() === employeeCode);
-          }
+          const employeeCode = (userDetails.employeeCode || '').trim();
+          const roleid = Number(userDetails.roleID);
 
-          // ✅ Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
+          // Apply filter ONLY for role 4 & 5
+          if (roleid === 4 || roleid === 5) {
+            jobs = jobs.filter((job: any) =>
+              (job.empNum || '').trim() === employeeCode.trim()
+            );
+          }
+          
+
+          //Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
           const grouped: { [key: string]: any[] } = jobs.reduce((acc: { [key: string]: any[] }, row: any) => {
             const key = `${row.jobNumber}|${row.operationNumber}|${row.serialNo}|${row.qcgroup}`;
             if (!acc[key]) acc[key] = [];
@@ -622,11 +630,11 @@ loadScrappedJobs() {
         const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
         const employeeCode = userDetails.employeeCode || '';
         const roleid = userDetails.roleID || '';
-        if (roleid === 4 || roleid === 5) {
+        if (roleid === 4 || roleid === 5) {          
           jobs = jobs.filter((job: any) => (job.empNum || '').trim() === employeeCode);
         }
 
-        // ✅ Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
+        // Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
         const grouped: { [key: string]: any[] } = jobs.reduce((acc: { [key: string]: any[] }, row: any) => {
           const key = `${row.jobNumber}|${row.operationNumber}|${row.serialNo}|${row.qcgroup}`;
           if (!acc[key]) acc[key] = [];

@@ -13,45 +13,45 @@
 
         <!-- Real-Time Production Overview -->
        <section class="section">
-  <h3 class="section-title">Transaction Overview</h3>
-  <div class="cards-grid">
-    <div class="card green">
-      <div class="card-header">
-        <span>JOBS RUNNING (LIVE)</span>
-        <i class="bi bi-lightning-charge"></i>
-      </div>
-      <h1>{{ transaction.runningJobs }}</h1>
-      <p>jobs</p>
-    </div>
+          <h3 class="section-title">Transaction Overview</h3>
+          <div class="cards-grid">
+            <div class="card green">
+              <div class="card-header">
+                <span>JOBS RUNNING (LIVE)</span>
+                <i class="bi bi-lightning-charge"></i>
+              </div>
+              <h1>{{ transaction.runningJobs }}</h1>
+              <p>jobs</p>
+            </div>
 
-    <div class="card yellow">
-      <div class="card-header">
-        <span>JOBS PAUSED (ATTENTION)</span>
-        <i class="bi bi-scissors"></i>
-      </div>
-      <h1>{{ transaction.pausedJobs }}</h1>
-      <p>needs check</p>
-    </div>
+            <div class="card yellow">
+              <div class="card-header">
+                <span>JOBS PAUSED (ATTENTION)</span>
+                <i class="bi bi-scissors"></i>
+              </div>
+              <h1>{{ transaction.pausedJobs }}</h1>
+              <p>needs check</p>
+            </div>
 
-    <div class="card red">
-      <div class="card-header">
-        <span>EXTENDED JOBS (OT)</span>
-        <i class="bi bi-clock"></i>
-      </div>
-      <h1>{{ transaction.extendedJobs }}</h1>
-      <p>critical</p>
-    </div>
+            <div class="card red">
+              <div class="card-header">
+                <span>EXTENDED JOBS (OT)</span>
+                <i class="bi bi-clock"></i>
+              </div>
+              <h1>{{ transaction.extendedJobs }}</h1>
+              <p>critical</p>
+            </div>
 
-    <div class="card gray">
-      <div class="card-header">
-        <span>COMPLETED JOBS (TODAY)</span>
-        <i class="bi bi-check2"></i>
-      </div>
-      <h1>{{ transaction.completedJobs }}</h1>
-      <p>in last 24h</p>
-    </div>
-  </div>
-</section>
+            <div class="card gray">
+              <div class="card-header">
+                <span>COMPLETED JOBS (TODAY)</span>
+                <i class="bi bi-check2"></i>
+              </div>
+              <h1>{{ transaction.completedJobs }}</h1>
+              <p>in last 24h</p>
+            </div>
+          </div>
+        </section>
 
         <!-- Real-Time Production Overview -->
        <section class="section">
@@ -94,6 +94,48 @@
     </div>
   </div>
 </section>
+
+ <!-- Real-Time Production Overview -->
+       <section class="section">
+          <h3 class="section-title">Verify Transaction Overview</h3>
+          <div class="cards-grid">
+            <div class="card green">
+              <div class="card-header">
+                <span>JOBS RUNNING (LIVE)</span>
+                <i class="bi bi-lightning-charge"></i>
+              </div>
+              <h1>{{ verify.runningVerifyJobs }}</h1>
+              <p>jobs</p>
+            </div>
+
+            <div class="card yellow">
+              <div class="card-header">
+                <span>JOBS PAUSED (ATTENTION)</span>
+                <i class="bi bi-scissors"></i>
+              </div>
+              <h1>{{ verify.pausedVerifyJobs }}</h1>
+              <p>needs check</p>
+            </div>
+
+            <div class="card red">
+              <div class="card-header">
+                <span>EXTENDED JOBS (OT)</span>
+                <i class="bi bi-clock"></i>
+              </div>
+              <h1>{{ verify.extendedVerifyJobs }}</h1>
+              <p>critical</p>
+            </div>
+
+            <div class="card gray">
+              <div class="card-header">
+                <span>COMPLETED JOBS (TODAY)</span>
+                <i class="bi bi-check2"></i>
+              </div>
+              <h1>{{ verify.completedVerifyJobs }}</h1>
+              <p>in last 24h</p>
+            </div>
+          </div>
+        </section>
 
       <!-- Idle Resource Monitor -->
 <section class="section">

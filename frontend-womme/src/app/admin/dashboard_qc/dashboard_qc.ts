@@ -56,7 +56,7 @@ export class QcDashboardComponent {
   }
 
  loadQcOverview(todayOnly: number = 0) {
-  const payload = { todayOnly, includeTransaction: 0, includeQC: 1 };
+  const payload = { todayOnly, includeTransaction: 0, includeQC: 1, includeVerify: 0 };
 
   this.jobService.GetTransactionOverview(payload).subscribe({
     next: (res: any) => {
@@ -81,7 +81,8 @@ loadQcJobs(todayOnly: number = 0) {
   const payload = {
     TodayOnly: todayOnly,
     IncludeTransaction: 0, //  Not transaction
-    IncludeQC: 1,          //  Only QC
+    IncludeQC: 1,
+    IncludeVerify: 0,            //  Only QC
     PageNumber: this.currentPage,
     PageSize: this.pageSize
   };

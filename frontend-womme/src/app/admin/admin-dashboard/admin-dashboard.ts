@@ -50,7 +50,8 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
     const payload = {
       todayOnly: 0,
       includeTransaction: 1,
-      includeQC: 1
+      includeQC: 1,
+      includeVerify: 1  
     };
 
     this.jobService.GetTransactionOverview(payload).subscribe({
@@ -68,6 +69,7 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
     TodayOnly: 0,
     IncludeTransaction: 1,
     IncludeQC: 1,
+    IncludeVerify: 1,  
     PageNumber: 1,  
     PageSize: 50
   };

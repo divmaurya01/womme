@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, Output, EventEmitter, ViewEncapsulation, OnInit} from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faTachometerAlt, faRepeat, faSyncAlt, faUsers, faBook, faCog, faProjectDiagram, faUpload, faSitemap, faUserShield,faCalendar, faIndustry, faBox, faTicket} from '@fortawesome/free-solid-svg-icons';
+import { faTachometerAlt, faRepeat, faSyncAlt, faUsers, faBook, faCog, faProjectDiagram, faUpload, faSitemap, faUserShield,faCalendar, faIndustry, faBox, faTicket, faTruckLoading} from '@fortawesome/free-solid-svg-icons';
 import {CdkDragDrop, moveItemInArray, DragDropModule} from '@angular/cdk/drag-drop';
 import { JobService } from '../../services/job.service'; // use your existing JobService
 import { ActivatedRoute } from '@angular/router'; // Import this
@@ -44,14 +44,17 @@ export class SidenavComponent implements OnInit {
         { label: 'Dashboard', link:'/dashboard_admin', icon: faTachometerAlt, color: '#3E7CB1' },
         { label: 'Dashboard', link:'/dashboard_emp', icon: faTachometerAlt, color: '#3E7CB1' },
         { label: 'Dashboard', link:'/dashboard_qc', icon: faTachometerAlt, color: '#3E7CB1' },
+        { label: 'Dashboard', link:'/dashboard_verify', icon: faTachometerAlt, color: '#3E7CB1' },
        
         //{ label: 'Dashboard', link:'/dashboard', icon: faTachometerAlt, color: '#3E7CB1' },        
         { label: 'Job Sync', link: '/jobs', icon: faSyncAlt, color: '#00A6A6' },
         { label: 'Issue Transaction', link: '/issuejobtransaction', icon: faRepeat, color: '#d015e9ff' },
+        { label: 'Verify Transaction', link: '/verify-transaction', icon: faTruckLoading, color: '#01071dff' },
         { label: 'Unposted Transaction', link: '/unpostedjobtransaction', icon: faRepeat, color: '#E9A115' },
         { label: 'Posted Transaction', link: '/postedjobtransaction', icon: faUpload, color: '#4AA96C' },
         { label: 'Quality check', link: '/qualitychecker', icon: faTicket, color: '#70eaadff' },
-        { label: 'Main Reports', link: '/JobListComponent', icon: faBook, color: '#70eae6ff' },        
+        { label: 'Main Reports', link: '/JobListComponent', icon: faBook, color: '#70eae6ff' },
+        { label: 'Job Report', link: '/job-report', icon: faBook, color: '#70eae6ff' },       
       ],
     },
     {

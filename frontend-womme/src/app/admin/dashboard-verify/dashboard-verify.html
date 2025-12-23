@@ -1,0 +1,103 @@
+<!-- HEADER -->
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<!-- PAGE LAYOUT -->
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+
+  <!-- SIDEBAR -->
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <div class="container-fluid mt-4">
+
+      <!-- PAGE TITLE -->
+      <h2 class="page-title">Verification Workflow</h2>
+
+      <!-- METRICS CARDS -->
+      <div class="metrics-cards">
+
+        <div class="card border-blue">
+          <div class="icon-circle blue"></div>
+          <div class="card-text">
+            <div class="title">RUNNING VERIFY JOBS</div>
+            <div class="value">{{ metrics.runningVerify }}</div>
+            <div class="desc">Currently Verifying</div>
+          </div>
+        </div>
+
+        <div class="card border-yellow">
+          <div class="icon-circle yellow"></div>
+          <div class="card-text">
+            <div class="title">PAUSED VERIFY JOBS</div>
+            <div class="value">{{ metrics.pausedVerify }}</div>
+            <div class="desc">On Hold</div>
+          </div>
+        </div>
+
+        <div class="card border-red">
+          <div class="icon-circle red"></div>
+          <div class="card-text">
+            <div class="title">EXTENDED VERIFY JOBS</div>
+            <div class="value">{{ metrics.extendedVerify }}</div>
+            <div class="desc">Needs Re-Check</div>
+          </div>
+        </div>
+
+        <div class="card border-green">
+          <div class="icon-circle green"></div>
+          <div class="card-text">
+            <div class="title">COMPLETED VERIFY JOBS</div>
+            <div class="value">{{ metrics.completedVerify }}</div>
+            <div class="desc">Successfully Verified</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- JOB TABLE -->
+      <h3 class="mt-4">Verify Job List</h3>
+
+      <div class="table-responsive" style="margin-bottom: 20px;">
+        <table class="table table-striped table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th>JOB ID</th>
+              <th>SERIAL NO</th>
+              <th>WORK CENTER</th>
+              <th>OPERATION</th>
+              <th>EMPLOYEE</th>
+              <th>LAST VERIFY TIME</th>
+              <th>VERIFY STATUS</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let job of jobs">
+              <td>{{ job.jobId }}</td>
+              <td>{{ job.serialNo }}</td>
+              <td>{{ job.workCenter }}</td>
+              <td>{{ job.operation }}</td>
+              <td>{{ job.employee }}</td>
+              <td>{{ job.lastCheck }}</td>
+              <td>
+                <span
+                  class="qc-badge"
+                  [style.backgroundColor]="job.statusColor">
+                  {{ job.verifyStatus }}
+                </span>
+              </td>
+            </tr>
+
+            <tr *ngIf="jobs.length === 0">
+              <td colspan="7" class="text-center text-muted">
+                No verification jobs found
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div>

@@ -135,8 +135,8 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
             const completed = group.find(g => g.status === '3');
             const lastRow = completed || group[group.length - 1];
             const totalHours = group
-  .filter(g => g.status === '3')      // all completed/OT rows
-  .reduce((sum, g) => sum + (g.total_hours || 0), 0);
+            .filter(g => g.status === '3')      // all completed/OT rows
+            .reduce((sum, g) => sum + (g.total_hours || 0), 0);
 
             return {
               ...lastRow,
@@ -331,26 +331,41 @@ getRowKey(job: PostedTransaction): string {
     return `${log.trans_num}|${log.serialNumber}|${log.operationNumber}|${log.workCenter}|${log.trans_date}|${log.status}`;
   }
 
+  toMinutePrecision(dateTime?: string | Date): string {
+    if (!dateTime) return '';
+
+    const d = new Date(dateTime);
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+
 
 // Start editing a row
 startEdit(log: PostedTransaction) {
   if (!log || log.trans_num == null) return;
-    if (log.status?.toString() !== '3') return;
+  if (log.status?.toString() !== '3') return;
 
-  // Store a copy in editingRows keyed by trans_num
   this.editingRows[log.trans_num] = {
-    ...log,
-    total_hours: log.total_hours ?? 0,
-    job_rate: log.job_rate ?? 0,
-    total_dollar: log.total_dollar ?? 0,
-    shift: log.shift ?? '1',
-    employee_num: log.employee_num ?? '',
-    machine_num: log.machine_num ?? '',
-    status: log.status ?? '',
-    start_time: log.start_time,
-    end_time: log.end_time
-  };
+    trans_num: log.trans_num,
+    jobNumber: log.jobNumber,
+    serialNumber: log.serialNumber,
+    operationNumber: log.operationNumber,
+    workCenter: log.workCenter,
+    start_time: this.toMinutePrecision(log.start_time),
+    end_time: this.toMinutePrecision(log.end_time),
+    status:log.status,
+    employee_num: log.employee_num,
+    machine_num: log.machine_num,
+  } as PostedTransaction;
 }
+
 
 // Check if a row is being edited
 isEditing(log: PostedTransaction): boolean {
@@ -359,63 +374,50 @@ isEditing(log: PostedTransaction): boolean {
 
 
 
-// Save the edited row
-saveEdit(log: PostedTransaction) {
-  const row = this.editingRows[log.trans_num];
-  if (!row) return;
+  saveEdit(log: PostedTransaction) {
+    const row = this.editingRows[log.trans_num];
+    if (!row) return;
+    
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+    const employeeCode = userDetails?.employeeCode;
 
-  // Recalculate hours and total amount before sending
-  this.calculateHoursAndAmount(row);
+    const payload = {
+      TransNum: row.trans_num,               // ✅ Ensure correct TransNum
+      SerialNumber: row.serialNumber,
+      Job: row.jobNumber,
+      OperationNumber: row.operationNumber,
+      WorkCenter: row.workCenter,
+      Status: row.status?.toString() ?? '',
+      JobRate: row.job_rate,
+      Shift: row.shift ?? '1',
+      EmpNum: row.employee_num?.toString().trim() ?? '',
+      MachineNum: row.machine_num?.toString().trim() ?? '',
+      UpdatedBy: employeeCode, // or current user
+      StartTime: row.start_time ?? null,
+      EndTime: row.end_time ?? null
+    };
 
-  // Prepare payload
-  const payload = {
-    TransNum: row.trans_num,               // ✅ Ensure correct TransNum
-    SerialNumber: row.serialNumber,
-    Job: row.jobNumber,
-    OperationNumber: row.operationNumber,
-    WorkCenter: row.workCenter,
-    Status: row.status?.toString() ?? '',
-    JobRate: row.job_rate,
-    Shift: row.shift ?? '1',
-    EmpNum: row.employee_num?.toString().trim() ?? '',
-    MachineNum: row.machine_num?.toString().trim() ?? '',
-    UpdatedBy: row.employee_num?.toString().trim() ?? '', // or current user
-    StartTime: row.start_time ?? null,
-    EndTime: row.end_time ?? null
-  };
+    this.jobService.updateJobLog(payload).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Updated',
+          text: 'Start & End time updated successfully',
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end'
+        });
 
-  console.log('Saving payload:', payload); // 🔹 Debug to verify TransNum
+        delete this.editingRows[log.trans_num];
+        this.loadJobsLazy();
+      },
+      error: () => {
+        Swal.fire('Error', 'Failed to update time', 'error');
+      }
+    });
+  }
 
-  this.jobService.updateJobLog(payload).subscribe({
-    next: () => {
-      Swal.fire({
-        icon: 'success',
-        title: 'Updated',
-        text: 'Record has been updated successfully',
-        timer: 2000,
-        showConfirmButton: false,
-        position: 'top-end',
-        toast: true
-      });
-
-      // Remove row from editingRows after saving
-      delete this.editingRows[log.trans_num];
-
-      // Reload table
-      this.loadJobsLazy();
-    },
-    error: (err) => {
-      console.error('Failed to update job log', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to update the record',
-        timer: 3000,
-        showConfirmButton: true
-      });
-    }
-  });
-}
 
 
 

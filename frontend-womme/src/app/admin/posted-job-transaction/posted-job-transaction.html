@@ -111,123 +111,76 @@
                     <ng-template pTemplate="body" let-log>
                       <tr>
                         <td>{{ formatDateFromString(log.trans_date) }}</td>
-<td>
-  <ng-container *ngIf="isEditing(log); else statusView">
-    <!-- Only show dropdown if original status is Complete -->
-    <select *ngIf="log.status?.toString() === '3'"
-            [(ngModel)]="editingRows[log.trans_num].status"
-            class="form-control form-control-sm">
-      <option [value]="3">Complete</option>
-      <option [value]="2">Idle</option>
-    </select>
+                      <td>
+                        {{ log.status?.toString() === '3' ? 'Complete'
+                          : log.status?.toString() === '2' ? 'Idle'
+                          : log.status?.toString() === '1' ? 'Started'
+                          : log.status }}
+                      </td>
 
-    <!-- Fallback numeric input if status is not Complete -->
-    <input *ngIf="log.status?.toString() !== '3'" 
-           type="number" 
-           [(ngModel)]="editingRows[log.trans_num].status" 
-           class="form-control form-control-sm" />
-  </ng-container>
+                      <!-- Start Time -->
+                      <td>
+                        <ng-container *ngIf="isEditing(log); else startView">
+                          <input type="datetime-local"
+                            step="60"
+                                [(ngModel)]="editingRows[log.trans_num].start_time"
+                                (change)="calculateHoursAndAmount(log)"
+                                class="form-control form-control-sm" />
+                        </ng-container>
+                        <ng-template #startView>
+                          {{ log.start_time | date:'shortTime' }}
+                        </ng-template>
+                      </td>
 
-  <ng-template #statusView>
-    {{ log.status?.toString() === '3' ? 'Complete' 
-       : log.status?.toString() === '2' ? 'Idle' 
-       : log.status?.toString() === '1' ? 'Started' 
-       : log.status }}
-  </ng-template>
-</td>
-<!-- Start Time -->
-<td>
-  <ng-container *ngIf="isEditing(log); else startView">
-    <input type="datetime-local"
-           [(ngModel)]="editingRows[log.trans_num].start_time"
-           (change)="calculateHoursAndAmount(log)"
-           class="form-control form-control-sm" />
-  </ng-container>
-  <ng-template #startView>
-    {{ log.start_time | date:'shortTime' }}
-  </ng-template>
-</td>
-
-<!-- End Time -->
-<td>
-  <ng-container *ngIf="isEditing(log); else endView">
-    <input type="datetime-local"
-           [(ngModel)]="editingRows[log.trans_num].end_time"
-           (change)="calculateHoursAndAmount(log)"
-           class="form-control form-control-sm" />
-  </ng-container>
-  <ng-template #endView>
-    {{ log.end_time | date:'shortTime' }}
-  </ng-template>
-</td>
+                      <!-- End Time -->
+                      <td>
+                        <ng-container *ngIf="isEditing(log); else endView">
+                          <input type="datetime-local"
+                            step="60"
+                                [(ngModel)]="editingRows[log.trans_num].end_time"
+                                (change)="calculateHoursAndAmount(log)"
+                                class="form-control form-control-sm" />
+                        </ng-container>
+                        <ng-template #endView>
+                          {{ log.end_time | date:'shortTime' }}
+                        </ng-template>
+                      </td>
 
 
                         <!-- Hours -->
-                        <td>
-                          <ng-container *ngIf="isEditing(log); else hoursView">
-                            <input type="number"
-                                  [(ngModel)]="editingRows[log.trans_num]!.total_hours"
-                                  (ngModelChange)="calculateAmount(log)"
-                                  class="form-control form-control-sm" />
-                          </ng-container>
-                          <ng-template #hoursView>{{ formatTimer(log.total_hours ?? 0) }}</ng-template>
-                        </td>
+                        <td>{{ formatTimer(log.total_hours ?? 0) }}</td>
 
-                        <!-- Rate -->
-                        <td>
-                          <ng-container *ngIf="isEditing(log); else rateView">
-                            <input type="number"
-                                  [(ngModel)]="editingRows[log.trans_num]!.job_rate"
-                                  (ngModelChange)="calculateAmount(log)"
-                                  class="form-control form-control-sm" />
-                          </ng-container>
-                          <ng-template #rateView>{{ log?.job_rate ?? '-' }}</ng-template>
-                        </td>
+
+                        <td>{{ log?.job_rate ?? '-' }}</td>
+
 
                         <!-- Amount (readonly) -->
-                        <td>{{ isEditing(log) ? editingRows[log.trans_num].total_dollar : log?.total_dollar ?? '-' }}</td>
+                        <td>{{ log?.total_dollar ?? '-' }}</td>
 
 
                         <td>
-                            <ng-container *ngIf="isEditing(log); else shiftView">
-                              <select [(ngModel)]="editingRows[log.trans_num]!.shift" class="form-control form-control-sm">
-                                <option value="1">Day</option>
-                                <option value="2">Overtime</option>
-                              </select>
-                            </ng-container>
-                            <ng-template #shiftView>
-                              {{ log?.shift === '1' ? 'Day' : log?.shift === '2' ? 'Overtime' : '-' }}
-                            </ng-template>
-                          </td>
+                          {{ log?.shift === '1' ? 'Day'
+                            : log?.shift === '2' ? 'Overtime'
+                            : '-' }}
+                        </td>
 
-                          <!-- Employee -->
-                          <td>
-                            <ng-container *ngIf="isEditing(log); else empView">
-                              <select [(ngModel)]="editingRows[log.trans_num]!.employee_num" class="form-control form-control-sm">
-                                <option *ngFor="let e of employees" [value]="e.empNum">{{ e.empName }}</option>
-                              </select>
-                            </ng-container>
-                            <ng-template #empView>{{ log?.employee_name ?? '-' }}</ng-template>
-                          </td>
+                          <td>{{ log?.employee_name ?? '-' }}</td>
 
-                          <!-- Machine -->
-                          <td>
-                            <ng-container *ngIf="isEditing(log); else machineView">
-                              <select [(ngModel)]="editingRows[log.trans_num]!.machine_num" class="form-control form-control-sm">
-                                <option *ngFor="let m of machines" [value]="m.machineNumber">{{ m.machineName }}</option>
-                              </select>                            
-                            </ng-container>
-                            <ng-template #machineView>{{ log?.machine_name ?? '-' }}</ng-template>
-                          </td>
+
+                          <td>{{ log?.machine_name ?? '-' }}</td>
+
                        
                         <!-- Edit / Save -->
                         <td class="text-center">
-                          <button *ngIf="!isEditing(log)"
-                                  pButton icon="pi pi-pencil"
+                          <button *ngIf="!isEditing(log) && log.status?.toString() === '3'"
+                                  pButton
+                                  icon="pi pi-pencil"
                                   class="p-button-rounded p-button-text p-button-sm"
-                                  [disabled]="roleId === 4 || log.status?.toString() !== '3'"
-                                  (click)="startEdit(log)" title="Edit Hours & Rate">
+                                  [disabled]="roleId === 4 || roleId === 5"
+                                  (click)="startEdit(log)"
+                                  title="Edit Start & End Time">
                           </button>
+
 
                           <button *ngIf="isEditing(log)"
                                   pButton icon="pi pi-check"

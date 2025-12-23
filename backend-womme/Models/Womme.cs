@@ -2520,6 +2520,8 @@ public class DeleteJobTransactionDto
         public DateTime EndTime { get; set; }  // current time when returning completed job
     }
 
+    
+
     public class JobTran
     {
         public string? JobNumber { get; set; }
@@ -2541,6 +2543,8 @@ public class DeleteJobTransactionDto
         public int todayOnly { get; set; }
         public int includeTransaction { get; set; }
         public int includeQC { get; set; }
+        public int IncludeVerify { get; set; }
+
     }
 
 
@@ -2549,8 +2553,10 @@ public class DeleteJobTransactionDto
         public int TodayOnly { get; set; }
         public int IncludeTransaction { get; set; }
         public int IncludeQC { get; set; }
-          public int PageNumber { get; set; } = 1;
-    public int PageSize { get; set; } = 50;
+        public int IncludeVerify { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 50;
+
     }
 
 public class ScrapJobDto
@@ -2560,6 +2566,43 @@ public class ScrapJobDto
     public int OperationNumber { get; set; }
     public string LoginUser { get; set; }
 }
+
+
+ public class JobDtos
+{
+    public string? JobNo { get; set; }
+    public string? Item { get; set; }
+    public string? Description { get; set; }
+    public decimal Qty { get; set; }
+    public DateTime ? JobDate {get;set;}
+    public decimal? TotalHours { get; set; }
+    public List<JobSerialDto> Serials { get; set; } = new();
+}
+ 
+public class JobSerialDto
+{
+    public string? SerialNo { get; set; }
+    public int TotalOperations { get; set; }
+    public int CompletedOperations { get; set; }
+        public int RunningOperations { get; set; }
+    public int HoldOperations{get;set;}
+ 
+    public decimal? TotalHours { get; set; }
+    public List<JobOperationDtos> Operations { get; set; } = new();
+}
+ 
+public class JobOperationDtos
+{
+    public int Operation { get; set; }
+    public string? Employee { get; set; }
+    public string? Status {get; set;}
+    public string EmployeeName { get; set; }  
+ 
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
+    public decimal? HoursConsumed { get; set; }
+}
+ 
 
 }
 

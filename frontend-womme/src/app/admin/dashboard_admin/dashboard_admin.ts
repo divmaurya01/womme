@@ -33,6 +33,14 @@ export class DashboardOverviewComponent {
     completedQCJobs: 0
   };
 
+  verify = {
+    runningVerifyJobs: 0,
+    pausedVerifyJobs: 0,
+    extendedVerifyJobs: 0,
+    completedVerifyJobs: 0
+  };
+
+
   utilization = {
     totalEmployees: 0,
     activeEmployees: 0,
@@ -61,17 +69,18 @@ export class DashboardOverviewComponent {
     this.isSidebarHidden = !this.isSidebarHidden;
   }
 
-  loadOverview(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1) {
-    const payload = { todayOnly, includeTransaction, includeQC };
-    this.jobService.GetTransactionOverview(payload).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.transaction = res.transactionOverview || this.transaction;
-          this.qc = res.qcOverview || this.qc;
-        }
-      },
-      error: (err) => console.error('Error loading overview:', err)
-    });
+  loadOverview(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1, includeVerify: number = 1) {
+    const payload = { todayOnly, includeTransaction, includeQC, includeVerify };
+      this.jobService.GetTransactionOverview(payload).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.transaction = res.transactionOverview || this.transaction;
+            this.qc = res.qcOverview || this.qc;
+            this.verify = res.verifyOverview || this.verify; // ✅ new
+          }
+        },
+        error: (err) => console.error('Error loading overview:', err)
+      });
   }
 
   loadUtilizationData() {
@@ -85,11 +94,12 @@ export class DashboardOverviewComponent {
     });
   }
 
-  loadTransactionData(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1) {
+  loadTransactionData(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1, includeVerify: number = 1) {
     const payload = {
       TodayOnly: todayOnly,
       IncludeTransaction: includeTransaction,
       IncludeQC: includeQC,
+      IncludeVerify: includeVerify,  
       PageNumber: this.currentPage,
       PageSize: this.pageSize
     };

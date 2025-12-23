@@ -148,6 +148,17 @@ export class JobService {
     );
   }
 
+   getVerifyTransactions(page: number, size: number, search: string, employeeCode:string) {
+      return this.http.get<{ data: any[], total: number }>(
+        `${this.baseUrl}/Get/GetVerifyTransactions?page=${page}&size=${size}&search=${search}&emp_num=${employeeCode}`,
+        { headers: this.getHeaders() }
+      );
+    }
+
+
+   
+
+
   canStartJob(jobNumber: string, serialNo: string, operationNumber: number) {
     return this.http.get<{ success: boolean; message: string; canStart: boolean }>(
       `${this.baseUrl}/Get/canStartJob`,
@@ -436,6 +447,20 @@ CheckPrevJob(jobData: any): Observable<any> {
     });
   }
 
+  submitTransaction(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/Post/submit-transaction`, payload, {
+      headers: this.getHeaders()
+    });
+  }
+
+  verifyTransaction(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/Post/verify-transaction`, payload, {
+      headers: this.getHeaders()
+    });
+  }
+
+
+
 
   JobPoolDetails(poolNumber: string): Observable<any> {
     return this.http.post<any>(
@@ -543,6 +568,12 @@ CheckPrevJob(jobData: any): Observable<any> {
 
     });
   }
+
+   getJobProgress(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/Get/getJobProgress`,{
+              headers: this.getHeaders()
+      });    
+    }
 
   startJob(payload: any): Observable<any> {
     const url = `${this.baseUrl}/Post/StartJob`;

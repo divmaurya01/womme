@@ -30,6 +30,9 @@ import { DashboardOverviewComponent } from './admin/dashboard_admin/dashboard_ad
 import { ProductionQcDashboardComponent } from './admin/dashboard_emp/dashboard_emp';
 import { QcDashboardComponent } from './admin/dashboard_qc/dashboard_qc';
 import { Issuetransaction } from './admin/issuetransaction/issuetransaction';
+import { VerifyTransaction } from './admin/verify-transaction/verify-transaction';
+import { DashboardVerify } from './admin/dashboard-verify/dashboard-verify';
+import { JobReportComponent } from './admin/job-report/job-report';
  
 export const routes: Routes = [
  
@@ -38,6 +41,7 @@ export const routes: Routes = [
   { path: 'forgot-password', component: ForgotPasswordComponent, canActivate: [AuthGuard] },
   { path: 'jobs', component: JobSyncComponent, canActivate: [AuthGuard] },
   { path: 'issuejobtransaction', component: Issuetransaction, canActivate: [AuthGuard] },
+  { path: 'verify-transaction', component: VerifyTransaction, canActivate: [AuthGuard] },
   { path: 'unpostedjobtransaction', component: UnpostedJobTransaction, canActivate: [AuthGuard] },
   { path: 'postedjobtransaction', component: PostedJobTransaction, canActivate: [AuthGuard] },
   { path: 'reports', component: ReportsViewComponent, canActivate: [AuthGuard] },
@@ -52,6 +56,7 @@ export const routes: Routes = [
   { path:'calendar',component:CalendarComponent , canActivate: [AuthGuard]},
   { path:'qualitychecker',component:QualityChecker, canActivate: [AuthGuard]},
   { path:'job-pool-details',component:JobPoolDetails, canActivate: [AuthGuard]},
+  { path:'job-report',component:JobReportComponent, canActivate: [AuthGuard]},
  
   {path:'JobListComponent',component:JobListComponent,canActivate: [AuthGuard]},
   {path:'job-sync-details',component:JobSyncDetailComponent , canActivate: [AuthGuard]},
@@ -63,6 +68,7 @@ export const routes: Routes = [
   {path:'dashboard_admin',component:DashboardOverviewComponent , canActivate: [AuthGuard]},
   {path:'dashboard_emp',component:ProductionQcDashboardComponent , canActivate: [AuthGuard]},
   {path:'dashboard_qc',component:QcDashboardComponent , canActivate: [AuthGuard]},
+  {path:'dashboard_verify',component:DashboardVerify , canActivate: [AuthGuard]},
  
   { path: '**', redirectTo: '' }
  

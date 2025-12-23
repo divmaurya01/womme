@@ -86,7 +86,7 @@ namespace WommeAPI.Services
 
                         cmd.Parameters.AddWithValue("@issue_parent", jobTran.issue_parent ?? 0);
                         cmd.Parameters.AddWithValue("@complete_op", comjob);
-                        cmd.Parameters.AddWithValue("@close_job", comjob);
+                        cmd.Parameters.AddWithValue("@close_job", jobTran.close_job);
                         cmd.Parameters.AddWithValue("@posted", jobTran.posted ?? 0);
 
                         cmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
@@ -144,7 +144,13 @@ namespace WommeAPI.Services
 
 
 
-    public async Task<bool> UpdateJobTranCompletionAsync(int transNum, int completeFlag)
+    public async Task<bool> UpdateJobTranCompletionAsync(
+        int transNum,        
+        byte completeOp,
+        int closeJob,
+        decimal qtyComplete,
+        decimal qtyMoved
+    )
     {
         try
         {
@@ -154,15 +160,23 @@ namespace WommeAPI.Services
 
                 string updateSql = @"
                     UPDATE jobtran_mst
-                    SET complete_op = @completeFlag,
-                        close_job = @completeFlag
-                    WHERE trans_num = @transNum
+                    SET
+                        
+                        complete_op    = @complete_op,
+                        close_job      = @close_job,
+                        qty_complete   = @qty_complete,
+                        qty_moved      = @qty_moved
+                    WHERE trans_num = @trans_num
                 ";
 
                 using (SqlCommand cmd = new SqlCommand(updateSql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@completeFlag", completeFlag);
-                    cmd.Parameters.AddWithValue("@transNum", transNum);
+                    
+                    cmd.Parameters.AddWithValue("@complete_op", completeOp);
+                    cmd.Parameters.AddWithValue("@close_job", closeJob);
+                    cmd.Parameters.AddWithValue("@qty_complete", qtyComplete);
+                    cmd.Parameters.AddWithValue("@qty_moved", qtyMoved);
+                    cmd.Parameters.AddWithValue("@trans_num", transNum);
 
                     int rowsAffected = await cmd.ExecuteNonQueryAsync();
                     return rowsAffected > 0;
@@ -295,6 +309,27 @@ namespace WommeAPI.Services
         }
     }
 
+
+    public async Task<bool> DeleteFromSyteLineAsync(
+        string job,
+        string serialNo,
+        string wc,
+        int operNum
+    )
+    {
+        using var conn = new SqlConnection(_connectionString);
+        using var cmd = new SqlCommand("DELETE FROM jobtran_mst WHERE job=@job AND Uf_MHSerialNo=@serialNo AND wc=@wc AND oper_num=@operNum", conn);
+
+        cmd.Parameters.AddWithValue("@job", job);
+        cmd.Parameters.AddWithValue("@serialNo", serialNo);
+        cmd.Parameters.AddWithValue("@wc", wc);
+        cmd.Parameters.AddWithValue("@operNum", operNum);
+
+        await conn.OpenAsync();
+        await cmd.ExecuteNonQueryAsync();
+
+        return true;
+    }
 
 
 

@@ -72,7 +72,7 @@ export class UnpostedJobTransaction implements OnInit {
 
   ngOnInit(): void {
     this.loadJobs();
-    this.loadIsNextJobActive();
+    
   }
 
   ngOnDestroy() {
@@ -83,46 +83,92 @@ export class UnpostedJobTransaction implements OnInit {
   loadJobs(pageEvent?: any) {
     this.isLoading = true;
     this.loader.show();
+
     const page = pageEvent?.first ? pageEvent.first / pageEvent.rows : this.page;
     const size = pageEvent?.rows ?? this.size;
+
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     this.employeeCode = userDetails?.employeeCode;
     this.role_id = userDetails.roleID;
 
+    // Load unposted jobs
     this.jobService.GetUnpostedTransactions(page, size, this.searchTerm, this.employeeCode)
-      .pipe(finalize(() => {
-        this.isLoading = false;
-        this.loader.hide();
-      }))
       .subscribe({
-        next: (res: any) => {
-         this.transactions = (res.data ?? []).map((x: any) => ({
-            serialNo: (x.serialNo ?? '').toString().trim(),
-            jobNumber: (x.job ?? '').toString().trim(),
-            qtyReleased: x.qtyReleased,
-            operationNumber: x.operNum ?? x.operationNumber,
-            wcCode: (x.wcCode ?? '').toString().trim(),
-            wcDescription: (x.wcDescription ?? '').toString().trim(),
-            emp_num: '',       // added
-            machine_id: '',    // added
-            a_hrs: 0,
-            
-          }));
-          this.totalRecords = res.totalRecords ?? 0;
-          this.loadIsNextJobActive();
-          this.loadActiveJobTransactions();
-          console.log("Backend rows:", res.data.length);
-          console.log("Transactions after mapping:", this.transactions.length);
+        next: (jobRes: any) => {
+          const rawJobs = jobRes.data ?? [];
 
+          // Load next-job-active info
+          this.jobService.getIsNextJobActive().subscribe({
+            next: (nextRes: any) => {
+
+              // --------------------------------------
+              // Build job|serial → next operations map
+              // --------------------------------------
+              const nextOpMap = new Map<string, number[]>();
+
+              (nextRes.data ?? []).forEach((x: any) => {
+                const key = `${x.job}|${x.serialNo}`;
+                if (!nextOpMap.has(key)) nextOpMap.set(key, []);
+                nextOpMap.get(key)!.push(Number(x.nextOper));
+              });
+
+              // --------------------------------------
+              // FINAL FILTER + MAP (ONCE)
+              // --------------------------------------
+              let filteredJobs = rawJobs.map((x: any) => ({
+                serialNo: (x.serialNo ?? '').toString().trim(),
+                jobNumber: (x.job ?? '').toString().trim(),
+                qtyReleased: x.qtyReleased,
+                operationNumber: x.operNum ?? x.operationNumber,
+                wcCode: (x.wcCode ?? '').toString().trim(),
+                wcDescription: (x.wcDescription ?? '').toString().trim(),
+                emp_num: '',
+                machine_id: '',
+                a_hrs: 0
+              }));
+
+              // Apply next-job filter ONLY for role 4
+              if (this.role_id === 4) {
+                filteredJobs = filteredJobs.filter((job: any) => {
+                  const key = `${job.jobNumber}|${job.serialNo}`;
+                  const nextOps = nextOpMap.get(key) ?? [];
+                  return nextOps.includes(Number(job.operationNumber));
+                });
+
+              }
+
+              // SINGLE ASSIGNMENT
+              this.transactions = filteredJobs;
+              this.totalRecords = filteredJobs.length;
+
+              // Load running transactions AFTER final list
+              this.loadActiveJobTransactions();
+
+              this.isLoading = false;
+              this.loader.hide();
+
+              console.log('Final jobs shown:', this.transactions.length);
+            },
+            error: err => this.handleError(err)
+          });
         },
-        error: (err) => {
-          this.isLoading = false;
-          this.loader.hide();
-          console.error('Error fetching job transactions:', err);
-          Swal.fire('Error', 'Failed to load jobs', 'error');
-        }
+        error: err => this.handleError(err)
       });
   }
+
+  private handleError(err: any) {
+    console.error('API Error:', err);
+  
+    this.isLoading = false;
+    this.loader.hide();
+  
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: err?.error?.message || 'Something went wrong. Please try again.',
+    });
+  }
+  
 
   onSearchChange(value: string) {
     this.searchTerm = value;
@@ -156,38 +202,7 @@ export class UnpostedJobTransaction implements OnInit {
   }
 
 
-  loadIsNextJobActive() {
-  this.jobService.getIsNextJobActive().subscribe({
-    next: (res: any) => {
-      // Build a Map of active next operations per job|serial
-      const activeNextOps = new Map<string, number[]>();
-
-      (res.data ?? []).forEach((x: any) => {
-        const key = `${x.job}|${x.serialNo}`;
-        const ops = activeNextOps.get(key) ?? [];
-        ops.push(Number(x.nextOper)); // ensure number type
-        activeNextOps.set(key, ops);
-      });
-
-      // Only mark transactions for role 4
-      if (this.role_id === 4 && this.transactions.length) {
-        this.transactions = this.transactions.map(job => {
-          const key = `${job.jobNumber}|${job.serialNo}`;
-          const nextOps = activeNextOps.get(key) ?? [];
-          return {
-            ...job,
-            isNextJobActive: nextOps.includes(Number(job.operationNumber)) // ensure number type
-          };
-        })
-        .filter(job => job.isNextJobActive); // show only active next jobs
-      }
-
-      console.log('Transactions after nextJobActive mapping:', this.transactions);
-    },
-    error: err => console.error('Error fetching next job active:', err)
-  });
-}
-
+  
 
 
 

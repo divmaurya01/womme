@@ -65,8 +65,8 @@ currentPage = 1;
   }
 
   //  Load overview (Production & QC)
-  loadOverview(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1) {
-    const payload = { todayOnly, includeTransaction, includeQC };
+  loadOverview(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1, includeVerify: number = 1) {
+    const payload = { todayOnly, includeTransaction, includeQC, includeVerify };
 
     this.jobService.GetTransactionOverview(payload).subscribe({
       next: (res: any) => {
@@ -92,11 +92,12 @@ currentPage = 1;
     });
   }
 // ✅ Load job transaction data for the job table
-loadTransactionData(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1) {
+loadTransactionData(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 0) {
   const payload = {
     TodayOnly: todayOnly,
     IncludeTransaction: includeTransaction,
     IncludeQC: includeQC,
+    IncludeVerify: 1,  
     PageNumber: this.currentPage,
     PageSize: this.pageSize
   };
