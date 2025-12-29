@@ -192,6 +192,7 @@
             <ng-template pTemplate="header">
               <tr>
                 <th style="background-color: #ECC391;">Sr No.</th>
+                <th style="background-color: #ECC391;">Login ID</th>
                 <th style="background-color: #ECC391;">Employee No.</th>
                 <th style="background-color: #ECC391;">Name</th>
                 <th style="background-color: #ECC391;">Department</th>
@@ -207,6 +208,7 @@
             <ng-template pTemplate="body" let-emp let-rowIndex="rowIndex">
               <tr>
                 <td>{{ dt.first + rowIndex + 1 }}</td>
+                <td>{{ emp.loginID }}</td>
                 <td>{{ emp.empNum }}</td>
                 <td>{{ emp.name }}</td>
                 <td>{{ emp.dept }}</td>

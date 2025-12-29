@@ -154,6 +154,14 @@ export class JobService {
         { headers: this.getHeaders() }
       );
     }
+   
+
+    GetCompletedVerifyJob(): Observable<{ data: any[], totalRecords: number }> {
+      return this.http.get<{ data: any[], totalRecords: number }>(
+        `${this.baseUrl}/Get/GetCompletedVerifyJob`,
+        { headers: this.getHeaders() }
+      );
+    }
 
 
    

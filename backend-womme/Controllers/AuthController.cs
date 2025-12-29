@@ -24,56 +24,66 @@ namespace WommeAPI.Controllers
             _context = context;
         }
 
-        [HttpPost("login")]  
+        [HttpPost("login")]
         public IActionResult Login([FromBody] LoginModel login)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
- 
-            var user = _context.EmployeeMst.FirstOrDefault(u => u.emp_num == login.emp_num);
+
+            // 🔹 Extract numeric part from emp_num (e.g. "wme0095" -> 95)
+            var numericPart = new string(login.emp_num.Where(char.IsDigit).ToArray());
+
+            if (!int.TryParse(numericPart, out int wommId))
+                return BadRequest(new { message = "Invalid Employee Code format." });
+
+            // 🔹 Find user using womm_id
+            var user = _context.EmployeeMst.FirstOrDefault(u => u.womm_id == wommId);
+
             if (user == null)
                 return BadRequest(new { message = "User not found." });
- 
-          //  if (!user.IsActive)  
-          //      return BadRequest(new { message = "User is not active." });  
 
-           if (user.IsActive != true)  // null or false = inactive
+            // 🔹 Check active status
+            if (user.IsActive != true)
                 return BadRequest(new { message = "User is not active." });
 
- 
+            // 🔹 Validate password
             if (user.PasswordHash != login.PasswordHash)
                 return BadRequest(new { message = "Invalid password." });
- 
+
+            // 🔹 Get role
             var role = _context.RoleMaster.FirstOrDefault(r => r.RoleID == user.RoleID);
             if (role == null)
                 return BadRequest(new { message = "Role not found." });
- 
-            // Generate JWT Token
+
+            // 🔹 JWT setup
             var jwtKey = _config["Jwt:Key"]
-                         ?? throw new InvalidOperationException("Jwt:Key is missing in configuration.");
- 
+                ?? throw new InvalidOperationException("Jwt:Key is missing in configuration.");
+
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(jwtKey);
-  
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[]
                 {
                     new Claim(ClaimTypes.Name, user.name!),
                     new Claim(ClaimTypes.Role, role.RoleName),
-                    new Claim("EmployeeCode", user.emp_num!)
+                    new Claim("EmployeeCode", user.emp_num!),   // REAL emp_num
+                    new Claim("WommId", user.womm_id.ToString())
                 }),
                 Expires = DateTime.UtcNow.AddHours(1),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
             };
- 
+
             var jwtToken = tokenHandler.CreateToken(tokenDescriptor);
             var jwtTokenString = tokenHandler.WriteToken(jwtToken);
- 
-            // Generate Custom Random Token
+
+            // 🔹 Generate random token
             var randomToken = GenerateRandomToken();
- 
-            // Save random token to UserToken table
+
+            // 🔹 Save token
             var userToken = new UserToken
             {
                 EmployeeCode = user.emp_num!,
@@ -81,35 +91,32 @@ namespace WommeAPI.Controllers
                 CreatedAt = DateTime.UtcNow,
                 ValidTill = DateTime.UtcNow.AddMonths(1)
             };
- 
+
             _context.UserToken.Add(userToken);
-            int saveResult = _context.SaveChanges();
- 
-            if (saveResult == 0)
+
+            if (_context.SaveChanges() == 0)
             {
-                return StatusCode(500, new { message = "Token generation failed. Please try again." });
+                return StatusCode(500, new { message = "Token generation failed." });
             }
- 
-            // Return both tokens and user details
+
+            // 🔹 Response
             return Ok(new
             {
                 jwtToken = jwtTokenString,
                 randomToken = randomToken,
                 userDetails = new
                 {
-
                     UserName = user.name,
-                    EmployeeCode = user.emp_num,
+                    EmployeeCode = user.emp_num,   // actual emp_num
+                    WommId = user.womm_id,
                     user.RoleID,
                     role.RoleName,
                     user.IsActive,
                     user.dept
-                    
-                   
                 }
             });
         }
-        
+
  
         // Random token generator
         private string GenerateRandomToken(int length = 32)

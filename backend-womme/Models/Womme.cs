@@ -1412,6 +1412,7 @@ public string? TransType { get; set; }
         public int? RoleID { get; set; }
         public bool? IsActive { get; set; }
         public string? ProfileImage { get; set; }
+        public int? womm_id{ get; set; }
 
     }
 [Table("employee_mst")]
@@ -2399,6 +2400,7 @@ public string? TransType { get; set; }
         public string MachineId { get; set; } = string.Empty;
         public string MachineDescription { get; set; } = string.Empty;
         public string QcGroup { get; set; } = string.Empty;
+        public string Remark { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public bool IsNextJobActive { get; set; }

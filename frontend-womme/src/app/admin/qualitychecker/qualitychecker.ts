@@ -85,26 +85,31 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
 
   loadJobs(pageEvent?: any) {
   this.isLoading = true;
-  this.loader.show();
+  
 
   const page = pageEvent?.first ? pageEvent.first / pageEvent.rows : this.page;
   const size = pageEvent?.rows ?? this.size;
 
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const roleid = Number(userDetails.roleID);
+
+
   // Fetch Active + QC + NextJobActive together
+  this.loader.show();
   this.jobService.GetActiveQCJobs().subscribe({
     next: (activeRes: any) => {
       const activeJobs = activeRes?.data ?? [];
 
-      this.jobService.GetQC(page, size, this.searchTerm).subscribe({
+      this.jobService.GetQC(page, size, this.searchTerm).pipe( finalize(() => { this.loader.hide(); })).subscribe({
         next: (qcRes: any) => {
           const qcJobs = qcRes?.data ?? [];
 
           this.jobService.getIsNextJobActive().subscribe({
             next: (nextRes: any) => {
 
-              // --------------------------------
+              
               // Build NEXT OP MAP
-              // --------------------------------
+             
               const nextOpMap = new Map<string, number[]>();
 
               (nextRes.data ?? []).forEach((x: any) => {
@@ -113,45 +118,49 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
                 nextOpMap.get(key)!.push(Number(x.nextOper));
               });
 
-              // --------------------------------
+              
               // FINAL FILTER (ALL CONDITIONS)
-              // --------------------------------
-              const filteredJobs = qcJobs
-                
-                .filter((job: any) => {
-                  return !activeJobs.some((active: any) =>
-                    active.job === job.job &&
-                    active.serialNo === job.serialNo &&
-                    active.oper_num === +job.operNum &&
-                    active.wc === job.wcCode &&
-                    active.item === job.item
-                  );
-                })
-               
-                .filter((job: any) => {
-                  const key = `${job.job}|${job.serialNo}`;
-                  const nextOps = nextOpMap.get(key) ?? [];
-                  return nextOps.includes(Number(job.operNum));
-                })
-                
-                .map((x: any, index: number) => ({
-                  uniqueRowId: `${x.serialNo}-${x.operNum}-${x.wcCode}-${index}`,
-                  serialNo: x.serialNo.trim(),
-                  jobNumber: x.job.trim(),
-                  qtyReleased: x.qtyReleased,
-                  item: x.item.trim(),
-                  jobYear: x.jobYear,
-                  operationNumber: Number(x.operNum),
-                  wcCode: x.wcCode.trim(),
-                  wcDescription: x.wcDescription.trim(),
-                  empNum: x.emp_num,
-                  status: x.status,
-                  isActive: x.isActive
-                }));
+              
+              let finalJobs = qcJobs;
 
-             
-              this.transactions = filteredJobs;
-              this.totalRecords = filteredJobs.length;
+              if (roleid !== 1) {
+                finalJobs = qcJobs
+                  // Remove already active jobs
+                  .filter((job: any) => {
+                    return !activeJobs.some((active: any) =>
+                      active.job === job.job &&
+                      active.serialNo === job.serialNo &&
+                      active.oper_num === +job.operNum &&
+                      active.wc === job.wcCode &&
+                      active.item === job.item
+                    );
+                  })
+                  // Allow only next operation
+                  .filter((job: any) => {
+                    const key = `${job.job}|${job.serialNo}`;
+                    const nextOps = nextOpMap.get(key) ?? [];
+                    return nextOps.includes(Number(job.operNum));
+                  });
+              }
+
+              // Common mapping for all roles
+              this.transactions = finalJobs.map((x: any, index: number) => ({
+                uniqueRowId: `${x.serialNo}-${x.operNum}-${x.wcCode}-${index}`,
+                serialNo: x.serialNo.trim(),
+                jobNumber: x.job.trim(),
+                qtyReleased: x.qtyReleased,
+                item: x.item.trim(),
+                jobYear: x.jobYear,
+                operationNumber: Number(x.operNum),
+                wcCode: x.wcCode.trim(),
+                wcDescription: x.wcDescription.trim(),
+                empNum: x.emp_num,
+                status: x.status,
+                isActive: x.isActive
+              }));
+
+              this.totalRecords = this.transactions.length;
+
 
               this.isLoading = false;
               this.loader.hide();
@@ -205,7 +214,8 @@ private handleError(err: any) {
       cancelButtonText: 'Cancel'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.jobService.startQCJob(payload).subscribe({
+        this.loader.show();
+        this.jobService.startQCJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
           next: () => {
             Swal.fire('Started!', `Job ${job.jobNumber} started successfully.`, 'success');
             this.loadJobs();
@@ -249,7 +259,8 @@ private handleError(err: any) {
       cancelButtonText: 'Cancel'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.jobService.startGroupQCJobs(payload).subscribe({
+        this.loader.show();
+        this.jobService.startGroupQCJobs(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
           next: (res: any) => {
             const started = res.startedJobs?.length ?? 0;
             const skipped = res.skippedJobs?.length ?? 0;
@@ -407,10 +418,10 @@ private handleError(err: any) {
       EmpNum: employeeCode,
       loginuser: employeeCode
     };
-
+    this.loader.show();
     if (job.isPaused) {
       // Resume
-      this.jobService.startQCJob(payload).subscribe({
+      this.jobService.startQCJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
         next: () => {
           job.isPaused = false;
 
@@ -428,7 +439,8 @@ private handleError(err: any) {
       });
     } else {
       // Pause
-      this.jobService.pauseSingleQCJob(payload).subscribe({
+
+      this.jobService.pauseSingleQCJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
         next: () => {
           job.isPaused = true;
 
@@ -466,7 +478,8 @@ completeQCJob(job: any) {
     confirmButtonText: 'Yes, Complete'
   }).then(result => {
     if (result.isConfirmed) {
-      this.jobService.completeSingleQCJob(payload).subscribe({
+      this.loader.show();
+      this.jobService.completeSingleQCJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
         next: () => {
           Swal.fire('Completed!', `Job ${job.jobNumber} completed successfully.`, 'success');
           this.loadJobs();
@@ -576,13 +589,14 @@ completeQCJob(job: any) {
           const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
           const employeeCode = (userDetails.employeeCode || '').trim();
           const roleid = Number(userDetails.roleID);
-
-          // Apply filter ONLY for role 4 & 5
-          if (roleid === 4 || roleid === 5) {
+          
+          // Apply filter for NON-ADMIN roles
+          if (roleid !== 1) {
             jobs = jobs.filter((job: any) =>
               (job.empNum || '').trim() === employeeCode.trim()
             );
           }
+
           
 
           //Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
@@ -630,9 +644,12 @@ loadScrappedJobs() {
         const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
         const employeeCode = userDetails.employeeCode || '';
         const roleid = userDetails.roleID || '';
-        if (roleid === 4 || roleid === 5) {          
-          jobs = jobs.filter((job: any) => (job.empNum || '').trim() === employeeCode);
+        if (roleid !== 1) {
+          jobs = jobs.filter((job: any) =>
+            (job.empNum || '').trim() === employeeCode.trim()
+          );
         }
+
 
         // Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
         const grouped: { [key: string]: any[] } = jobs.reduce((acc: { [key: string]: any[] }, row: any) => {

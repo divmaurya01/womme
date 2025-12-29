@@ -22,23 +22,27 @@ export class DashboardOverviewComponent {
   transaction = {
     runningJobs: 0,
     pausedJobs: 0,
+    normalCompletedJobs: 0,
     extendedJobs: 0,
-    completedJobs: 0
+    ongoingCriticalJobs: 0
   };
 
   qc = {
     runningQCJobs: 0,
     pausedQCJobs: 0,
+    normalCompletedQCJobs: 0,
     extendedQCJobs: 0,
-    completedQCJobs: 0
+    ongoingCriticalQCJobs: 0
   };
 
   verify = {
     runningVerifyJobs: 0,
     pausedVerifyJobs: 0,
+    normalCompletedVerifyJobs: 0,
     extendedVerifyJobs: 0,
-    completedVerifyJobs: 0
+    ongoingCriticalVerifyJobs: 0
   };
+
 
 
   utilization = {
@@ -56,32 +60,58 @@ export class DashboardOverviewComponent {
   totalRecords = 0;
   totalPages = 0;
   hoveredRow: number = -1;
+  roleId: number = 0;
 
   constructor(private jobService: JobService) {}
 
   ngOnInit() {
-    this.loadOverview();
-    this.loadTransactionData();
-    this.loadUtilizationData(); // ✅ new call
+    
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');    
+    this.roleId = userDetails.roleID;    
+    this.applyRoleRules();    
+    this.loadUtilizationData(); 
   }
 
   toggleSidebar() {
     this.isSidebarHidden = !this.isSidebarHidden;
   }
 
-  loadOverview(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1, includeVerify: number = 1) {
-    const payload = { todayOnly, includeTransaction, includeQC, includeVerify };
+  applyRoleRules() {
+    if (this.roleId === 4) {      
+      this.loadOverview(0, 1, 0, 0);
+      this.loadTransactionData(0, 1, 0, 0);
+    }
+    else if (this.roleId === 5) {      
+      this.loadOverview(0, 0, 1, 0);
+      this.loadTransactionData(0, 0, 1, 0);
+    }
+    else {      
+      this.loadOverview();
+      this.loadTransactionData();
+    }
+  }
+
+
+  loadOverview(
+      todayOnly: number = 0,
+      includeTransaction: number = 1,
+      includeQC: number = 1,
+      includeVerify: number = 1
+    ) {
+      const payload = { todayOnly, includeTransaction, includeQC, includeVerify };
+
       this.jobService.GetTransactionOverview(payload).subscribe({
         next: (res: any) => {
           if (res.success) {
-            this.transaction = res.transactionOverview || this.transaction;
-            this.qc = res.qcOverview || this.qc;
-            this.verify = res.verifyOverview || this.verify; // ✅ new
+            this.transaction = res.transactionOverview ?? this.transaction;
+            this.qc = res.qcOverview ?? this.qc;
+            this.verify = res.verifyOverview ?? this.verify;
           }
         },
-        error: (err) => console.error('Error loading overview:', err)
+        error: err => console.error('Error loading overview:', err)
       });
-  }
+    }
+
 
   loadUtilizationData() {
     this.jobService.GetEmployeeAndMachineStats().subscribe({
@@ -157,6 +187,24 @@ getIdlePercentageMachine(): number {
 
   return Math.max(0, 100 - active);
 }
+
+getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'Completed':
+      return 'badge badge-success';
+    case 'Paused':
+      return 'badge badge-warning';
+    case 'Extended':
+      return 'badge badge-danger';
+    case 'Ongoing Critical':
+      return 'badge badge-dark';
+    case 'Running':
+      return 'badge badge-primary';
+    default:
+      return 'badge badge-secondary';
+  }
+}
+
 
 
 }

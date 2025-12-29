@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, Output, EventEmitter, ViewEncapsulation, OnInit} from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faTachometerAlt, faRepeat, faSyncAlt, faUsers, faBook, faCog, faProjectDiagram, faUpload, faSitemap, faUserShield,faCalendar, faIndustry, faBox, faTicket, faTruckLoading} from '@fortawesome/free-solid-svg-icons';
+import { faChartLine, faUserTie, faClipboardCheck, faUserCheck, faSyncAlt, faArrowUpRightDots, faCheckCircle, faClockRotateLeft, faCloudUploadAlt, faSpellCheck, faFileLines, faChartColumn, faDiagramProject, faNetworkWired, faIndustry, faUsers, faCogs, faBoxesStacked, faUserShield, faReceipt, faCalendarDays, faGear } from '@fortawesome/free-solid-svg-icons';
 import {CdkDragDrop, moveItemInArray, DragDropModule} from '@angular/cdk/drag-drop';
 import { JobService } from '../../services/job.service'; // use your existing JobService
 import { ActivatedRoute } from '@angular/router'; // Import this
@@ -37,44 +37,54 @@ export class SidenavComponent implements OnInit {
   currentUrl: string = '';
   groupedSidebarItems: SidebarGroup[] = [];
  
-  private readonly allSidebarItems: SidebarGroup[] = [
+    private readonly allSidebarItems: SidebarGroup[] = [
     {
       title: 'Operations',
       items: [
-        { label: 'Dashboard', link:'/dashboard_admin', icon: faTachometerAlt, color: '#3E7CB1' },
-        { label: 'Dashboard', link:'/dashboard_emp', icon: faTachometerAlt, color: '#3E7CB1' },
-        { label: 'Dashboard', link:'/dashboard_qc', icon: faTachometerAlt, color: '#3E7CB1' },
-        { label: 'Dashboard', link:'/dashboard_verify', icon: faTachometerAlt, color: '#3E7CB1' },
-       
-        //{ label: 'Dashboard', link:'/dashboard', icon: faTachometerAlt, color: '#3E7CB1' },        
-        { label: 'Job Sync', link: '/jobs', icon: faSyncAlt, color: '#00A6A6' },
-        { label: 'Issue Transaction', link: '/issuejobtransaction', icon: faRepeat, color: '#d015e9ff' },
-        { label: 'Verify Transaction', link: '/verify-transaction', icon: faTruckLoading, color: '#01071dff' },
-        { label: 'Unposted Transaction', link: '/unpostedjobtransaction', icon: faRepeat, color: '#E9A115' },
-        { label: 'Posted Transaction', link: '/postedjobtransaction', icon: faUpload, color: '#4AA96C' },
-        { label: 'Quality check', link: '/qualitychecker', icon: faTicket, color: '#70eaadff' },
-        { label: 'Main Reports', link: '/JobListComponent', icon: faBook, color: '#70eae6ff' },
-        { label: 'Job Report', link: '/job-report', icon: faBook, color: '#70eae6ff' },       
+        // Dashboards
+        { label: 'Main Dashboard', link: '/dashboard_admin', icon: faChartLine, color: '#E9A115' },
+        { label: 'Employee Dashboard', link: '/dashboard_emp', icon: faUserTie, color: '#1976D2' },
+        { label: 'QC Dashboard', link: '/dashboard_qc', icon: faClipboardCheck, color: '#70eaadff' },
+        { label: 'Verify Dashboard', link: '/dashboard_verify', icon: faUserCheck, color: '#70eae6ff' },
+        //{ label: 'Dashboard', link:'/dashboard', icon: faTachometerAlt, color: '#70eae6ff' }, 
+
+        // Jobs & Transactions
+        { label: 'Job Sync', link: '/jobs', icon: faSyncAlt, color: '#0097A7' },
+        { label: 'Issue Transaction', link: '/issuejobtransaction', icon: faArrowUpRightDots, color: '#7B1FA2' },
+        { label: 'Verify Transaction', link: '/verify-transaction', icon: faCheckCircle, color: '#388E3C' },
+        { label: 'Unposted Transaction', link: '/unpostedjobtransaction', icon: faClockRotateLeft, color: '#F57C00' },
+        { label: 'Posted Transaction', link: '/postedjobtransaction', icon: faCloudUploadAlt, color: '#43A047' },
+
+        // Quality & Reports
+        { label: 'Quality Check', link: '/qualitychecker', icon: faSpellCheck, color: '#F4A261' },
+        { label: 'Main Reports', link: '/JobListComponent', icon: faFileLines, color: '#0288D1' },
+        { label: 'Job Report', link: '/job-report', icon: faChartColumn, color: '#ff7300ff' },
       ],
     },
+
     {
       title: 'Manage',
       items: [
-        { label: 'WC/M Mapping', link: '/machine-employee', icon: faCog, color: '#ffc107' },
-        { label: 'WC/E Mapping', link: '/workcenter', icon: faSitemap, color: '#816CDA' },
-        { label: 'Machines', link: '/machines', icon: faIndustry, color: '#8C52FF' },
-        { label: 'Employee', link: '/users', icon: faUsers, color: '#279EFF' },
+        // Mapping & Setup
+        { label: 'WC / Machine Mapping', link: '/machine-employee', icon: faDiagramProject, color: '#F9A825' },
+        { label: 'WC / Employee Mapping', link: '/workcenter', icon: faNetworkWired, color: '#7E57C2' },
+
+        // Masters
+        { label: 'Machines', link: '/machines', icon: faIndustry, color: '#6A1B9A' },
+        { label: 'Employee', link: '/users', icon: faUsers, color: '#1E88E5' },
+        { label: 'Operations', link: '/operations', icon: faCogs, color: '#E53935' },
+        { label: 'Item Master', link: '/items', icon: faBoxesStacked, color: '#558B2F' },
+        { label: 'Role Master', link: '/rolemaster', icon: faUserShield, color: '#FB8C00' },
         // { label: 'Assign Job', link: '/assignjob', icon: faIndustry, color: '#816CDA' },
-        { label: 'Operations', link: '/operations', icon: faProjectDiagram, color: '#E85A70' },        
-        { label: 'Item', link: '/items', icon: faBox, color: '#5F8D4E' },        
-        { label: 'Role Master', link: '/rolemaster', icon: faUserShield, color: '#F4A261' },
-        { label: 'TransactionComponent', link: '/transactions', icon: faBook, color: '#17a2b8' },
-        { label: 'Settings', link: '#', icon: faCog, color: '#ffc107' },
-        { label: 'Calendar', link: '/calendar', icon: faCalendar, color: '#06675aff' },
- 
+
+        // Utilities
+        { label: 'Transactions', link: '/transactions', icon: faReceipt, color: '#00BCD4' },
+        { label: 'Calendar', link: '/calendar', icon: faCalendarDays, color: '#00796B' },
+        { label: 'Settings', link: '#', icon: faGear, color: '#9E9E9E' },
       ],
     },
   ];
+
  
   constructor(
     private router: Router,

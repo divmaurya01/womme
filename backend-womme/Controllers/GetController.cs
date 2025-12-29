@@ -238,7 +238,8 @@ public class GetController : ControllerBase
                 e.hire_date,
                 e.RoleID,
                 e.IsActive,
-                e.ProfileImage
+                e.ProfileImage,
+                e.womm_id
             })
             .ToList();
 
@@ -1654,14 +1655,27 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
             var statusDict = latestStatuses
                 .Where(x => x != null)
                 .ToDictionary(
-                    x => $"{x!.SerialNo}-{x.oper_num}",
-                    x => x!.status
+                    x => $"{x!.SerialNo}-{x.oper_num}-{x.wc}",
+                    x => new
+                    {
+                        x.trans_num,
+                        x.status,
+                        x.Remark
+                    }
                 );
+
 
             foreach (var item in groupedData)
             {
-                var key = $"{item.SerialNo}-{item.OperNum}";
-                item.IsActive = statusDict.TryGetValue(key, out var st) && st != "3";
+                var key = $"{item.SerialNo}-{item.OperNum}-{item.WcCode}";
+
+                if (statusDict.TryGetValue(key, out var st))
+                {
+                    item.trans_number = (int)st.trans_num; 
+                    item.Status = st.status;
+                    item.Remark = st.Remark;
+                    item.IsActive = st.status != "3";  
+                }
             }
 
             // 🔹 STEP 8 — Final sort
@@ -1692,6 +1706,99 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
             return StatusCode(500, new { error = ex.Message });
         }
     }
+
+
+    [HttpGet]
+    public async Task<IActionResult> GetCompletedVerifyJob()
+    {
+        try
+        {
+            // STEP 1: All VERIFY transactions (any status)
+            var allVerifyRows = await _context.JobTranMst
+                .Where(j =>
+                    j.wc == "VERIFY" &&
+                    (j.qty_scrapped == null || j.qty_scrapped == 0))
+                .ToListAsync();
+
+            // STEP 2: Groups which HAVE at least one completed row
+            var completedGroups = allVerifyRows
+                .GroupBy(j => new
+                {
+                    j.job,
+                    j.SerialNo,
+                    j.oper_num,
+                    j.wc
+                })
+                .Where(g => g.Any(x => x.status == "3")) // completed job
+                .Select(g => new
+                {
+                    // Latest completed transaction
+                    LatestCompleted = g
+                        .Where(x => x.status == "3")
+                        .OrderByDescending(x => x.trans_date)
+                        .First(),
+
+                    // ALL remarks from ANY status
+                    Remarks = g
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Remark))
+                        .Select(x => new
+                        {
+                            x.emp_num,
+                            x.Remark
+                        })
+                        .Distinct()
+                        .ToList()
+                })
+                .ToList();
+
+            // STEP 3: Employee names
+            var empNums = completedGroups
+                .SelectMany(g => g.Remarks)
+                .Select(e => e.emp_num)
+                .Distinct()
+                .ToList();
+
+            var empMap = await _context.EmployeeMst
+                        .Where(e => empNums.Contains(e.emp_num))
+                        .ToDictionaryAsync(
+                            e => e.emp_num,
+                            e => e.name   
+                        );
+
+
+            // STEP 4: Final response
+            var result = completedGroups
+                .Select(g => new
+                {
+                    trans_num = g.LatestCompleted.trans_num,
+                    job = g.LatestCompleted.job,
+                    serialNo = g.LatestCompleted.SerialNo,
+                    operNum = g.LatestCompleted.oper_num,
+                    wcCode = g.LatestCompleted.wc,
+                    transDate = g.LatestCompleted.trans_date,
+                    qcGroup = g.LatestCompleted.qcgroup,
+
+                    employees = g.Remarks.Select(r => new
+                    {
+                        empNum = r.emp_num,
+                        empName = empMap.ContainsKey(r.emp_num)
+                            ? empMap[r.emp_num]
+                            : "",
+                        remark = r.Remark
+                    }).ToList()
+                })
+                .OrderByDescending(x => x.transDate)
+                .ToList();
+
+            return Ok(new { data = result, totalRecords = result.Count });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+
 
 
     [HttpGet]
@@ -2544,7 +2651,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
     {    
         // ===================== DATE FILTER =====================
     
-        DateTime cutoffDate = new DateTime(2025, 11, 07);
+        DateTime cutoffDate = new DateTime(2025, 12, 07);
     
         // ===================== JOB MASTER =====================
     

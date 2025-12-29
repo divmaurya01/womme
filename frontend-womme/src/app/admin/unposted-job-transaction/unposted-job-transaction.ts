@@ -377,7 +377,8 @@ export class UnpostedJobTransaction implements OnInit {
   finishWizard() {
     console.log('Matched Data:', this.matchedData);
 
-      this.jobService.startJob(this.matchedData).subscribe({
+      this.loader.show();
+      this.jobService.startJob(this.matchedData).pipe( finalize(() => { this.loader.hide(); })).subscribe({
       next: (res: any) => {
        Swal.fire({
         icon: 'success',
@@ -415,7 +416,8 @@ export class UnpostedJobTransaction implements OnInit {
     };
 
     console.log(payload);
-    this.jobService.PauseJob(payload).subscribe({
+    this.loader.show();
+    this.jobService.PauseJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
       next: (res: any) => {
         // Stop timer for this job
         if (this.activeTimers[selectedRow.serialNo]) {
@@ -458,8 +460,8 @@ export class UnpostedJobTransaction implements OnInit {
       qtyReleased: selectedRow.qtyReleased,
       loginuser: this.employeeCode // or whichever user is logged in
     };
-
-    this.jobService.CompleteJob(payload).subscribe({
+    this.loader.show();
+    this.jobService.CompleteJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
       next: (res: any) => {
                 Swal.fire({
               icon: 'success',

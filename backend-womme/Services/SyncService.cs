@@ -36,7 +36,7 @@ namespace WommeAPI.Services
         }
 
 
-        public async Task<(List<JobMst> insertedRecords, List<JobMst> updatedRecords)> SyncJobMstAsync()
+       public async Task<(List<JobMst> insertedRecords, List<JobMst> updatedRecords)> SyncJobMstAsync()
         {
             const int batchSize = 300;
             var insertedRecords = new List<JobMst>();
@@ -44,8 +44,11 @@ namespace WommeAPI.Services
 
             SyncLogger.Log("JobMst", "Sync started at: " + DateTime.Now);
 
-            // Load local data into dictionary for fast lookup
-            var localData = await _localContext.JobMst.ToDictionaryAsync(j => j.job!);
+            // ✅ Load local data as Lookup (supports duplicates)
+            var localLookup = (await _localContext.JobMst.ToListAsync())
+                .Where(j => !string.IsNullOrEmpty(j.job))
+                .ToLookup(j => j.job!);
+
             int totalRecords = await _sourceContext.JobMst.CountAsync();
 
             for (int i = 0; i < totalRecords; i += batchSize)
@@ -61,55 +64,64 @@ namespace WommeAPI.Services
                     if (string.IsNullOrEmpty(sourceItem.job))
                         continue;
 
-                    if (localData.TryGetValue(sourceItem.job, out var localItem))
+                    var localItems = localLookup[sourceItem.job];
+
+                    // 🔄 UPDATE all matching local rows
+                    if (localItems.Any())
                     {
-                        bool needsUpdate = false;
-
-                        // 🔄 Auto-compare all properties dynamically
-                        var properties = typeof(JobMst).GetProperties()
-                            .Where(p => p.CanRead && p.CanWrite && p.Name != "RecordDate"); // skip RecordDate itself
-
-                        foreach (var prop in properties)
+                        foreach (var localItem in localItems)
                         {
-                            var localValue = prop.GetValue(localItem);
-                            var sourceValue = prop.GetValue(sourceItem);
+                            bool needsUpdate = false;
 
-                            // compare values — handle nulls properly
-                            if (!Equals(localValue, sourceValue))
+                            var properties = typeof(JobMst).GetProperties()
+                                .Where(p => p.CanRead && p.CanWrite && p.Name != "RecordDate");
+
+                            foreach (var prop in properties)
                             {
-                                prop.SetValue(localItem, sourceValue);
-                                needsUpdate = true;
+                                var localValue = prop.GetValue(localItem);
+                                var sourceValue = prop.GetValue(sourceItem);
+
+                                if (!Equals(localValue, sourceValue))
+                                {
+                                    prop.SetValue(localItem, sourceValue);
+                                    needsUpdate = true;
+                                }
+                            }
+
+                            if (needsUpdate)
+                            {
+                                localItem.RecordDate = DateTime.Now;
+                                _localContext.JobMst.Update(localItem);
+                                updatedRecords.Add(localItem);
+
+                                SyncLogger.Log("JobMst-Updated", new Dictionary<string, object>
+                                {
+                                    { "job", localItem.job! }
+                                });
                             }
                         }
-
-                        if (needsUpdate)
-                        {
-                            localItem.RecordDate = DateTime.Now;
-                            _localContext.JobMst.Update(localItem);
-                            updatedRecords.Add(localItem);
-
-                            SyncLogger.Log("JobMst-Updated", new Dictionary<string, object>
-                    {
-                        { "job", localItem.job! }
-                    });
-                        }
                     }
+                    // ➕ INSERT if no local rows exist
                     else
                     {
                         await _localContext.JobMst.AddAsync(sourceItem);
                         insertedRecords.Add(sourceItem);
 
                         SyncLogger.Log("JobMst-Inserted", new Dictionary<string, object>
-                {
-                    { "job", sourceItem.job! }
-                });
+                        {
+                            { "job", sourceItem.job! }
+                        });
                     }
                 }
 
                 await _localContext.SaveChangesAsync();
             }
 
-            SyncLogger.Log("JobMst", $"Sync completed. Inserted: {insertedRecords.Count}, Updated: {updatedRecords.Count}");
+            SyncLogger.Log(
+                "JobMst",
+                $"Sync completed. Inserted: {insertedRecords.Count}, Updated: {updatedRecords.Count}"
+            );
+
             return (insertedRecords, updatedRecords);
         }
 

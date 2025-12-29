@@ -13,6 +13,8 @@ import { Subject } from 'rxjs';
 import { LoaderService } from '../../services/loader.service';
 import { finalize, flatMap } from 'rxjs/operators';
 import { BrowserQRCodeReader } from '@zxing/browser';
+import { TabViewModule } from 'primeng/tabview';
+
 
 @Component({
   selector: 'app-verify-transaction',
@@ -26,17 +28,28 @@ import { BrowserQRCodeReader } from '@zxing/browser';
     TableModule,
     FormsModule,
     DialogModule,
-    ZXingScannerModule
+    ZXingScannerModule,
+    TabViewModule
   ]
 })
 export class VerifyTransaction implements OnInit {
 
-  @ViewChild('dt') dt!: Table;
+
 
   transactions: any[] = [];
   totalRecords = 0;
   isLoading = false;
   searchTerm = '';
+  selectedTab: 'NEW' | 'ONGOING' | 'COMPLETED' = 'NEW';
+  newJobs: any[] = [];
+  ongoingJobs: any[] = [];
+  completedJobs: any[] = [];
+  activeTabIndex = 0;
+  totalRecordsNew = 0;
+  totalRecordsOngoing = 0;
+  totalRecordsCompleted = 0;
+
+
 
   isSidebarHidden = false;
 
@@ -46,17 +59,22 @@ export class VerifyTransaction implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private zone: NgZone
-  ) {}
+  ) { }
 
   ngOnInit(): void {
-    // initial load
+    this.loadJobs({
+      first: 0,
+      rows: 50
+    });
+    this.loadCompletedJobs();
   }
+
 
   toggleSidebar() {
     this.isSidebarHidden = !this.isSidebarHidden;
   }
 
- 
+
   loadJobs(event: any) {
     const page = event.first / event.rows;
     const size = event.rows;
@@ -67,7 +85,6 @@ export class VerifyTransaction implements OnInit {
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     const employeeCode = userDetails.employeeCode || '';
 
-
     this.jobService
       .getVerifyTransactions(page, size, this.searchTerm, employeeCode)
       .pipe(finalize(() => {
@@ -76,22 +93,218 @@ export class VerifyTransaction implements OnInit {
       }))
       .subscribe({
         next: (res: any) => {
-          this.transactions = res.data || [];
-          this.totalRecords = res.totalRecords || 0;
+          const data = res.data || [];
+
+          data.forEach((x: any) => {
+            x.isRemarkSaved = !!x.remark;   // if backend sends remark later
+            x.verify = false;
+          });
+
+          this.newJobs = data.filter((x: any) =>
+            (!x.status || x.status === '') && x.isActive === false
+          );
+
+
+          this.ongoingJobs = data.filter((x: any) =>
+            x.status === '1' && x.isActive === true
+          );          
+
+          this.totalRecordsNew = this.newJobs.length;
+          this.totalRecordsOngoing = this.ongoingJobs.length;
+          this.totalRecordsCompleted = this.completedJobs.length;
         },
         error: () => {
-          Swal.fire('Error', 'Failed to load verify transactions', 'error');
+          Swal.fire('Error', 'Failed to load transactions', 'error');
         }
       });
   }
 
- 
-  onSearchChange(value: string) {
-    this.searchTerm = value;
-    this.dt?.reset(); // reload table
+
+
+  filterByTab(data: any[]) {
+    switch (this.selectedTab) {
+
+      case 'NEW':
+        return data.filter(x =>
+          (x.status === null || x.status === '' || x.status === undefined) &&
+          x.isActive === false
+        );
+
+      case 'ONGOING':
+        return data.filter(x =>
+          x.status === '1' &&
+          x.isActive === true
+        );
+
+      case 'COMPLETED':
+        return data.filter(x =>
+          x.status === '3'
+        );
+
+      default:
+        return data;
+    }
   }
 
-  
+ /** Start Single Job */
+startApproval(job: any) {
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const employeeCode = userDetails.employeeCode || '';
+
+  const payload = {
+    JobNumber: job.jobNumber || job.job,
+    SerialNo: job.serialNo,
+    OperationNumber: job.operationNumber || job.operNum,
+    Wc: job.wcCode,
+    Item: job.item,
+    QtyReleased: job.qtyReleased,
+    EmpNum: employeeCode,
+    loginuser: employeeCode
+  };
+
+  Swal.fire({
+    title: 'Start Job?',
+    text: `Do you want to start Job ${payload.JobNumber} (Serial ${payload.SerialNo}) at WC ${payload.Wc}?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Start',
+    cancelButtonText: 'Cancel'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      this.loaderService.show();
+
+      this.jobService.startJob(payload)
+        .pipe(finalize(() => this.loaderService.hide()))
+        .subscribe({
+          next: (res: any) => {
+            Swal.fire('Started!', `Job ${job.jobNumber} started successfully.`, 'success');
+            location.reload();
+          },
+          error: (err) => {
+            Swal.fire(
+              'Error',
+              err.error?.message || 'Failed to start job',
+              'error'
+            );
+          }
+        });
+    }
+  });
+}
+
+
+saveRemark(job: any) {
+
+  if (!job.remark || job.remark.trim() === '') {
+    Swal.fire('Warning', 'Please enter remark', 'warning');
+    return;
+  }
+
+  const payload = {
+    trans_num: job.trans_number,
+    Remark: job.remark
+  };
+
+  this.loaderService.show();
+
+  this.jobService.updateQCRemark(payload)
+    .pipe(finalize(() => this.loaderService.hide()))
+    .subscribe({
+      next: (res: any) => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Remark Saved',
+          timer: 1500,
+          showConfirmButton: false
+        });
+
+        // ✅ UI STATE CHANGE
+        job.isRemarkSaved = true;   // hide Save button
+      },
+      error: () => {
+        Swal.fire('Error', 'Failed to save remark', 'error');
+      }
+    });
+}
+
+
+
+verifyJob(job: any) {
+
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const employeeCode = userDetails.employeeCode || '';
+
+  const payload = {
+    jobNumber: job.job,
+    serialNo: job.serialNo,
+    OperationNumber: job.operNum,
+    wc: job.wcCode,    
+    qtyReleased: job.qtyReleased,    
+    empNum: employeeCode,
+    loginuser: employeeCode
+  };
+
+  Swal.fire({
+    text: `Do you want to start Job ${payload.jobNumber} (Serial ${payload.serialNo}) at WC ${payload.wc}?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Verify'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    this.loaderService.show();
+
+    this.jobService.CompleteJob(payload)
+      .pipe(finalize(() => this.loaderService.hide()))
+      .subscribe({
+        next: () => {
+          Swal.fire('Verify', 'Job Verify successfully', 'success');
+          job.verify = true;
+          this.loadJobs({ first: 0, rows: 50 });
+        },
+        error: () => {
+          Swal.fire('Error', 'Verify failed', 'error');
+        }
+      });
+  });
+}
+
+loadCompletedJobs() {
+  this.isLoading = true;
+  this.loaderService.show();
+
+  this.jobService
+    .GetCompletedVerifyJob()
+    .pipe(finalize(() => {
+      this.isLoading = false;
+      this.loaderService.hide();
+    }))
+    .subscribe({
+      next: (res) => {
+        this.completedJobs = res.data || [];
+        this.totalRecordsCompleted = res.totalRecords || this.completedJobs.length;
+      },
+      error: () => {
+        Swal.fire('Error', 'Failed to load completed jobs', 'error');
+      }
+    });
+}
+
+
+
+
+  onTabChange(event: any) {
+    this.activeTabIndex = event.index;
+  }
+
+
+  onSearchChange(value: string) {
+    this.searchTerm = value;
+    this.loadJobs({ first: 0, rows: 50 });
+  }
+
+
+
   verifyTransaction(job: any) {
     if (!job.remark || job.remark.trim() === '') {
       Swal.fire('Warning', 'Please enter remark before verify', 'warning');
@@ -115,24 +328,28 @@ export class VerifyTransaction implements OnInit {
     this.loaderService.show();
 
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-    const employeeCode = userDetails.employeeCode || '';    
-      const payload = {
+    const employeeCode = userDetails.employeeCode || '';
+
+    const payload = {
       JobNumber: job.jobNumber,
       SerialNo: job.serialNo,
       OperationNumber: job.operationNumber,
       Wc: job.wcCode,
+      qtyReleased:job.qtyReleased,
       Item: job.item,
       EmpNum: employeeCode,
-      loginuser: employeeCode
+      loginuser: employeeCode,
+      Remark: job.remark
     };
-    
 
     this.jobService.verifyTransaction(payload)
       .pipe(finalize(() => this.loaderService.hide()))
       .subscribe({
         next: () => {
           Swal.fire('Success', 'Transaction verified successfully', 'success');
-          this.dt.reset(); // reload table
+
+          // Mark row as verified
+          job.isVerified = true;
         },
         error: () => {
           Swal.fire('Error', 'Verification failed', 'error');
@@ -140,7 +357,7 @@ export class VerifyTransaction implements OnInit {
       });
   }
 
-  
+
   submitTransaction(job: any) {
     Swal.fire({
       title: 'Submit Transaction?',
@@ -163,7 +380,6 @@ export class VerifyTransaction implements OnInit {
       .subscribe({
         next: () => {
           Swal.fire('Submitted', 'Transaction submitted successfully', 'success');
-          this.dt.reset();
         },
         error: () => {
           Swal.fire('Error', 'Submit failed', 'error');

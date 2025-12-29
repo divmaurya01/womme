@@ -230,10 +230,10 @@ public class SchedulerController : ControllerBase
 
             // ------------------- 1️⃣ Job_mst -------------------
            // 1️⃣ Job_mst
-var jobMstData = await _sourceContext.JobMst
-    .AsNoTracking()
-    .Where(x => x.RecordDate >= cutoffDate)
-    .ToListAsync();
+            var jobMstData = await _sourceContext.JobMst
+                .AsNoTracking()
+                .Where(x => x.RecordDate >= cutoffDate)
+                .ToListAsync();
 
             foreach (var src in jobMstData)
             {
@@ -254,8 +254,7 @@ var jobMstData = await _sourceContext.JobMst
 
                 if (existing != null)
                 {
-                    existing.RecordDate = src.RecordDate;
-                    
+                    existing.RecordDate = GetSafeSqlDateTime(src.RecordDate);                    
                     _localContext.JobMst.Update(existing);
                 }
                 else
@@ -269,6 +268,18 @@ var jobMstData = await _sourceContext.JobMst
                 }
             }
 
+            foreach (var entry in _localContext.ChangeTracker.Entries())
+            {
+                foreach (var prop in entry.Properties)
+                {
+                    if (prop.Metadata.ClrType == typeof(DateTime))
+                    {
+                        var dt = (DateTime)prop.CurrentValue;
+                        if (dt < new DateTime(1753, 1, 1))
+                            Console.WriteLine($"⚠️ Out-of-range datetime in {entry.Entity.GetType().Name}.{prop.Metadata.Name}: {dt}");
+                    }
+                }
+            }
             await _localContext.SaveChangesAsync();
 
             syncResults.Add($"Job_mst synced ({jobMstData.Count} records).");
@@ -292,10 +303,14 @@ var jobMstData = await _sourceContext.JobMst
 
                 if (existing != null)
                 {
-                    existing.RecordDate = src.RecordDate;
-                    // map other properties
+                    existing.RecordDate = GetSafeSqlDateTime(src.RecordDate);
+                    existing.CreateDate = GetSafeSqlDateTime(src.CreateDate);
+                    existing.CreatedBy = string.IsNullOrEmpty(src.CreatedBy) ? "SYSTEM" : src.CreatedBy;
+                    existing.UpdatedBy = string.IsNullOrEmpty(src.UpdatedBy) ? "SYSTEM" : src.UpdatedBy;
+                    existing.Wc = string.IsNullOrEmpty(src.Wc) ? "UNKNOWN" : src.Wc;
                     _localContext.JobRouteMst.Update(existing);
                 }
+
                 else
                 {
                     await _localContext.JobRouteMst.AddAsync(new JobRouteMst
@@ -304,9 +319,25 @@ var jobMstData = await _sourceContext.JobMst
                         Suffix = src.Suffix,
                         OperNum = src.OperNum,
                         SiteRef = src.SiteRef,
-                        RecordDate = src.RecordDate
+                        RecordDate = GetSafeSqlDateTime(src.RecordDate),
+                        CreateDate = GetSafeSqlDateTime(src.CreateDate),
+                       CreatedBy = string.IsNullOrEmpty(src.CreatedBy) ? "SYSTEM" : src.CreatedBy,
+                       UpdatedBy = string.IsNullOrEmpty(src.UpdatedBy) ? "SYSTEM" : src.UpdatedBy,
+                       Wc = string.IsNullOrEmpty(src.Wc) ? "UNKNOWN" : src.Wc,
                         // map other properties
                     });
+                }
+            }
+            foreach (var entry in _localContext.ChangeTracker.Entries())
+            {
+                foreach (var prop in entry.Properties)
+                {
+                    if (prop.Metadata.ClrType == typeof(DateTime))
+                    {
+                        var dt = (DateTime)prop.CurrentValue;
+                        if (dt < new DateTime(1753, 1, 1))
+                            Console.WriteLine($"⚠️ Out-of-range datetime in {entry.Entity.GetType().Name}.{prop.Metadata.Name}: {dt}");
+                    }
                 }
             }
             await _localContext.SaveChangesAsync();
@@ -326,7 +357,7 @@ var jobMstData = await _sourceContext.JobMst
                 if (existing != null)
                 {
                     existing.name = src.name;
-                    existing.RecordDate = src.RecordDate;
+                    existing.RecordDate = GetSafeSqlDateTime(src.RecordDate);
                     _localContext.EmployeeMst.Update(existing);
                 }
                 else
@@ -340,54 +371,78 @@ var jobMstData = await _sourceContext.JobMst
                     });
                 }
             }
+            foreach (var entry in _localContext.ChangeTracker.Entries())
+            {
+                foreach (var prop in entry.Properties)
+                {
+                    if (prop.Metadata.ClrType == typeof(DateTime))
+                    {
+                        var dt = (DateTime)prop.CurrentValue;
+                        if (dt < new DateTime(1753, 1, 1))
+                            Console.WriteLine($"⚠️ Out-of-range datetime in {entry.Entity.GetType().Name}.{prop.Metadata.Name}: {dt}");
+                    }
+                }
+            }
             await _localContext.SaveChangesAsync();
             syncResults.Add($"Employee_mst synced ({empData.Count} records).");
 
             // ------------------- 4️⃣ Item_mst -------------------
-       // ------------------- 4️⃣ Item_mst -------------------
-var itemData = await _sourceContext.ItemMst
-    .AsNoTracking()
-    .Where(x => x.RecordDate >= cutoffDate)
-    .ToListAsync();
+                // ------------------- 4️⃣ Item_mst -------------------
+            var itemData = await _sourceContext.ItemMst
+                .AsNoTracking()
+                .Where(x => x.RecordDate >= cutoffDate)
+                .ToListAsync();
 
-int syncedCount = 0;
+            int syncedCount = 0;
 
-foreach (var src in itemData)
-{
-    // Skip if PK is null
-    if (string.IsNullOrEmpty(src.item))
-        continue;
+            foreach (var src in itemData)
+            {
+                // Skip if PK is null
+                if (string.IsNullOrEmpty(src.item))
+                    continue;
 
-    // Try to find existing item by PK
-    var existing = await _localContext.ItemMst
-        .FirstOrDefaultAsync(i => i.item == src.item);
+                // Try to find existing item by PK
+                var existing = await _localContext.ItemMst
+                    .FirstOrDefaultAsync(i => i.item == src.item);
 
-    if (existing != null)
-    {
-        existing.description = src.description;
-        existing.RecordDate = src.RecordDate;
-        existing.Auto_Job = string.IsNullOrEmpty(src.Auto_Job) ? "N" : src.Auto_Job; // ✅ Default to "N"
-        existing.Auto_Post = src.Auto_Post ?? "N";
-        _localContext.ItemMst.Update(existing);
-    }
-    else
-    {
-        await _localContext.ItemMst.AddAsync(new ItemMst
-        {
-            item = src.item,
-            description = src.description,
-            RecordDate = src.RecordDate,
-            Auto_Job = string.IsNullOrEmpty(src.Auto_Job) ? "N" : src.Auto_Job, // ✅ ensure non-null
-            Auto_Post = src.Auto_Post ?? "N"
-        });
-    }
+                if (existing != null)
+                {
+                    existing.description = src.description;
+                    existing.RecordDate = GetSafeSqlDateTime(src.RecordDate);
+                    existing.Auto_Job = string.IsNullOrEmpty(src.Auto_Job) ? "N" : src.Auto_Job; // ✅ Default to "N"
+                    existing.Auto_Post = src.Auto_Post ?? "N";
+                    _localContext.ItemMst.Update(existing);
+                }
+                else
+                {
+                    await _localContext.ItemMst.AddAsync(new ItemMst
+                    {
+                        item = src.item,
+                        description = src.description,
+                        RecordDate = src.RecordDate,
+                        Auto_Job = string.IsNullOrEmpty(src.Auto_Job) ? "N" : src.Auto_Job, // ✅ ensure non-null
+                        Auto_Post = src.Auto_Post ?? "N"
+                    });
+                }
 
-    syncedCount++;
-}
+                syncedCount++;
+            }
 
 
-await _localContext.SaveChangesAsync();
-syncResults.Add($"Item_mst synced ({syncedCount} records).");
+            foreach (var entry in _localContext.ChangeTracker.Entries())
+            {
+                foreach (var prop in entry.Properties)
+                {
+                    if (prop.Metadata.ClrType == typeof(DateTime))
+                    {
+                        var dt = (DateTime)prop.CurrentValue;
+                        if (dt < new DateTime(1753, 1, 1))
+                            Console.WriteLine($"⚠️ Out-of-range datetime in {entry.Entity.GetType().Name}.{prop.Metadata.Name}: {dt}");
+                    }
+                }
+            }
+            await _localContext.SaveChangesAsync();
+            syncResults.Add($"Item_mst synced ({syncedCount} records).");
 
 
 
@@ -404,7 +459,7 @@ syncResults.Add($"Item_mst synced ({syncedCount} records).");
 
                 if (existing != null)
                 {
-                    existing.RecordDate = src.RecordDate;
+                    existing.RecordDate = GetSafeSqlDateTime(src.RecordDate);
                     _localContext.WomWcEmployee.Update(existing);
                 }
                 else
@@ -414,6 +469,18 @@ syncResults.Add($"Item_mst synced ({syncedCount} records).");
                         EmpNum = src.EmpNum,
                         RecordDate = src.RecordDate
                     });
+                }
+            }
+            foreach (var entry in _localContext.ChangeTracker.Entries())
+            {
+                foreach (var prop in entry.Properties)
+                {
+                    if (prop.Metadata.ClrType == typeof(DateTime))
+                    {
+                        var dt = (DateTime)prop.CurrentValue;
+                        if (dt < new DateTime(1753, 1, 1))
+                            Console.WriteLine($"⚠️ Out-of-range datetime in {entry.Entity.GetType().Name}.{prop.Metadata.Name}: {dt}");
+                    }
                 }
             }
             await _localContext.SaveChangesAsync();
@@ -432,7 +499,7 @@ syncResults.Add($"Item_mst synced ({syncedCount} records).");
 
                 if (existing != null)
                 {
-                    existing.RecordDate = src.RecordDate;
+                    existing.RecordDate = GetSafeSqlDateTime(src.RecordDate);
                     _localContext.WcMst.Update(existing);
                 }
                 else
@@ -444,7 +511,20 @@ syncResults.Add($"Item_mst synced ({syncedCount} records).");
                     });
                 }
             }
+            foreach (var entry in _localContext.ChangeTracker.Entries())
+            {
+                foreach (var prop in entry.Properties)
+                {
+                    if (prop.Metadata.ClrType == typeof(DateTime))
+                    {
+                        var dt = (DateTime)prop.CurrentValue;
+                        if (dt < new DateTime(1753, 1, 1))
+                            Console.WriteLine($"⚠️ Out-of-range datetime in {entry.Entity.GetType().Name}.{prop.Metadata.Name}: {dt}");
+                    }
+                }
+            }
             await _localContext.SaveChangesAsync();
+
             syncResults.Add($"Wc_mst synced ({wcData.Count} records).");
 
             await transaction.CommitAsync();
@@ -467,6 +547,19 @@ syncResults.Add($"Item_mst synced ({syncedCount} records).");
             });
         }
     }
+
+
+
+    private static DateTime GetSafeSqlDateTime(DateTime? value)
+    {
+        var minSqlDate = new DateTime(1753, 1, 1);
+
+        if (!value.HasValue || value.Value < minSqlDate)
+            return minSqlDate;
+
+        return value.Value;
+    }
+
 
 
     }

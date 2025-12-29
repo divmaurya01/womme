@@ -22,85 +22,185 @@
         </div>
       </div>
 
+
+
       <!-- Table -->
       <div class="card p-1 mt-3 shadow-sm">
         <div class="card-body p-1">
 
-          <p-table
-            [value]="transactions"
-            [lazy]="true"
-            [paginator]="true"
-            [rows]="50"
-            [totalRecords]="totalRecords"
-            (onLazyLoad)="loadJobs($event)"
-            [loading]="isLoading"
-            [responsiveLayout]="'scroll'"
-            [scrollable]="true"
-            scrollHeight="400px"
-            [resizableColumns]="true"
-            [autoLayout]="true"
-          >
-            <!-- Header -->
-            <ng-template pTemplate="header">
-              <tr>
-                <th style="background-color:#ECC391;padding:10px;">S.No</th>
-                <th style="background-color:#ECC391;padding:10px;">Job</th>
-                <th style="background-color:#ECC391;padding:10px;">Serial No</th>
-                <th style="background-color:#ECC391;padding:10px;">Qty</th>
-                <th style="background-color:#ECC391;padding:10px;">Opr No.</th>
-                <th style="background-color:#ECC391;padding:10px;">Item.</th>
-                <th style="background-color:#ECC391;padding:10px;">Remark</th>
-                <th style="background-color:#ECC391;padding:10px;">Action</th>
-              </tr>
-            </ng-template>
+          <p-tabView
+            [(activeIndex)]="activeTabIndex"
+            (onChange)="onTabChange($event)">
 
-            <!-- Body -->
-            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
-              <tr>
-                <td>{{ rowIndex + 1 }}</td>
-                <td>{{ job.job }}</td>
-                <td>{{ job.serialNo }}</td>
-                <td>{{ job.qtyReleased }}</td>
-                <td>{{ job.operNum }}</td>
-                 <td>{{ job.item }}</td>
-                
+            <p-tabPanel header="New Job">
 
-                <!-- Remark Input -->
-                <td>
-                  <input
-                    type="text"
-                    pInputText
-                    [(ngModel)]="job.remark"
-                    placeholder="Enter remark"
-                    class="form-control form-control-sm"
-                  />
-                </td>
+              <p-table
+                [value]="newJobs"
+                [paginator]="true"
+                [rows]="50"
+                [loading]="isLoading"
+                [responsiveLayout]="'scroll'"
+                scrollHeight="400px">
 
-                <!-- Actions -->
-                <td class="d-flex gap-2">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="background-color: #ECC391; padding: 10px;">S.No</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Job</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Serial No</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Qty</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Opr No</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Item</th>
+                    <th style="background-color:#ECC391;padding:10px;">Action</th>
+                  </tr>
+                </ng-template>
 
-                  <!-- Verify / Tick -->
-                  <button
-                    class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center ver-transr"
-                    title="Verify"
-                    (click)="verifyTransaction(job)"                  >
-                    <i class="pi pi-check"></i>
-                  </button>
+                <ng-template pTemplate="body" let-job let-i="rowIndex">
+                  <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ job.job }}</td>
+                    <td>{{ job.serialNo }}</td>
+                    <td>{{ job.qtyReleased }}</td>
+                    <td>{{ job.operNum }}</td>
+                    <td>{{ job.item }}</td>
+                    <td class="text-center">
+                      <button
+                        class="btn btn-success btn-sm rounded-pill px-3"
+                        (click)="startApproval(job)">                        
+                        Start Job
+                      </button>
+                    </td>
+                  </tr>
+                </ng-template>
 
-                  <!-- Submit -->
-                  <button
-                    class="btn btn-success rounded-circle d-flex align-items-center justify-content-center save-ver"
-                    title="Submit"
-                    (click)="submitTransaction(job)"
-                  >
-                    <i class="pi pi-save"></i>
-                  </button>
+              </p-table>
 
-                </td>
-              </tr>
-            </ng-template>
+            </p-tabPanel>
 
-          </p-table>
+            <p-tabPanel header="On Going Job">
+
+              <p-table
+                [value]="ongoingJobs"
+                [paginator]="true"
+                [rows]="50"
+                [loading]="isLoading"
+                scrollHeight="400px">
+
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="background-color: #ECC391; padding: 10px;">S.No</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Job</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Serial No</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Qty</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Opr No</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Item</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Remark</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Action</th>
+                  </tr>
+                </ng-template>
+
+                <ng-template pTemplate="body" let-job let-i="rowIndex">
+                  <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ job.job }}</td>
+                    <td>{{ job.serialNo }}</td>
+                    <td>{{ job.qtyReleased }}</td>
+                    <td>{{ job.operNum }}</td>
+                    <td>{{ job.item }}</td>
+
+                    <td>
+                      <input
+                        type="text"
+                        pInputText
+                        [(ngModel)]="job.remark"
+                        class="form-control form-control-sm"
+                        [readonly]="job.isRemarkSaved"
+                      />
+                    </td>
+
+                    <td class="d-flex gap-2">
+
+                        <button
+                          *ngIf="!job.isRemarkSaved"
+                          class="btn btn-primary"
+                          (click)="saveRemark(job)">
+                          Save Remark
+                        </button>
+
+                        <button
+                          *ngIf="job.isRemarkSaved"
+                          class="btn btn-success"
+                          (click)="verifyJob(job)">
+                          Verify Job
+                        </button>
+
+
+                      </td>
+
+                  </tr>
+                </ng-template>
+
+              </p-table>
+
+            </p-tabPanel>
+
+            <p-tabPanel header="Completed Job">
+              <p-table
+                [value]="completedJobs"
+                [paginator]="true"
+                [rows]="50"
+                [loading]="isLoading"
+                scrollHeight="400px">
+
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="background-color: #ECC391;">S.No</th>
+                    <th style="background-color: #ECC391;">Job</th>
+                    <th style="background-color: #ECC391;">Serial No</th>
+                    <th style="background-color: #ECC391;">Opr No</th>
+                    <th style="background-color: #ECC391;">WC</th>
+                    <th style="background-color: #ECC391;">Completed Date</th>                    
+                    <th style="background-color: #ECC391;">Employees / Remarks</th>
+                  </tr>
+                </ng-template>
+
+                <ng-template pTemplate="body" let-job let-i="rowIndex">
+                  <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ job.job }}</td>
+                    <td>{{ job.serialNo }}</td>
+                    <td>{{ job.operNum }}</td>
+                    <td>{{ job.wcCode }}</td>
+                    <td>{{ job.transDate | date:'dd-MM-yyyy HH:mm' }}</td>                    
+                    <td>
+                      <div *ngIf="job.employees?.length; else noRemark">
+                        <div
+                          *ngFor="let e of job.employees"
+                          class="mb-1 p-1 border rounded">
+                          
+                          <strong>{{ e.empName }}</strong>
+                          <div class="text-muted small">
+                            {{ e.remark }}
+                          </div>
+
+                        </div>
+                      </div>
+
+                      <ng-template #noRemark>
+                        <span class="text-muted">No remarks</span>
+                      </ng-template>
+                    </td>
+
+                  </tr>
+                </ng-template>
+
+              </p-table>
+
+            </p-tabPanel>
+
+
+          </p-tabView>
+
+
 
         </div>
       </div>

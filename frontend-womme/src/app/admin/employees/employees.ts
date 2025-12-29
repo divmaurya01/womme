@@ -67,16 +67,28 @@ export class EmployeesComponent implements OnInit {
 
   /** Map API employee -> frontend model */
   mapEmployee(apiEmp: any) {
-    return {
-      empNum: apiEmp.emp_num || apiEmp.empNum || '',
-      name: apiEmp.name || '',
-      passwordHash: apiEmp.passwordHash || '',
-      roleID: apiEmp.roleID || apiEmp.role_id || null,
-      isActive: apiEmp.isActive ?? apiEmp.is_active ?? true,
-      site_ref: apiEmp.site_ref?.trim() || 'DEFAULT',
-      createdBy: apiEmp.createdBy?.trim() || 'system admin',
-    };
-  }
+  return {
+    empNum: apiEmp.emp_num || apiEmp.empNum || '',
+    name: apiEmp.name || '',
+    passwordHash: apiEmp.passwordHash || '',
+    roleID: apiEmp.roleID || apiEmp.role_id || null,
+    isActive: apiEmp.isActive ?? apiEmp.is_active ?? true,
+    site_ref: apiEmp.site_ref?.trim() || 'DEFAULT',
+    createdBy: apiEmp.createdBy?.trim() || 'system admin',
+    dept: apiEmp.dept || '',
+    emp_type: apiEmp.emp_type || '',
+    pay_freq: apiEmp.pay_freq || '',
+    mfg_dt_rate: apiEmp.mfg_dt_rate ?? 0,
+    mfg_ot_rate: apiEmp.mfg_ot_rate ?? 0,
+    mfg_reg_rate: apiEmp.mfg_reg_rate ?? 0,
+    hire_date: apiEmp.hire_date || null,
+    profileImage: apiEmp.profileImage || null,
+    womm_id: apiEmp.womm_id || 0,
+
+    // Compute Login ID: WME + zero-padded 3-digit ID
+    loginID: `WME${(apiEmp.womm_id || 0).toString().padStart(3, '0')}`
+  };
+}
 
   resetForm(isEdit: boolean = false) {
     if (!isEdit) {

@@ -632,8 +632,7 @@ public class PostController : ControllerBase
                         return BadRequest(new { message = "No Syteline transaction number found to update." });
                         
                         bool sytelineResult = await _sytelineService.UpdateJobTranCompletionAsync(
-                            Convert.ToInt32(lastImportDocId),                // trans_num in Syteline
-                            
+                            Convert.ToInt32(lastImportDocId),               // trans_num in Syteline
                             (byte)latestRow.complete_op,                          // byte
                             latestRow.close_job ?? 0,                       // byte
                             latestRow.qty_complete ?? 0,
@@ -3419,126 +3418,151 @@ public class PostController : ControllerBase
     }
 
 
+    
     [HttpPost("GetTransactionOverview")]
-    public async Task<IActionResult> GetTransactionOverview([FromBody] TransactionOverviewRequest request)
+public async Task<IActionResult> GetTransactionOverview(
+    [FromBody] TransactionOverviewRequest request)
+{
+    try
     {
-        try
+        var now = DateTime.Now;
+
+        bool todayOnly = request.todayOnly == 1;
+        bool includeTransaction = request.includeTransaction == 1;
+        bool includeQC = request.includeQC == 1;
+        bool includeVerify = request.IncludeVerify == 1;
+
+        var query = _context.JobTranMst.AsQueryable();
+
+        // ================================
+        // TODAY FILTER (OPTIONAL)
+        // ================================
+        if (todayOnly)
         {
-            var today = DateTime.Now.Date;
-
-            bool todayOnly = request.todayOnly == 1;
-            bool includeTransaction = request.includeTransaction == 1;
-            bool includeQC = request.includeQC == 1;
-            bool includeVerify = request.IncludeVerify == 1;
-
-            var allTrans = _context.JobTranMst.AsQueryable();
-
-            List<JobTranMst> latestNormal = new();
-            if (includeTransaction)
-            {
-                var normalTrans = allTrans.Where(j =>j.trans_type != "M" && j.wc != "VERIFY");
-
-                if (todayOnly)
-                    normalTrans = normalTrans.Where(j => j.trans_date.HasValue && j.trans_date.Value.Date == today);
-
-                latestNormal = await normalTrans
-                    .GroupBy(j => j.job)
-                    .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault()!)
-                    .ToListAsync();
-            }
-
-            List<JobTranMst> latestQC = new();
-            if (includeQC)
-            {
-                var qcTrans = allTrans.Where(j => j.trans_type == "M");
-
-                if (todayOnly)
-                    qcTrans = qcTrans.Where(j => j.trans_date.HasValue && j.trans_date.Value.Date == today);
-
-                latestQC = await qcTrans
-                    .GroupBy(j => j.job)
-                    .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault()!)
-                    .ToListAsync();
-            }
-
-            var transactionOverview = includeTransaction
-                ? new
-                {
-                    RunningJobs = latestNormal.Count(j => j.status == "1"),
-                    PausedJobs = latestNormal.Count(j => j.status == "2"),
-                    ExtendedJobs = latestNormal.Count(j => j.trans_type == "O"),
-                    CompletedJobs = latestNormal.Count(j => j.status == "3" && j.completed_flag == true)
-                }
-                : null;
-
-            var qcOverview = includeQC
-                ? new
-                {
-                    RunningQCJobs = latestQC.Count(j => j.status == "1"),
-                    PausedQCJobs = latestQC.Count(j => j.status == "2"),
-                    ExtendedQCJobs = latestQC.Count(j => j.trans_type == "O"),
-                    CompletedQCJobs = latestQC.Count(j => j.status == "3" && j.completed_flag == true)
-                }
-                : null;
-
-            
-
-            List<JobTranMst> latestVerify = new();
-
-            if (includeVerify)
-            {
-                var verifyQuery = allTrans.Where(j => j.wc == "VERIFY");
-
-                if (todayOnly)
-                {
-                    verifyQuery = verifyQuery.Where(j =>
-                        j.trans_date.HasValue &&
-                        j.trans_date.Value.Date == today);
-                }
-
-                latestVerify = await verifyQuery
-                    .GroupBy(j => j.job)
-                    .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault()!)
-                    .ToListAsync();
-            }
-
-
-
-            var verifyOverview = includeVerify
-                ? new
-                {
-                    RunningVerifyJobs = latestVerify.Count(j => j.status == "1"),
-                    PausedVerifyJobs = latestVerify.Count(j => j.status == "2"),
-                    ExtendedVerifyJobs = latestVerify.Count(j => j.trans_type == "O"),
-                    CompletedVerifyJobs = latestVerify.Count(j => j.status == "3" && j.completed_flag == true)
-                }
-                : null;
-
-
-
-            return Ok(new
-            {
-                success = true,
-                todayOnly,
-                includeTransaction,
-                includeQC,
-                includeVerify,
-                TransactionOverview = transactionOverview,
-                QCOverview = qcOverview,
-                VerifyOverview = verifyOverview
-            });
+            var today = now.Date;
+            query = query.Where(j =>
+                j.trans_date.HasValue &&
+                j.trans_date.Value.Date == today);
         }
-        catch (Exception ex)
+
+        // ================================
+        // GET LATEST TRANSACTION PER JOB
+        // ================================
+        async Task<List<JobTranMst>> GetLatestJobs(IQueryable<JobTranMst> q)
         {
-            return StatusCode(500, new
-            {
-                success = false,
-                message = "Error while fetching transaction overview.",
-                error = ex.Message,
-                innerError = ex.InnerException?.Message
-            });
+            return await q
+                .GroupBy(j => new
+                {
+                    j.job,
+                    j.SerialNo,
+                    j.wc,
+                    j.oper_num
+                })
+                .Select(g => g
+                    .OrderByDescending(x => x.trans_num)
+                    .FirstOrDefault()!)
+                .ToListAsync();
         }
+
+        var normalJobs = includeTransaction
+            ? await GetLatestJobs(query.Where(j => j.trans_type != "M" && j.wc != "VERIFY"))
+            : new List<JobTranMst>();
+
+        var qcJobs = includeQC
+            ? await GetLatestJobs(query.Where(j => j.trans_type == "M"))
+            : new List<JobTranMst>();
+
+        var verifyJobs = includeVerify
+            ? await GetLatestJobs(query.Where(j => j.wc == "VERIFY"))
+            : new List<JobTranMst>();
+
+        // ================================
+        // COMMON CALCULATIONS
+        // ================================
+        int CountRunning(List<JobTranMst> list) =>
+            list.Count(j => j.status == "1");
+
+        int CountPaused(List<JobTranMst> list) =>
+            list.Count(j => j.status == "2");
+
+        int CountExtended(List<JobTranMst> list) =>
+            list.Count(j =>
+                j.status == "3" &&
+                j.a_hrs.HasValue &&
+                j.a_hrs.Value > 8);
+
+        int CountOngoingCritical(List<JobTranMst> list) =>
+            list.Count(j =>
+                (j.status == "1" || j.status == "2") &&  
+                j.start_time.HasValue &&
+                (now - j.start_time.Value).TotalHours > 8);
+
+        int CountNormalCompleted(List<JobTranMst> list) =>
+            list.Count(j =>
+                j.status == "3" &&
+                (!j.a_hrs.HasValue || j.a_hrs.Value <= 8));
+
+
+        // ================================
+        // BUILD OVERVIEWS
+        // ================================
+        var transactionOverview = includeTransaction ? new
+        {
+            RunningJobs = CountRunning(normalJobs),
+            PausedJobs = CountPaused(normalJobs),
+            ExtendedJobs = CountExtended(normalJobs),
+            NormalCompletedJobs = CountNormalCompleted(normalJobs),
+            OngoingCriticalJobs = CountOngoingCritical(normalJobs)
+        } : null;
+
+        var qcOverview = includeQC ? new
+        {
+            RunningQCJobs = CountRunning(qcJobs),
+            PausedQCJobs = CountPaused(qcJobs),
+            ExtendedQCJobs = CountExtended(qcJobs),
+            NormalCompletedQCJobs = CountNormalCompleted(qcJobs),
+            OngoingCriticalQCJobs = CountOngoingCritical(qcJobs)
+        } : null;
+
+        var verifyOverview = includeVerify ? new
+        {
+            RunningVerifyJobs = CountRunning(verifyJobs),
+            PausedVerifyJobs = CountPaused(verifyJobs),
+            ExtendedVerifyJobs = CountExtended(verifyJobs),
+            NormalCompletedVerifyJobs = CountNormalCompleted(verifyJobs),
+            OngoingCriticalVerifyJobs = CountOngoingCritical(verifyJobs)
+        } : null;
+
+        // ================================
+        // RESPONSE
+        // ================================
+        return Ok(new
+        {
+            success = true,
+            todayOnly,
+            includeTransaction,
+            includeQC,
+            includeVerify,
+            TransactionOverview = transactionOverview,
+            QCOverview = qcOverview,
+            VerifyOverview = verifyOverview
+        });
     }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new
+        {
+            success = false,
+            message = "Error while fetching transaction overview",
+            error = ex.Message
+        });
+    }
+}
+
+
+
+
+
 
     [HttpPost("GetTransactionData")]
     public async Task<IActionResult> GetTransactionData([FromBody] JobOverviewFilterDto filter)

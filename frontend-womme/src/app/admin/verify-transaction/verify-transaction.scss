@@ -47,43 +47,128 @@
   border-radius: 4px;
 }
 
-::ng-deep .custom-bordered-table .p-datatable-thead > tr > th,
-::ng-deep .custom-bordered-table .p-datatable-tbody > tr > td {
-  border: 1px solid #ccc;
-}
-
-::ng-deep .custom-bordered-table .p-datatable-thead > tr > th {
-  background-color: #ECC391 !important;
-}
-
-.custom-start{
-  background-color: #82b75c;
+.custom-complete-timer{
+  background-color: #1e9f04;  
+  font-size: 14px;
+  font-weight: 500;
   color: white;
-  font-size: 12px;
   padding: 5px; 
   border-radius: 10px
 }
 
-.custom-pause{
-  background-color: #79791d;
+
+
+.table-wrapper {
+  padding: 1rem;
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-add {
+      background-color: #28a745;
+      color: white;
+      border-radius: 0pxx;
+    }
+  }
+}
+
+.job-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+::ng-deep .p-tabview .p-tabview-nav {
+  padding: 10px !important;
+}
+
+
+::ng-deep .p-tabview .p-tabview-nav li.p-highlight,
+::ng-deep .p-tabview .p-tabview-nav li[role="presentation"] {
+  margin-right: 10px !important;
+}
+
+
+
+.job-tab {
+  background: #ecc391;
+  padding: 6px 12px;
+  border-radius: 16px;     // rounded pill
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: default;
+  transition: all 0.2s ease-in-out;
+}
+
+.job-tab:hover {
+  background: #e2b96f;
+  transform: translateY(-1px);
+}
+
+.close-icon {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: red;
+  transition: color 0.2s ease-in-out;
+}
+
+.close-icon:hover {
+  color: red;
+}
+
+.paddingbtn{
+  margin-top: 10px;
+}
+.delete-job {
+  background: transparent;
+  border: none;
+  color: #FF646D;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  padding-left: 10;
+  margin: 0;
+}
+
+.delete-job:hover {
+  color: red;
+}
+
+.custom-start-timer{
+  background-color: #82b75c;  
+  font-size: 14px;
+  font-weight: 500;
   color: white;
-  font-size: 12px;
   padding: 5px; 
   border-radius: 10px
 }
 
-.custom-complete{
-  background-color: #1e9f04;
+.custom-pause-timer{
+  background-color: #79791d;  
+  font-size: 14px;
+  font-weight: 500;
   color: white;
-  font-size: 12px;
   padding: 5px; 
   border-radius: 10px
 }
 
-.custom-notstarted{
-  background-color: #ecc391;
-  color: rgb(87, 86, 86);
-  font-size: 12px;
+.custom-complete-timer{
+  background-color: #1e9f04;  
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
   padding: 5px; 
   border-radius: 10px
 }
@@ -116,143 +201,14 @@
   background-color: #FF646D; /* red */
 }
 
-.btn-play {
-  background-color: #82b75c;
-  color: #fff;
-  border: none;
+.job-timer-card {
+  background: #f4f9ff;
+  padding: 4px 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  display: inline-block;
 }
 
-.btn-play:hover {
-  background-color: #6ea54d;
-}
-
-.btn-pause {
-  background-color: #ecc391;
-  color: #000;
-  border: none;
-}
-
-.btn-pause:hover {
-  background-color: #e0b671;
-  color: #000;
-}
-
-.btn-stop {
-  background-color: #FF646D;
-  color: #fff;
-  border: none;
-}
-
-.btn-stop:hover {
-  background-color: #e6555d;
-}
-
-.btn-scrap {
-  background-color: #6c757d;
-  color: #fff;
-  border: none;
-}
-
-.btn-scrap:hover {
-  background-color: #5a6268;
-}
-
-.btn-move {
-  background-color: #17a2b8;
-  color: #fff;
-  border: none;
-}
-
-.btn-move:hover {
-  background-color: #138496;
-}
-
-
-/* Hover effect */
-.action-circle:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-}
-
-
-.custom-start-timer{
-  background-color: #82b75c;  
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  padding: 5px; 
-  border-radius: 10px
-}
-
-.custom-pause-timer{
-  background-color: #79791d;  
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  padding: 5px; 
-  border-radius: 10px
-}
-
-.custom-complete-timer{
-  background-color: #1e9f04;  
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  padding: 5px; 
-  border-radius: 10px
-}
-
-.custom-notstarted-timer{  
-  background-color: #ecc391;  
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  padding: 5px; 
-  border-radius: 10px
-}
-
-
-.custom-partial-timer{
-  background-color: #1e9f04;  
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  padding: 5px; 
-  border-radius: 10px
-}
-
-.table-wrapper {
-  padding: 1rem;
-
-  .table-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-
-    .btn {
-      padding: 0.5rem 1rem;
-      font-size: 0.9rem;
-    }
-
-    .btn-add {
-      background-color: #28a745;
-      color: white;
-      border-radius: 0pxx;
-    }
-  }
-}
-
-
-.edit-job{
-    color: white;
-    font-size: 8px;
-}
-
-.delete-job{
-    color: white;
-    font-size: 8px;
-    background-color: #FF646D!important;
-}
 
 .custom-p-table th,
 .custom-p-table td {
@@ -266,49 +222,72 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+::ng-deep .p-tabview .p-tabview-nav li.p-tabview-selected {
+  background-color: #4caf50; /* active tab color */
+  color: white;
+  font-weight: bold;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.3s ease;
+}
 
-.job-timer-card {
-  background: #f4f9ff;
-  padding: 4px 8px;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+::ng-deep .p-tabview .p-tabview-nav li:not(.p-tabview-selected):hover {
+  background-color: #f0f0f0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Optional: style tab content */
+::ng-deep .p-tabview .p-tabview-panel {
+  border: 1px solid #4caf50;
+  border-top: none;
+  padding: 1rem;
+  border-radius: 0 0 8px 8px;
+  background-color: #fafafa;
+}
+
+/* Active tab button */
+::ng-deep .p-tabview .p-tabview-nav li.p-tabview-selected > a.p-tabview-nav-link {
+  background-color: #4caf50;  /* Active tab color */
+  color: white;               /* Text color */
+  font-weight: bold;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+/* Inactive tabs */
+::ng-deep .p-tabview .p-tabview-nav li:not(.p-tabview-selected) > a.p-tabview-nav-link {
+  background-color: #f5f5f5;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+/* Hover effect for inactive tabs */
+::ng-deep .p-tabview .p-tabview-nav li:not(.p-tabview-selected) > a.p-tabview-nav-link:hover {
+  background-color: #a1c372;
+  cursor: pointer;
+}
+
+.action-circle {
   display: inline-block;
-}
-
-.active-job {
-  background-color: #e6ffed; // light green highlight
-}
-
-.ver-trans {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  font-size: 1.1rem;
-  border: none;
-  background-color: #007bff;
-  transition: 0.2s ease-in-out;
+  font-size: 1.2rem;
+  width: 28px;
+  height: 28px;
+  text-align: center;
+  line-height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  background-color: #ecf3f9;
   cursor: pointer;
 }
 
-.ver-trans:hover {
-  background-color: #0056b3;
-  transform: scale(1.05);
-  cursor: pointer;
+.pi-play {
+  color: #28a745; // green for resume
 }
 
-.save-ver {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  font-size: 1.1rem;
-  border: none;
-  background-color: #328403;
-  transition: 0.2s ease-in-out;
-  cursor: pointer;
+.pi-pause {
+  color: #ffc107; // yellow for pause
 }
 
-.save-ver:hover {
-  background-color: #2db300;
-  transform: scale(1.05);
-  cursor: pointer;
-}
+
+

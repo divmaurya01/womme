@@ -396,8 +396,8 @@ isEditing(log: PostedTransaction): boolean {
       StartTime: row.start_time ?? null,
       EndTime: row.end_time ?? null
     };
-
-    this.jobService.updateJobLog(payload).subscribe({
+    this.loader.show();
+    this.jobService.updateJobLog(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
       next: () => {
         Swal.fire({
           icon: 'success',
@@ -481,8 +481,9 @@ deleteJobTransaction(job: any) {
     cancelButtonText: 'Cancel'
   }).then(result => {
     if (result.isConfirmed) {
+      this.loader.show();
      this.jobService.deleteJobTransaction(job.jobNumber, job.serialNumber,job.operationNumber)
-        .subscribe({
+        .pipe( finalize(() => { this.loader.hide(); })).subscribe({
           next: (res) => {
             Swal.fire('Deleted!', res.message || 'Transaction has been deleted.', 'success');
             this.loadJobsLazy();
