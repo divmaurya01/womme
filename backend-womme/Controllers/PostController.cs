@@ -1523,8 +1523,8 @@ public class PostController : ControllerBase
             await _context.SaveChangesAsync();
 
             // ✅ Push to Syteline after successful local insert
-            var sytelineService = new SytelineService(_configuration);
-            await sytelineService.InsertEmployeeAsync(employee);
+            // var sytelineService = new SytelineService(_configuration);
+            // await sytelineService.InsertEmployeeAsync(employee);
 
             return Ok(new { message = "Employee created successfully and synced to Syteline." });
         }

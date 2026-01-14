@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AuthServices } from './auth.service'; // ✅ import AuthServices
+import { AuthServices } from './auth.service'; 
+import { environment } from '../../environments/environment';
 
 export interface AssignedJob {
   employeeCode: string;
@@ -20,8 +21,8 @@ export interface AssignedJob {
   providedIn: 'root'
 })
 export class JobService {
-  private baseUrl = 'http://localhost:5173/api';
-  public fileBaseUrl = 'http://localhost:5173';
+  private baseUrl = environment.apiBaseUrl;
+  public fileBaseUrl = environment.fileBaseUrl;
 
   constructor(
     private http: HttpClient,
@@ -758,7 +759,7 @@ updateEmployee(empNum: string, employee: any): Observable<any> {
 
 updateMachineEmployee(machineNumber: string, payload: any) {
   return this.http.put(
-    `http://localhost:5173/api/update/EditMachineEmployee/${machineNumber}`,
+    `${this.baseUrl}/update/EditMachineEmployee/${machineNumber}`,
     payload
   );
 }

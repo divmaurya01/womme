@@ -146,10 +146,14 @@
                           <!-- Camera -->
                           <div *ngIf="useCamera" class="card shadow-sm mb-3">
                             <div class="card-body">
-                              <zxing-scanner [device]="selectedDevice || undefined"
-                                            (camerasFound)="onCamerasFound($event)"
-                                            (scanSuccess)="handleScannedData($event)">
+                              <zxing-scanner
+                                *ngIf="useCamera && selectedDevice"
+                                [device]="selectedDevice"
+                                [autostart]="false"
+                                (camerasFound)="onCamerasFound($event)"
+                                (scanSuccess)="handleScannedData($event)">
                               </zxing-scanner>
+
                             </div>
                           </div>
 

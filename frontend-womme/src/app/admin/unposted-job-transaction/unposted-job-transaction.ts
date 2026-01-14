@@ -47,7 +47,10 @@ export class UnpostedJobTransaction implements OnInit {
   activeJobTrans: any[] = [];
   showWizard: boolean = false;
   wizardStep: number = 1;
-  useCamera: boolean = false;
+  
+
+  useCamera = false;
+  useFile = false;
 
   scannedData: string | null = null;
   stepValid: boolean = false;
@@ -185,6 +188,7 @@ export class UnpostedJobTransaction implements OnInit {
           this.scannedData = null;
           this.stepValid = false;
           this.showWizard = true;
+          this.useCamera = true;
 
           console.log('Selected row data:', job);
 
@@ -245,10 +249,14 @@ export class UnpostedJobTransaction implements OnInit {
 
   onCamerasFound(devices: MediaDeviceInfo[]) {
     this.availableDevices = devices || [];
-    if (!this.selectedDevice && this.availableDevices.length) {
-      this.selectedDevice = this.availableDevices[0];
-    }
+
+    // Prefer back camera
+    this.selectedDevice =
+      devices.find(d => d.label.toLowerCase().includes('back')) ||
+      devices[0] ||
+      null;
   }
+
 
       handleScannedData(raw: string) {
         try {
