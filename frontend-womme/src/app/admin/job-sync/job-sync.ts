@@ -11,6 +11,7 @@ import Swal from 'sweetalert2';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-job-sync',
@@ -30,13 +31,18 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading = false;
   syncMessage: string | null = null;
   isError = false;
+  autoSyncEnabled: boolean = false;
+  autoSyncInterval: any;
+  jobs: any[] = [];
+  filteredJobs: any[] = [];
+  globalSearch: string = '';
 
 
   
   transactions: any[] = [];
   totalRecords: number = 0;
   page: number = 0;
-  size: number = 50;
+  size: number = 200;
   searchTerm: string = '';
 
   @ViewChild('dt') dt!: Table;
@@ -49,40 +55,58 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.loadJobsLazy();
+    this.loadJobs();
+    const saved = localStorage.getItem('autoSync');
+    this.autoSyncEnabled = saved === 'true';
+    if (this.autoSyncEnabled) this.startAutoSync();
   }
 
-  loadJobsLazy(event?: any) {
-    this.isLoading = true;
-    const page = event?.first ? event.first / event?.rows : 0;
-    const size = event?.rows || 50;
-    this.loader.show();
-    this.jobService.GetJobs(page, size, this.searchTerm)
+  loadJobs(): void {
+  this.loader.show();
+
+  this.jobService.GetJobs(0, 100000, '') // large size
     .pipe(finalize(() => this.loader.hide()))
     .subscribe({
       next: (res: any) => {
-          this.transactions = (res.data ?? []).map((x: any) => ({
-          jobNumber: x.job.trim(),
-          qtyReleased: x.quantity,
-          item: x.item.trim(),
-        
-          operationNumber: x.operNo,
-          wcCode: x.wcCode.trim(),
-          
-        }));
-        this.totalRecords = res.totalRecords ?? 0;
-        this.isLoading = false;
-      },
-      error: () => {
-        this.isLoading = false;
+        if (res && res.data) {
+          this.jobs = res.data.map((x: any, index: number) => ({
+            srNo: index + 1,
+            jobNumber: x.job.trim(),
+            qtyReleased: x.quantity,
+            item: x.item.trim(),
+            operationNumber: x.operNo,
+            wcCode: x.wcCode.trim()
+          }));
+
+          this.filteredJobs = [...this.jobs];
+        }
       }
     });
+}
+
+
+  onGlobalSearch(): void {
+    const rawSearch = this.globalSearch.toLowerCase().trim();
+
+    if (!rawSearch) {
+      this.filteredJobs = [...this.jobs];
+      return;
+    }
+
+    const keywords = rawSearch
+      .split('|')
+      .map(k => k.trim())
+      .filter(k => k.length > 0);
+
+    this.filteredJobs = this.jobs.filter(job =>
+      keywords.some(keyword =>
+        Object.values(job).some(value =>
+          value?.toString().toLowerCase().includes(keyword)
+        )
+      )
+    );
   }
 
-  onSearchChange(value: string) {
-    this.searchTerm = value;
-    this.loadJobsLazy({ first: 0, rows: this.size });
-  }
 
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
@@ -90,6 +114,7 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.dtTrigger.unsubscribe();
+    this.stopAutoSync();
   }
 
   downloadQr(job: string) {
@@ -167,6 +192,58 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
 
+  onAutoSyncChange() {
+    localStorage.setItem('autoSync', this.autoSyncEnabled.toString());
+      if (this.autoSyncEnabled) {
+        this.startAutoSync();
+      } else {
+        this.stopAutoSync();
+      }
+    }
+
+    startAutoSync() {
+      // Prevent duplicate intervals
+      if (this.autoSyncInterval) {
+        clearInterval(this.autoSyncInterval);
+      }
+
+      // Run immediately once
+      this.syncAllTables();
+
+      // Then every 5 minutes
+      this.autoSyncInterval = setInterval(() => {
+        this.syncAllTables();
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+
+    stopAutoSync() {
+      if (this.autoSyncInterval) {
+        clearInterval(this.autoSyncInterval);
+        this.autoSyncInterval = null;
+      }
+    }
+
+
+    exportJobsToExcel(): void {
+    if (!this.filteredJobs.length) return;
+
+    const exportData = this.filteredJobs.map((job, index) => ({
+      'Sr No': index + 1,
+      'Job': job.jobNumber,
+      'Qty': job.qtyReleased,
+      'Item': job.item,
+      'Operation': job.operationNumber,
+      'WC': job.wcCode
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = {
+      Sheets: { Jobs: worksheet },
+      SheetNames: ['Jobs']
+    };
+
+    XLSX.writeFile(workbook, 'Jobs.xlsx');
+  }
 
 
 

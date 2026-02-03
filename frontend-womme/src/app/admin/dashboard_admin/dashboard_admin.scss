@@ -78,6 +78,7 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     position: relative;
     transition: transform 0.2s;
+    cursor: pointer;
 
     &:hover {
       transform: translateY(-3px);
@@ -218,4 +219,5 @@
       background: #ef4444;
     }
   }
+  
 }

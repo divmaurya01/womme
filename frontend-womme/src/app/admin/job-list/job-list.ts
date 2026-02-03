@@ -59,15 +59,41 @@ export class JobListComponent implements OnInit {
     .pipe(finalize(() => this.loader.hide()))
     .subscribe({
       next: res => {
-         this.operations = res.data.map(job => ({
-        job: job.job,
-        trans_num: job.trans_number,
-        oper_num: job.operNum,
-        next_oper: '', // No field in API, leave blank or calculate if needed
-        name: job.empName,
-        wc: job.wcDescription, // or job.wcCode
-        logDetails: [] // if you have logs, otherwise empty array
-    }));
+        
+        const grouped: { [job: string]: any[] } = {};
+
+        // 1️⃣ Group rows by JOB
+        res.data.forEach((row: any) => {
+          if (!grouped[row.job]) {
+            grouped[row.job] = [];
+          }
+          grouped[row.job].push(row);
+        });
+
+        // 2️⃣ Build ONE ROW PER JOB
+        this.operations = Object.keys(grouped).map(jobKey => {
+          const rows = grouped[jobKey];
+
+          // pick first row for common fields
+          const first = rows[0];
+
+          return {
+            job: first.job,
+            item: first.item,
+            empName: first.empName,
+            wc: first.wcDescription,
+
+            // combine logs if available
+            logDetails: rows.flatMap(r => r.logDetails || []),
+
+            // for timer key
+            jobKey: first.job
+          };
+        });
+
+        this.totalRecords = this.operations.length;
+        this.isLoading = false;
+
         this.totalRecords = res.total;
         this.isLoading = false;
 
@@ -83,8 +109,9 @@ export class JobListComponent implements OnInit {
     });
   }
    getJobKey(job: any): string {
-    return `${job.job}_${job.oper_num}_${job.trans_num}_${job.emp_num}_${job.wc}`;
-  }
+      return job.job;
+    }
+
     startJobTimer(jobKey: string, logs: any[]) {
     // Clear existing timer
     if (this.timerIntervals[jobKey]) {

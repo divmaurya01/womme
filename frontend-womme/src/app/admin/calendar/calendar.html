@@ -11,10 +11,59 @@
         <button class="btn custom-assign-btn" (click)="openAddDialog()">
           <i class="fa-solid fa-plus"></i>&nbsp; Add Date
         </button>
+        <button
+          class="btn custom-show-btn ms-2"
+          type="button"
+          (click)="fileInput.click()">
+
+          <i class="fa-solid fa-file-excel"></i>&nbsp;
+          Import Calendar
+          
+        </button>
+
+        <input
+          type="file"
+          accept=".xlsx,.xls"
+          hidden
+          #fileInput
+          (change)="onExcelUpload($event)" />
+
+
           <button class="btn custom-show-btn ms-2" (click)="openShowCalendarDialog()">
             <i class="fa-regular fa-calendar"></i>&nbsp; Show Calendar
           </button>
+          
       </div>
+
+      <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+
+        <!-- Left Side -->
+        <div class="flex-grow-1" style="min-width:250px; max-width:500px;">
+          <small class="text-muted">0 - For Overtime & 1 - For Double Time</small>
+          <input
+            type="text"
+            class="form-control rounded-pill mt-1"
+            placeholder="Search calendar (date, occasion, description, type)"
+            [(ngModel)]="globalSearch"
+            (input)="onGlobalSearch(globalSearch)"
+          />
+        </div>
+
+        <!-- Right Side Export Button -->
+        <button
+          type="button"
+          class="btn btn-success rounded-pill px-4 py-2 shadow-sm export-btn"
+          title="Export to Excel"          
+          (click)="exportCalendarToExcel()"
+          style="cursor: pointer;">
+          <i class="fa-solid fa-file-excel me-2"></i>
+          Export
+        </button>
+
+      </div>
+
+      
+
         <p-dialog
           header="Calendar"
           [(visible)]="openCalendarDialog"
@@ -181,23 +230,41 @@
       <div class="card p-1 mt-3 shadow-sm">
       <div class="card-body p-1">
         <p-table
-          [value]="calendarList"
-          [paginator]="true"
-          [rows]="15"
+          [value]="filteredCalendars"
           [responsiveLayout]="'scroll'"
           [scrollable]="true"
-          scrollHeight="400px"
+          sortMode="multiple"          
           class="p-datatable-sm p-datatable-striped custom-p-table"
         >
+
           <ng-template pTemplate="header">
             <tr>
-              <th style="background-color: #ECC391;">Date</th>
-              <th style="background-color: #ECC391;">Occasion</th>
-              <th style="background-color: #ECC391;">Description</th>
-              <th style="background-color: #ECC391;">Type</th>
-              <th style="background-color: #ECC391;">Action</th>
+              <th pSortableColumn="date" style="background-color: #ECC391;">
+                Date
+                <p-sortIcon field="date"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="occasion" style="background-color: #ECC391;">
+                Occasion
+                <p-sortIcon field="occasion"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="calendarDescription" style="background-color: #ECC391;">
+                Description
+                <p-sortIcon field="calendarDescription"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="flag" style="background-color: #ECC391;">
+                Type
+                <p-sortIcon field="flag"></p-sortIcon>
+              </th>
+
+              <th style="background-color: #ECC391;">
+                Action
+              </th>
             </tr>
           </ng-template>
+
  
           <ng-template pTemplate="body" let-entry>
             <tr>

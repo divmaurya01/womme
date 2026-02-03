@@ -3737,6 +3737,74 @@ public async Task<IActionResult> GetTransactionOverview(
         }
     }
 
+   [HttpPost("importCalendar")]
+    public IActionResult ImportCalendar([FromBody] List<CalendarImportDto> list)
+    {
+        if (list == null || !list.Any())
+            return BadRequest("No data provided");
+
+        foreach (var item in list)
+        {
+            bool exists = _context.Calendar
+                .Any(x => x.date == item.Date);
+
+            if (exists) continue;
+
+            var entity = new Calendar
+            {
+                date = item.Date,
+                flag = item.Flag,
+                CalendarDescription = item.CalendarDescription,
+                Occasion = item.Occasion
+            };
+
+            _context.Calendar.Add(entity);
+        }
+
+        _context.SaveChanges();
+
+        return Ok(new { message = "Calendar imported successfully" });
+    }
+
+
+    [HttpPost("notifications")]
+    public async Task<IActionResult> RespondToNotification(
+        [FromBody] NotificationResponseDto dto)
+    {
+        var notification = _context.Notification
+            .FirstOrDefault(n => n.NotificationID == dto.NotificationID);
+
+        if (notification == null)
+            return NotFound("Notification not found");
+
+        // Update notification
+        notification.ResponseSubject = dto.ResponseSubject;
+        notification.ResponseBody = dto.ResponseBody;
+        notification.ResponseStatus = "RESPONDED";
+        notification.Status = "RESPONDED";
+        notification.UpdatedDate = DateTime.Now;
+
+        _context.SaveChanges();
+
+        // Send email to user
+        var emailApiUrl = _configuration["EmailSettings:ApiUrl"];
+        using var client = new HttpClient();
+
+        await client.PostAsJsonAsync(emailApiUrl, new
+        {
+            to = new[] { notification.Email },
+            cc = Array.Empty<string>(),
+            bcc = Array.Empty<string>(),
+            subject = dto.ResponseSubject,
+            body = dto.ResponseBody,
+            isHtml = true
+        });
+
+        return Ok(new { message = "Response sent successfully" });
+    }
+
+
+
 
 }
 

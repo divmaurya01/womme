@@ -14,15 +14,24 @@
             (ngModelChange)="onSearchChange($event)" -->
         <div class="flex-grow-1 position-relative" style="min-width: 250px; max-width: 400px;">
           <input
-            type="text"
-            pInputText
-            placeholder="Search Operation"
-           [(ngModel)]="searchText"
-            (ngModelChange)="onOperationSearchChange($event)"
-            class="form-control ps-5 pe-5 rounded-pill shadow-sm"
-            style="height: 45px; transition: all 0.3s;"
-          />
+              type="text"
+              pInputText
+              placeholder="Search Operation"
+              [(ngModel)]="globalSearch"
+              (ngModelChange)="onOperationSearchChange($event)"
+              class="form-control ps-5 pe-5 rounded-pill shadow-sm"
+              style="height: 45px;"
+            />
         </div>
+        <button
+          type="button"
+          class="btn btn-success rounded-pill px-3 py-2 ms-2"
+          title="Export to Excel"
+          (click)="exportOperationsToExcel()"style="cursor: pointer;">
+          <i class="fa-solid fa-file-excel me-2"></i>
+          Export
+        </button>
+
       </div>
 
       <!-- Dialog Box -->
@@ -33,30 +42,33 @@
         <div class="card-body p-1">
           <p-table
             #dt
-            [value]="operations"
-            [paginator]="true"
-            [rows]="15"
-            [lazy]="true"
-            (onLazyLoad)="loadOperations($event)"
-            [totalRecords]="totalOperations"
+            [value]="filteredOperations"
             [responsiveLayout]="'scroll'"
-            [scrollable]="true"
-            scrollHeight="400px"
             [resizableColumns]="true"
             [autoLayout]="true"
             columnResizeMode="expand"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
-            class="p-datatable-sm p-datatable-striped custom-p-table"
+            sortMode="single"            
+            class="p-datatable-sm p-datatable-striped custom-p-table"  
+            [scrollable]="true"
+            scrollHeight="500px"          
           >
+
 
             <ng-template pTemplate="header">
               <tr>
-                <th style="background-color: #ECC391;">Sr No.</th>
-                <th style="background-color: #ECC391;">Operation Number</th>                
-                <th style="background-color: #ECC391;">Download Code</th>
+                <th style="background-color:#ECC391;">Sr No.</th>
+
+                <th
+                  pSortableColumn="operationNumber"
+                  style="background-color:#ECC391; cursor:pointer;">
+                  Operation Number
+                  <p-sortIcon field="operationNumber" />
+                </th>
+
+                <th style="background-color:#ECC391;">Download Code</th>
               </tr>
             </ng-template>
+
 
             <ng-template pTemplate="body" let-op let-rowIndex="rowIndex">
               <tr>

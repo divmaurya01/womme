@@ -10,6 +10,8 @@ import { DialogModule } from 'primeng/dialog';
 import Swal from 'sweetalert2';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
+
 
 @Component({
   selector: 'app-machines',
@@ -25,18 +27,20 @@ export class MachineComponent implements OnInit {
   searchText = '';
   formError: string = '';
 
+  filteredMachinesList: any[] = [];
+  globalSearch = '';
 
 
-newMachine: any = {
-  machineNumber: null,
-  machineName: '',
-  machineDescription: ''
-};
- form = {
-  machineNumber: null,
-  machineName: '',
-  machineDescription: ''
-};
+  newMachine: any = {
+    machineNumber: null,
+    machineName: '',
+    machineDescription: ''
+  };
+  form = {
+    machineNumber: null,
+    machineName: '',
+    machineDescription: ''
+  };
 
 
 editingMachineEntryNo: number | null = null;
@@ -52,17 +56,69 @@ editingMachineEntryNo: number | null = null;
   }
 
   loadMachines(): void {
-    this.loader.show();
-    this.jobService.getMachineMasters()
+  this.loader.show();
+  this.jobService.getMachineMasters()
     .pipe(finalize(() => this.loader.hide()))
     .subscribe({
       next: (data) => {
-        this.machines = data;
-        console.log('Machines loaded:', data);
+        this.machines = data || [];
+        this.filteredMachinesList = [...this.machines]; // 🔥 key line
       },
       error: (err) => console.error('Error loading machines:', err)
     });
+}
+
+onGlobalSearch(): void {
+  const rawSearch = this.globalSearch.toLowerCase().trim();
+
+  if (!rawSearch) {
+    this.filteredMachinesList = [...this.machines];
+    return;
   }
+
+  // Split by | for multi-search
+  const keywords = rawSearch
+    .split('|')
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
+
+  this.filteredMachinesList = this.machines.filter(machine =>
+    keywords.some(keyword =>
+      Object.values(machine).some(value =>
+        value?.toString().toLowerCase().includes(keyword)
+      )
+    )
+  );
+}
+
+
+exportMachinesToExcel(): void {
+  if (!this.filteredMachinesList || this.filteredMachinesList.length === 0) {
+    Swal.fire('No Data', 'No machines available to export', 'info');
+    return;
+  }
+
+  // Prepare clean export data
+  const exportData = this.filteredMachinesList.map((m, index) => ({
+    'Sr No': index + 1,
+    'Machine Number': m.machineNumber,
+    'Machine Name': m.machineName,
+    'Description': m.machineDescription
+  }));
+
+  // Create worksheet & workbook
+  const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook: XLSX.WorkBook = {
+    Sheets: { Machines: worksheet },
+    SheetNames: ['Machines']
+  };
+
+  // Export file
+  XLSX.writeFile(workbook, 'Machines_List.xlsx');
+}
+
+
+
 
   openAddDialog(form:any): void {
       this.resetForm(); // Clear machine data
@@ -213,17 +269,6 @@ deleteMachine(event: Event, entryNo: number): void {
 }
 
 
-
-
-
-filteredMachines() {
-  return this.searchText
-    ? this.machines.filter(m =>
-        m.machineName.toLowerCase().includes(this.searchText.toLowerCase()) ||
-        m.machineNumber.toString().includes(this.searchText)
-      )
-    : this.machines;
-}
 
 downloadMachineQR(event: Event, machineNumber: any) {
   event.preventDefault();

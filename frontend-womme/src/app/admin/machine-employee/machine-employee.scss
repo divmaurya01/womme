@@ -78,9 +78,10 @@
 .custom-p-table th,
 .custom-p-table td {
   text-align: center;
-  vertical-align: middle; /* Optional: aligns text vertically center */
-  font-size: 0.85rem;      /* Already added for small text */
+  vertical-align: middle;
+  font-size: 0.85rem;      
 }
+
 ::ng-deep .p-dropdown-label {
   font-size: 12px;
   white-space: nowrap;

@@ -1,0 +1,182 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content">
+    <section class="table-wrapper">
+
+      <!-- Page Title -->
+      <div class="mb-3" style="padding-top: 2em;">
+        <h2>Notifications</h2>
+      </div>
+
+      <!-- Search -->
+      <div class="row mb-2">
+        <div class="col-md-4 ms-auto">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Search Notification..."
+            [(ngModel)]="globalSearch"
+            (input)="onGlobalSearch()"
+          />
+        </div>
+      </div>
+
+      <!-- Notifications Table -->
+      <div class="card p-1 mt-3 shadow-sm">
+        <div class="card-body p-1">
+          <p-table
+                #dt
+                [value]="filteredNotifications"
+                [responsiveLayout]="'scroll'"
+                [resizableColumns]="true"
+                [autoLayout]="true"
+                columnResizeMode="expand"
+                sortMode="multiple"
+                class="p-datatable-sm p-datatable-striped custom-p-table">
+
+                <!-- TABLE HEADER -->
+                <ng-template pTemplate="header">
+                    <tr>
+                    <th style="background-color: #ECC391;">Sr No.</th>
+
+                    <th pSortableColumn="name" style="background-color: #ECC391;">
+                        Name
+                        <p-sortIcon field="name"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="email" style="background-color: #ECC391;">
+                        Email
+                        <p-sortIcon field="email"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="subject" style="background-color: #ECC391;">
+                        Subject
+                        <p-sortIcon field="subject"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="responseStatus" style="background-color: #ECC391;">
+                        Status
+                        <p-sortIcon field="responseStatus"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="createdDate" style="background-color: #ECC391;">
+                        Created Date
+                        <p-sortIcon field="createdDate"></p-sortIcon>
+                    </th>
+
+                    <th style="background-color: #ECC391;">Action</th>
+                    </tr>
+                </ng-template>
+
+
+            <!-- TABLE BODY -->
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ dt.first + rowIndex + 1 }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.email }}</td>
+                <td>{{ row.subject }}</td>
+
+                <!-- STATUS -->
+                <td>
+                  <span
+                    class="badge bg-warning"
+                    *ngIf="!row.responseStatus">
+                    Pending
+                  </span>
+
+                  <span
+                    class="badge bg-success"
+                    *ngIf="row.responseStatus">
+                    Responded
+                  </span>
+                </td>
+
+                <td>{{ row.createdDate | date:'short' }}</td>
+
+                <!-- ACTION -->
+                <td class="text-nowrap">
+
+                    <!-- SHOW REPLY BUTTON ONLY WHEN NOT RESPONDED -->
+                    <button
+                        *ngIf="!row.responseStatus && !row.responseSubject && !row.responseBody"
+                        type="button"
+                        class="btn btn-primary btn-sm mx-1"
+                        title="Reply"
+                        (click)="openReplyDialog(row)">
+                        <i class="fa-solid fa-reply"></i>
+                    </button>
+
+                    <!-- SHOW RESPONDED TEXT ONLY WHEN RESPONDED -->
+                    <span
+                        *ngIf="row.responseStatus || row.responseSubject || row.responseBody"
+                        class="badge bg-success">
+                        Responded
+                    </span>
+
+                    </td>
+
+              </tr>
+            </ng-template>
+
+          </p-table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<!-- ================= REPLY DIALOG ================= -->
+<p-dialog
+  header="Reply to Notification"
+  [(visible)]="showReplyDialog"
+  [modal]="true"
+  [closable]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '600px' }"
+  [baseZIndex]="10000"
+  [styleClass]="'custom-dialog'"
+  (onHide)="closeDialog()">
+
+  <div class="p-fluid">
+
+    <!-- SUBJECT -->
+    <div class="mb-3">
+      <label class="form-label">
+        Subject <span class="text-danger">*</span>
+      </label>
+      <input
+        type="text"
+        class="form-control"
+        [(ngModel)]="replyForm.responseSubject"
+        placeholder="Enter response subject">
+    </div>
+
+    <!-- MESSAGE -->
+    <div class="mb-3">
+      <label class="form-label">
+        Message <span class="text-danger">*</span>
+      </label>
+      <textarea
+        rows="4"
+        class="form-control"
+        [(ngModel)]="replyForm.responseBody"
+        placeholder="Enter response message">
+      </textarea>
+    </div>
+
+    <!-- ACTION -->
+    <div class="text-end">
+      <button
+        class="custom-submit-btn"
+        (click)="sendReply()">
+        Send Response
+      </button>
+    </div>
+
+  </div>
+</p-dialog>

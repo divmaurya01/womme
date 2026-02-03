@@ -35,6 +35,12 @@ namespace WommeAPI.Data
         public DbSet<WomMachineEmployee> WomMachineEmployee { get; set; }        
         public DbSet<JobPool> JobPool { get; set; }
         public DbSet<WomWcMachine> WomWcMachines { get; set; }
+        public DbSet<Notification> Notification { get; set; }
+        public DbSet<SyncLog> SyncLog { get; set; }
+
+
+       
+
 
        
         

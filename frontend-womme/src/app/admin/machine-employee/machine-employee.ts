@@ -10,6 +10,8 @@ import Swal from 'sweetalert2';
 import { JobService } from '../../services/job.service';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
+
 
 interface WorkCenter {
   wcName: string;
@@ -47,6 +49,11 @@ export class MachineEmployeeComponent implements OnInit {
   machinesList: Machine[] = [];   // machine dropdown
   wcList: WorkCenter[] = [];      // WC dropdown
 
+ 
+  filteredMachines: any[] = []; // filtered table data
+  globalSearch = '';
+
+
   selectedWc: WorkCenter | null = null;
 
   newMachine: any = {
@@ -73,16 +80,15 @@ loadMachines() {
       next: (res: any[]) => {
         console.log('Raw API Response (GetAllWcMachines):', res);
 
-        this.machines = res.map((m, index) => {
-          const machine = {
-            machineNumber: m.machineId,
-            wc: m.wc,
-            machineDescription: m.machineDescription,
-            wcName: m.wcName || '(No Name)'
-          };
-          console.log(`Mapped machine [${index}]:`, machine);
-          return machine;
-        });
+        this.machines = res.map((m, index) => ({
+          machineNumber: m.machineId,
+          wc: m.wc,
+          machineDescription: m.machineDescription,
+          wcName: m.wcName || '(No Name)'
+        }));
+
+        this.filteredMachines = [...this.machines]; // IMPORTANT
+
 
         console.log('Final machines array:', this.machines);
       },
@@ -91,6 +97,56 @@ loadMachines() {
       }
     });
 }
+
+exportMachineWcToExcel(): void {
+  if (!this.filteredMachines || this.filteredMachines.length === 0) {
+    Swal.fire('No Data', 'No Machine-WC data available to export', 'info');
+    return;
+  }
+
+  // Prepare clean export data
+  const exportData = this.filteredMachines.map((m, index) => ({
+    'Sr No': index + 1,
+    'WC Code': m.wc,
+    'WC Name': m.wcName,
+    'Machine Number': m.machineNumber,
+    'Machine Description': m.machineDescription
+  }));
+
+  // Create worksheet & workbook
+  const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook: XLSX.WorkBook = {
+    Sheets: { 'Machine-WC': worksheet },
+    SheetNames: ['Machine-WC']
+  };
+
+  // Export Excel file
+  XLSX.writeFile(workbook, 'Machine_WC_Mapping.xlsx');
+}
+
+
+onGlobalSearch(): void {
+  const rawSearch = this.globalSearch.toLowerCase().trim();
+
+  if (!rawSearch) {
+    this.filteredMachines = [...this.machines];
+    return;
+  }
+
+  const keywords = rawSearch
+    .split('|')
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
+
+  this.filteredMachines = this.machines.filter(machine =>
+    keywords.some(keyword =>
+      Object.values(machine).some(value =>
+        value?.toString().toLowerCase().includes(keyword)
+      )
+    )
+  );
+}
+
 
 /** Load machines for dropdown */
 loadMachinesList() {

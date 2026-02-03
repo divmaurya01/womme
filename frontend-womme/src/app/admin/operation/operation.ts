@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import { TimeoutError } from 'rxjs';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-operation-masters',
@@ -23,6 +24,10 @@ export class OperationMastersComponent implements OnInit {
   showForm = false;
   operations: any[] = [];
   searchText = '';
+  allOperations: any[] = [];        // full list
+  filteredOperations: any[] = [];  // table binding
+  globalSearch = '';
+
   formError: string = '';
   totalOperations = 0;
   isOperationLoading = false;
@@ -45,33 +50,47 @@ export class OperationMastersComponent implements OnInit {
     this.isSidebarHidden = !this.isSidebarHidden;
   }
 
- loadOperations(event?: any): void {
+ loadOperations(): void {
   this.isOperationLoading = true;
-  const page = event?.first ? event.first / event?.rows : 0;
-  const size = event?.rows || 50; 
   this.loader.show();
-  this.jobService.GetDistinctOperations(page, size, this.operationSearchTerm)
-  .pipe(finalize(() => this.loader.hide()))
-  .subscribe({
-    next: (res) => {
-      this.operations = res.data.map((num: number, index: number) => ({
-        entryNo: page * size + index + 1,
-        operationNumber: num
-      }));
-      this.totalOperations = res.total; 
+
+  // Load ALL data at once
+  this.jobService.GetDistinctOperations(0, 100000, '')
+    .pipe(finalize(() => {
+      this.loader.hide();
       this.isOperationLoading = false;
-    },
-    error: (err) => {
-      this.isOperationLoading = false;
-      Swal.fire('Error', 'Failed to load operations', 'error');
-      console.error('Error loading operations:', err);
-    }
-  });
+    }))
+    .subscribe({
+      next: (res) => {
+        this.allOperations = res.data.map((num: number, index: number) => ({
+          entryNo: index + 1,
+          operationNumber: num
+        }));
+
+        // bind initially
+        this.filteredOperations = [...this.allOperations];
+      },
+      error: (err) => {
+        Swal.fire('Error', 'Failed to load operations', 'error');
+        console.error('Error loading operations:', err);
+      }
+    });
 }
 
+
 onOperationSearchChange(value: string): void {
-  this.operationSearchTerm = value;
-  this.loadOperations();
+  const search = value.toLowerCase().trim();
+
+  if (!search) {
+    this.filteredOperations = [...this.allOperations];
+    return;
+  }
+
+  this.filteredOperations = this.allOperations.filter(op =>
+    Object.values(op).some(v =>
+      v?.toString().toLowerCase().includes(search)
+    )
+  );
 }
 
 
@@ -112,6 +131,26 @@ allowOnlyNumbers(event: KeyboardEvent): void {
   if (charCode < 48 || charCode > 57) {
     event.preventDefault();
   }
+}
+
+exportOperationsToExcel(): void {
+  if (!this.filteredOperations || this.filteredOperations.length === 0) {
+    Swal.fire('No Data', 'No Operations available to export', 'info');
+    return;
+  }
+
+  const exportData = this.filteredOperations.map((op, index) => ({
+    'Sr No': index + 1,
+    'Operation Number': op.operationNumber
+  }));
+
+  const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook: XLSX.WorkBook = {
+    Sheets: { 'Operations': worksheet },
+    SheetNames: ['Operations']
+  };
+
+  XLSX.writeFile(workbook, 'Operations_List.xlsx');
 }
 
   

@@ -31,7 +31,13 @@ namespace WommeAPI.Controllers
                 return BadRequest(ModelState);
 
             // 🔹 Extract numeric part from emp_num (e.g. "wme0095" -> 95)
+           if (string.IsNullOrWhiteSpace(login.emp_num))
+            {
+                return BadRequest("Employee number is required");
+            }
+
             var numericPart = new string(login.emp_num.Where(char.IsDigit).ToArray());
+
 
             if (!int.TryParse(numericPart, out int wommId))
                 return BadRequest(new { message = "Invalid Employee Code format." });
@@ -114,6 +120,106 @@ namespace WommeAPI.Controllers
                     user.IsActive,
                     user.dept
                 }
+            });
+        }
+
+        [HttpPost("forgot-login")]
+        public async Task<IActionResult> ForgotLogin([FromBody] ForgotLoginDto dto)
+        {
+            if (string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Name))
+                return BadRequest("Name and Email are required");
+
+            var employee = _context.EmployeeMst
+                .FirstOrDefault(x => x.email == dto.Email);
+
+            if (employee == null)
+                return NotFound("Email not found in system");
+
+            // Save notification
+            var notification = new Notification
+            {
+                Name = employee.name,   // use DB name (safer)
+                Email = employee.email,
+                Subject = dto.Flag == "FORGOT_PASSWORD"
+                    ? "Forgot Password Request"
+                    : "Forgot User ID Request",
+                Details = $"Request raised for {dto.Flag}",
+                Status = "PENDING",
+                CreatedDate = DateTime.Now
+            };
+
+            _context.Notification.Add(notification);
+            _context.SaveChanges();
+
+            var emailApiUrl = _config["EmailSettings:ApiUrl"];
+            if (string.IsNullOrEmpty(emailApiUrl))
+                return StatusCode(500, "Email API URL not configured");
+
+            // ---------------- EMAIL BODIES ----------------
+
+            string adminEmailBody = $@"
+            <p>Dear Admin,</p>
+            <p>A login assistance request has been submitted.</p>
+            <ul>
+            <li><strong>Name:</strong> {employee.name}</li>
+            <li><strong>Email:</strong> {employee.email}</li>
+            <li><strong>Request:</strong>
+                {(dto.Flag == "FORGOT_PASSWORD" ? "Forgot Password" : "Forgot User ID")}
+            </li>
+            </ul>
+            <p>Please review and take necessary action.</p>
+            <p>Regards,<br/><strong>WOMME System</strong></p>";
+
+            string userEmailBody = $@"
+            <p>Dear {employee.name},</p>
+            <p>
+            We have received your request regarding login assistance.
+            Our support team will review it and get back to you shortly.
+            </p>
+            <p>
+            Thank you for your patience.
+            </p>
+            <p>Regards,<br/><strong>WOMME Support Team</strong></p>";
+
+            using var client = new HttpClient();
+
+            // ---------------- SEND ADMIN EMAIL ----------------
+            var adminResponse = await client.PostAsJsonAsync(emailApiUrl, new
+            {
+                to = new[] { "divyansh@nowarainfotech.com" }, // admin email
+                cc = Array.Empty<string>(),
+                bcc = Array.Empty<string>(),
+                subject = "Action Required: Login Assistance Request",
+                body = adminEmailBody,
+                isHtml = true
+            });
+
+            // ---------------- SEND USER EMAIL ----------------
+            var userResponse = await client.PostAsJsonAsync(emailApiUrl, new
+            {
+                to = new[] { employee.email }, // user email
+                cc = Array.Empty<string>(),
+                bcc = Array.Empty<string>(),
+                subject = "We Have Received Your Request",
+                body = userEmailBody,
+                isHtml = true
+            });
+
+            // ---------------- UPDATE STATUS ----------------
+            notification.Status =
+                adminResponse.IsSuccessStatusCode && userResponse.IsSuccessStatusCode
+                    ? "SENT"
+                    : "PARTIAL";
+
+            notification.UpdatedDate = DateTime.Now;
+            _context.SaveChanges();
+
+            if (!adminResponse.IsSuccessStatusCode || !userResponse.IsSuccessStatusCode)
+                return StatusCode(500, "Email sending failed");
+
+            return Ok(new
+            {
+                message = "Request submitted successfully. A confirmation email has been sent."
             });
         }
 

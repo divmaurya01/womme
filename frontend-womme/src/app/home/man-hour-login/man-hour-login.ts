@@ -6,10 +6,13 @@ import { AuthServices } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import { DialogModule } from 'primeng/dialog';
+
+
 @Component({
   selector: 'man-hour-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DialogModule],
   templateUrl: './man-hour-login.html',
   styleUrls: ['./man-hour-login.scss']
 })
@@ -21,6 +24,17 @@ export class ManHourLoginComponent {
   submitted: boolean = false;
   shake = false;
   showPassword: boolean = false;
+
+  showForgotPopup = false;
+  forgotType: 'PASSWORD' | 'USERID' = 'PASSWORD';
+
+  forgotForm = {
+    name: '',
+    email: ''
+  };
+
+  forgotError = '';
+
 
   constructor(
     private router: Router,
@@ -106,6 +120,42 @@ togglePassword(): void {
     }
   });
 }
+
+openForgotPopup(type: 'PASSWORD' | 'USERID') {
+  this.forgotType = type;
+  this.forgotForm = { name: '', email: '' };
+  this.forgotError = '';
+  this.showForgotPopup = true;
+}
+
+
+  submitForgotRequest() {
+    if (!this.forgotForm.name || !this.forgotForm.email) {
+      this.forgotError = 'Name and Email are required';
+      return;
+    }
+
+    const payload = {
+      name: this.forgotForm.name,
+      email: this.forgotForm.email,
+      flag: this.forgotType === 'PASSWORD'
+        ? 'FORGOT_PASSWORD'
+        : 'FORGOT_USERID'
+    };
+
+    this.authService.forgotLogin(payload).subscribe({
+      next: () => {
+        this.successMessage = 'Email sent successfully';
+        this.showForgotPopup = false;
+      },
+      error: (err) => {
+        this.forgotError = err.error || 'Email not found';
+      }
+    });
+  }
+
+
+
 
   private triggerShake() {
     this.shake = true;

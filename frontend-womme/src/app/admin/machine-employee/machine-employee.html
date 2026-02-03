@@ -7,11 +7,17 @@
     <section class="table-wrapper">
 
       <!-- Add Machine-WC Mapping Button -->
-      <div class="mb-3" style="padding-top: 2em;">
+      <div class="mb-3 d-flex justify-content-between align-items-center" style="padding-top: 2em;">
         <button class="btn custom-assign-btn" (click)="openAddDialog()">
           + Machine-WC Mapping
         </button>
+
+        <button class="btn btn-success" (click)="exportMachineWcToExcel()"style="cursor: pointer;">
+          <i class="fa-solid fa-file-excel me-2"></i>
+          Export
+        </button>
       </div>
+
 
       <!-- Dialog Box -->
       <p-dialog header="Add Machine to WC" [(visible)]="showForm" [modal]="true" [closable]="true"
@@ -73,27 +79,66 @@
           </div>
         </form>
       </p-dialog>
+      <div class="row mb-2">
+          <div class="col-md-4 ms-auto">
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Search..."
+              [(ngModel)]="globalSearch"
+              (input)="onGlobalSearch()"
+            />
+          </div>
+        </div>
 
       <!-- Machines Table -->
       <div class="card p-1 mt-3 shadow-sm">
+        
+
         <div class="card-body p-1">
-          <p-table #dt [value]="machines" [paginator]="true" [rows]="15" [responsiveLayout]="'scroll'"
-            [scrollable]="true" scrollHeight="400px" [resizableColumns]="true" [autoLayout]="true"
-            columnResizeMode="expand" [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
-            class="p-datatable-sm p-datatable-striped custom-p-table">
+          <p-table
+            #dt
+            [value]="filteredMachines"            
+            [responsiveLayout]="'scroll'"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            columnResizeMode="expand" 
+            sortMode="multiple"           
+            class="p-datatable-sm p-datatable-striped custom-p-table"
+            [scrollable]="true"
+            scrollHeight="500px"
+          >
+
 
             <!-- Table Header -->
             <ng-template pTemplate="header">
               <tr>
                 <th style="background-color: #ECC391;">Sr No.</th>
-                <th style="background-color: #ECC391;">WC Code</th>
-                <th style="background-color: #ECC391;">WC Name</th>
-                <th style="background-color: #ECC391;">Machine No.</th>
-                <th style="background-color: #ECC391;">Machine Description</th>
+
+                <th pSortableColumn="wc" style="background-color: #ECC391;">
+                  WC Code
+                  <p-sortIcon field="wc"></p-sortIcon>
+                </th>
+
+                <th pSortableColumn="wcName" style="background-color: #ECC391;">
+                  WC Name
+                  <p-sortIcon field="wcName"></p-sortIcon>
+                </th>
+
+                <th pSortableColumn="machineNumber" style="background-color: #ECC391;">
+                  Machine No.
+                  <p-sortIcon field="machineNumber"></p-sortIcon>
+                </th>
+
+                <th pSortableColumn="machineDescription" style="background-color: #ECC391;">
+                  Machine Description
+                  <p-sortIcon field="machineDescription"></p-sortIcon>
+                </th>
+
                 <th style="background-color: #ECC391;">Action</th>
               </tr>
             </ng-template>
+
 
             <!-- Table Body -->
             <ng-template pTemplate="body" let-machine let-rowIndex="rowIndex">

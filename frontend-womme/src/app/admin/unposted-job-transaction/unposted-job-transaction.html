@@ -9,18 +9,20 @@
       <!-- Control Bar -->
       <div class="dashboard-control-bar d-flex flex-wrap justify-content-between align-items-center mb-3" style="gap: 1rem; padding-top: 2em;">
 
-        <!-- Search Input -->
-        <div class="flex-grow-1 position-relative" style="min-width: 250px; max-width: 400px;">
-          <input
-            type="text"
-            pInputText
-            placeholder="Search Job"
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="onSearchChange($event)"
-            class="form-control ps-5 pe-5 rounded-pill shadow-sm"
-            style="height: 45px; transition: all 0.3s;"
-          />
-        </div>
+        <input
+          type="text"
+          pInputText
+          placeholder="Search Job | Serial | WC | Emp"
+          [(ngModel)]="globalSearch"
+          (input)="onGlobalSearch()"
+          class="form-control rounded-pill"
+          style="max-width:400px;"
+        />
+
+        <button class="btn btn-success ms-2" (click)="exportToExcel()">
+          <i class="fa fa-file-excel"></i> Export
+        </button>
+
 
         
 
@@ -31,33 +33,59 @@
         <div class="card-body p-1">
 
           <p-table
-            [value]="transactions"
-            [lazy]="true"
+            [value]="filteredTransactions"
             [paginator]="true"
-            [rows]="50"
-            [totalRecords]="totalRecords"
-            (onLazyLoad)="loadJobs($event)"
+            [rows]="200"
             [loading]="isLoading"
-            [responsiveLayout]="'scroll'"
+            sortMode="multiple"
             [scrollable]="true"
-            scrollHeight="400px"
-            [resizableColumns]="true"
-            [autoLayout]="true"
-            columnResizeMode="expand"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            scrollHeight="500px"
+            sortMode="multiple"
           >
+
             <ng-template pTemplate="header">
               <tr>
                 <th style="background-color: #ECC391; padding: 10px;">S.No</th>
-                <th style="background-color: #ECC391; padding: 10px;">Job</th>
-                <th style="background-color: #ECC391; padding: 10px;">SerialNo</th>                
-                <th style="background-color: #ECC391; padding: 10px;">Qty</th>                               
-                <th style="background-color: #ECC391; padding: 10px;">Opr No.</th>
-                <th style="background-color: #ECC391; padding: 10px;">Work Center Code</th>                
-                <th style="background-color: #ECC391; padding: 10px;">Employees</th>
-                <th style="background-color: #ECC391; padding: 10px;">Machines</th>
-                <th style="background-color: #ECC391; padding: 10px;">Timer</th>
+                <th pSortableColumn="jobNumber" style="background-color:#ECC391;">
+                    Job
+                    <p-sortIcon field="jobNumber"></p-sortIcon>
+                  </th>
+
+                  <th pSortableColumn="serialNo" style="background-color:#ECC391;">
+                    SerialNo
+                    <p-sortIcon field="serialNo"></p-sortIcon>
+                  </th>
+
+                  <th pSortableColumn="qtyReleased" style="background-color:#ECC391;">
+                    Qty
+                    <p-sortIcon field="qtyReleased"></p-sortIcon>
+                  </th>
+
+                  <th pSortableColumn="operationNumber" style="background-color:#ECC391;">
+                    Opr No.
+                    <p-sortIcon field="operationNumber"></p-sortIcon>
+                  </th>
+
+                  <th pSortableColumn="wcCode" style="background-color:#ECC391;">
+                    Work Center Code
+                    <p-sortIcon field="wcCode"></p-sortIcon>
+                  </th>
+
+                  <th pSortableColumn="emp_num" style="background-color:#ECC391;">
+                    Employees
+                    <p-sortIcon field="emp_num"></p-sortIcon>
+                  </th>
+
+                  <th pSortableColumn="machine_id" style="background-color:#ECC391;">
+                    Machines
+                    <p-sortIcon field="machine_id"></p-sortIcon>
+                  </th>
+
+                  <th pSortableColumn="elapsedSeconds" style="background-color:#ECC391;">
+                    Timer
+                    <p-sortIcon field="elapsedSeconds"></p-sortIcon>
+                  </th>
+
                 <th style="background-color: #ECC391; padding: 10px;">Action</th>
               </tr>
             </ng-template>
@@ -76,7 +104,7 @@
                   {{ formatTime(job.elapsedSeconds) }}
                 </span>
                 </td>
-                <td>
+                <td class="action-cell">
                   <!-- Job not started / no status -->
                   <i *ngIf="!job.status" 
                     class="pi pi-play action-circle play" 
@@ -117,13 +145,21 @@
         </div>
       </div>
 
-      <p-dialog
-                    header="Job Assignment"
-                    [(visible)]="showWizard"
-                    [dismissableMask]="true"
-                    [modal]="true"
-                    [closable]="true"
-                    [style]="{ width: '800px' }">
+     <p-dialog
+          header="Job Assignment"
+          [(visible)]="showWizard"
+          [modal]="true"
+          [dismissableMask]="true"
+          [closable]="true"
+          [draggable]="false"
+          [resizable]="false"
+          [responsive]="true"
+          [appendTo]="'body'"
+          [style]="{ width: '60vw' }"
+          [contentStyle]="{ 'max-height': '75vh', overflow: 'auto' }"
+          styleClass="responsive-dialog"
+        >
+
 
                     <div class="card p-2">
 
@@ -137,22 +173,20 @@
 
                         <!-- Right -->
                         <div class="col-md-7 ps-4">
-                          <button type="button" class="btn btn-outline-primary mb-3"
-                                  (click)="useCamera = !useCamera">
-                            <i class="pi" [ngClass]="useCamera ? 'pi-upload' : 'pi-video'"></i>
-                            {{ useCamera ? 'Use File Upload' : 'Open Camera' }}
-                          </button>
+                          
 
                           <!-- Camera -->
-                          <div *ngIf="useCamera" class="card shadow-sm mb-3">
+                          <div class="card shadow-sm mb-3">
                             <div class="card-body">
                               <zxing-scanner
-                                *ngIf="useCamera && selectedDevice"
-                                [device]="selectedDevice"
-                                [autostart]="false"
+                                [device]="selectedDevice || undefined"
+                                [autostart]="true"
                                 (camerasFound)="onCamerasFound($event)"
                                 (scanSuccess)="handleScannedData($event)">
                               </zxing-scanner>
+
+
+
 
                             </div>
                           </div>
@@ -185,18 +219,18 @@
                         </div>
 
                         <div class="col-md-7 ps-4">
-                          <button type="button" class="btn btn-outline-primary mb-3"
-                                  (click)="useCamera = !useCamera">
-                            <i class="pi" [ngClass]="useCamera ? 'pi-upload' : 'pi-video'"></i>
-                            {{ useCamera ? 'Use File Upload' : 'Open Camera' }}
-                          </button>
+                          <!-- Camera -->
 
-                          <div *ngIf="useCamera" class="card shadow-sm mb-3">
+                          <!-- Camera -->
+                          <div class="card shadow-sm mb-3">
                             <div class="card-body">
-                              <zxing-scanner [device]="selectedDevice || undefined"
-                                            (camerasFound)="onCamerasFound($event)"
-                                            (scanSuccess)="handleScannedData($event)">
+                              <zxing-scanner
+                                [device]="selectedDevice || undefined"
+                                [autostart]="true"
+                                (camerasFound)="onCamerasFound($event)"
+                                (scanSuccess)="handleScannedData($event)">
                               </zxing-scanner>
+
                             </div>
                           </div>
 
@@ -226,18 +260,18 @@
                         </div>
 
                         <div class="col-md-7 ps-4">
-                          <button type="button" class="btn btn-outline-primary mb-3"
-                                  (click)="useCamera = !useCamera">
-                            <i class="pi" [ngClass]="useCamera ? 'pi-upload' : 'pi-video'"></i>
-                            {{ useCamera ? 'Use File Upload' : 'Open Camera' }}
-                          </button>
+                          <!-- Camera -->
 
-                          <div *ngIf="useCamera" class="card shadow-sm mb-3">
+                          <!-- Camera -->
+                          <div class="card shadow-sm mb-3">
                             <div class="card-body">
-                              <zxing-scanner [device]="selectedDevice || undefined"
-                                            (camerasFound)="onCamerasFound($event)"
-                                            (scanSuccess)="handleScannedData($event)">
+                              <zxing-scanner
+                                [device]="selectedDevice || undefined"
+                                [autostart]="true"
+                                (camerasFound)="onCamerasFound($event)"
+                                (scanSuccess)="handleScannedData($event)">
                               </zxing-scanner>
+
                             </div>
                           </div>
 
@@ -267,18 +301,18 @@
                         </div>
 
                         <div class="col-md-7 ps-4">
-                          <button type="button" class="btn btn-outline-primary mb-3"
-                                  (click)="useCamera = !useCamera">
-                            <i class="pi" [ngClass]="useCamera ? 'pi-upload' : 'pi-video'"></i>
-                            {{ useCamera ? 'Use File Upload' : 'Open Camera' }}
-                          </button>
+                          <!-- Camera -->
 
-                          <div *ngIf="useCamera" class="card shadow-sm mb-3">
+                          <!-- Camera -->
+                          <div class="card shadow-sm mb-3">
                             <div class="card-body">
-                              <zxing-scanner [device]="selectedDevice || undefined"
-                                            (camerasFound)="onCamerasFound($event)"
-                                            (scanSuccess)="handleScannedData($event)">
+                              <zxing-scanner
+                                [device]="selectedDevice || undefined"
+                                [autostart]="true"
+                                (camerasFound)="onCamerasFound($event)"
+                                (scanSuccess)="handleScannedData($event)">
                               </zxing-scanner>
+
                             </div>
                           </div>
 

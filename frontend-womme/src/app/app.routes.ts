@@ -33,11 +33,13 @@ import { Issuetransaction } from './admin/issuetransaction/issuetransaction';
 import { VerifyTransaction } from './admin/verify-transaction/verify-transaction';
 import { DashboardVerify } from './admin/dashboard-verify/dashboard-verify';
 import { JobReportComponent } from './admin/job-report/job-report';
+import { NotificationComponent } from './admin/notifications/notifications';
  
 export const routes: Routes = [
  
   { path: '', component: ManHourLoginComponent },  
   { path: 'dashboard', component: AdminDashboardComponent, canActivate: [AuthGuard] },
+  { path: 'notifications', component: NotificationComponent, canActivate: [AuthGuard] },
   { path: 'forgot-password', component: ForgotPasswordComponent, canActivate: [AuthGuard] },
   { path: 'jobs', component: JobSyncComponent, canActivate: [AuthGuard] },
   { path: 'issuejobtransaction', component: Issuetransaction, canActivate: [AuthGuard] },

@@ -237,9 +237,12 @@ public class GetController : ControllerBase
                 e.mfg_reg_rate,
                 e.hire_date,
                 e.RoleID,
+                e.PasswordHash,
+                e.site_ref,
                 e.IsActive,
                 e.ProfileImage,
-                e.womm_id
+                e.womm_id,
+                e.email_addr
             })
             .ToList();
 
@@ -2929,7 +2932,30 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
     }
     
     
+        [HttpGet]
+        public IActionResult GetNotifications()
+        {
+            var notifications = _context.Notification
+                .OrderByDescending(n => n.CreatedDate)
+                .Select(n => new
+                {
+                    n.NotificationID,
+                    n.Name,
+                    n.Email,
+                    n.Subject,
+                    n.Details,
+                    n.Status,
+                    n.ResponseSubject,
+                    n.ResponseBody,
+                    n.ResponseStatus,
+                    n.CreatedDate,
+                    n.UpdatedDate
+                })
+                .ToList();
 
+            return Ok(notifications);
+        }
+    
 
 
 

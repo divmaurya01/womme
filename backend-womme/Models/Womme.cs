@@ -1413,6 +1413,7 @@ public string? TransType { get; set; }
         public bool? IsActive { get; set; }
         public string? ProfileImage { get; set; }
         public int? womm_id{ get; set; }
+        public string? email{ get; set; }
 
     }
 [Table("employee_mst")]
@@ -2244,7 +2245,10 @@ public string? TransType { get; set; }
         public decimal mfg_reg_rate { get; set; }
         public decimal mfg_ot_rate { get; set; }
         public decimal mfg_dt_rate { get; set; }
+        public string? LoginID { get; set; }
     }
+
+
 
     public class JobOperationRequest
     {
@@ -2604,6 +2608,61 @@ public class JobOperationDtos
     public string? EndTime { get; set; }
     public decimal? HoursConsumed { get; set; }
 }
+
+public class CalendarImportDto
+{
+    public DateTime Date { get; set; }
+    public int Flag { get; set; }
+    public string CalendarDescription { get; set; }
+    public string Occasion { get; set; }
+}
+
+public class Notification
+{
+    public int NotificationID { get; set; }
+
+    // User request info
+    public string Name { get; set; }
+    public string Email { get; set; }
+    public string Subject { get; set; }
+    public string Details { get; set; }
+
+    // Request status
+    public string Status { get; set; }   // PENDING / SENT / RESPONDED
+
+    // Admin response
+    public string? ResponseSubject { get; set; }
+    public string? ResponseBody { get; set; }
+    public string? ResponseStatus { get; set; } // RESPONDED
+
+    // Audit fields
+    public DateTime CreatedDate { get; set; }
+    public DateTime? UpdatedDate { get; set; }
+}
+
+
+public class ForgotLoginDto
+{
+    public string Name { get; set; }
+    public string Email { get; set; }
+    public string Flag { get; set; } 
+}
+
+public class NotificationResponseDto
+{
+    public int NotificationID { get; set; }
+    public string ResponseSubject { get; set; }
+    public string ResponseBody { get; set; }
+}
+
+public class SyncLog
+{
+    public int Id { get; set; }
+    public string TableName { get; set; }
+    public DateTime LastSyncDate { get; set; }
+}
+
+
  
 
 }

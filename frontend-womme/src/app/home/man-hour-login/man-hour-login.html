@@ -51,14 +51,21 @@
       <div class="toast error" *ngIf="errorMessage">{{ errorMessage }}</div>
       <div class="toast success" *ngIf="successMessage">{{ successMessage }}</div>
 
-      <!-- <a class="forget-link" href="#">Forgot password?</a> -->
+      <div class="forget-links mb-3">
+        <a href="#" (click)="openForgotPopup('PASSWORD')">Forgot Password?</a>
+        |
+        <a href="#" (click)="openForgotPopup('USERID')">Forgot User ID?</a>
+      </div>
+
 
       <button class="login-button" (click)="login()">Log in</button>
 
       <!-- <p class="signup-link">
         Don't have an account? <a href="#">Sign up</a>
       </p> -->
-    </div>
+    </div>  
+
+
 
     <!-- Right Panel -->
     <div class="right-panel">
@@ -71,4 +78,57 @@
       </div>
     </div>
   </div>
+
+  <p-dialog
+      header="{{ forgotType === 'PASSWORD' ? 'Forgot Password' : 'Forgot User ID' }}"
+      [(visible)]="showForgotPopup"
+      [modal]="true"
+      [closable]="true"
+      [dismissableMask]="true"
+      [style]="{ width: '450px' }"
+      [baseZIndex]="10000"
+      [styleClass]="'custom-dialog'"
+    >
+
+      <div class="p-fluid">
+
+        <!-- Name -->
+        <div class="mb-3">
+          <label class="form-label">Full Name</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="forgotForm.name"
+            placeholder="Enter your full name"
+          />
+        </div>
+
+        <!-- Email -->
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input
+            type="email"
+            class="form-control"
+            [(ngModel)]="forgotForm.email"
+            placeholder="Enter your registered email"
+          />
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="forgotError" class="text-danger text-center mb-2">
+          {{ forgotError }}
+        </div>
+
+        <!-- Footer -->
+        <div class="text-end">
+          <button
+            class="custom-submit-btn"
+            (click)="submitForgotRequest()">
+            Submit
+          </button>
+        </div>
+
+      </div>
+    </p-dialog>
+
 </div>

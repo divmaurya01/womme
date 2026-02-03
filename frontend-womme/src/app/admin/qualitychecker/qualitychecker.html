@@ -53,20 +53,54 @@
               >
                 <ng-template pTemplate="header">
                   <tr>
-                    <th style="background-color: #ECC391; padding: 10px;">
+                    <th style="background-color:#ECC391; padding:10px;">
                       <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
                     </th>
-                    <th style="background-color: #ECC391; padding: 10px;">S.No</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Job</th>
-                    <th style="background-color: #ECC391; padding: 10px;">SerialNo</th> 
-                    <th style="background-color: #ECC391; padding: 10px;">Opr No.</th>                   
-                    <th style="background-color: #ECC391; padding: 10px;">WC</th>  
-                    <th style="background-color: #ECC391; padding: 10px;">Item</th>                     
-                    <th style="background-color: #ECC391; padding: 10px;">Qty</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Action</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Report</th>
+
+                    <th style="background-color:#ECC391; padding:10px;">
+                      S.No
+                    </th>
+
+                    <th pSortableColumn="jobNumber" style="background-color:#ECC391; padding:10px;">
+                      Job
+                      <p-sortIcon field="jobNumber"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="serialNo" style="background-color:#ECC391; padding:10px;">
+                      Serial No
+                      <p-sortIcon field="serialNo"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="operationNumber" style="background-color:#ECC391; padding:10px;">
+                      Opr No.
+                      <p-sortIcon field="operationNumber"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="wcCode" style="background-color:#ECC391; padding:10px;">
+                      WC
+                      <p-sortIcon field="wcCode"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="item" style="background-color:#ECC391; padding:10px;">
+                      Item
+                      <p-sortIcon field="item"></p-sortIcon>
+                    </th>
+
+                    <th pSortableColumn="qtyReleased" style="background-color:#ECC391; padding:10px;">
+                      Qty
+                      <p-sortIcon field="qtyReleased"></p-sortIcon>
+                    </th>
+
+                    <th style="background-color:#ECC391; padding:10px;">
+                      Action
+                    </th>
+
+                    <th style="background-color:#ECC391; padding:10px;">
+                      Report
+                    </th>
                   </tr>
                 </ng-template>
+
 
                 <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
                   <tr [pSelectableRow]="job">

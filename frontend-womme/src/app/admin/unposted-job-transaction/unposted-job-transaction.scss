@@ -278,3 +278,59 @@
 .active-job {
   background-color: #e6ffed; // light green highlight
 }
+.action-cell {
+  display: flex;
+  align-items: center;     /* vertical center */
+  justify-content: center; /* horizontal center */
+  gap: 8px;                /* space between icons */
+  height: 100%;
+}
+
+.action-cell i {
+  font-size: 18px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .responsive-dialog .row {
+    flex-direction: column;
+  }
+
+  .responsive-dialog .col-md-5,
+  .responsive-dialog .col-md-7 {
+    width: 100%;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  .responsive-dialog h5 {
+    margin-top: 1rem;
+  }
+}
+
+zxing-scanner {
+  width: 100% !important;
+  
+}
+
+::ng-deep .responsive-dialog {
+  margin: auto !important;
+}
+
+@media (max-width: 768px) {
+  ::ng-deep .responsive-dialog {
+    width: 90vw !important;
+  }
+}
+
+@media (max-width: 576px) {
+  ::ng-deep .responsive-dialog {
+    width: 100vw !important;
+    height: 100vh;
+    border-radius: 0;
+  }
+}
+
+
+
+

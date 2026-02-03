@@ -103,70 +103,49 @@ public class UpdateController : ControllerBase
             if (string.IsNullOrWhiteSpace(empNum) || dto == null)
                 return BadRequest(new { message = "Invalid request." });
 
-            var employee = _context.EmployeeMst.FirstOrDefault(e => e.emp_num == empNum);
+            var employee = _context.EmployeeMst
+                .FirstOrDefault(e => e.emp_num == empNum);
 
             if (employee == null)
                 return NotFound(new { message = "Employee not found." });
+             
+            // UPDATE ONLY PASSWORD
+            if (!string.IsNullOrWhiteSpace(dto.PasswordHash))
+                employee.PasswordHash = dto.PasswordHash;
 
-            // Update only if new values are provided
-            employee.name = dto.Name ?? employee.name;
-            employee.PasswordHash = dto.PasswordHash ?? employee.PasswordHash;
-            employee.RoleID = dto.RoleID ?? employee.RoleID;
-            employee.IsActive = dto.IsActive ?? employee.IsActive;
-            employee.site_ref = dto.site_ref ?? employee.site_ref;
+            // UPDATE ONLY ROLE
+            if (dto.RoleID.HasValue)
+                employee.RoleID = dto.RoleID.Value;
+
+            if (dto.IsActive.HasValue)
+                employee.IsActive = dto.IsActive.Value;
+
+                   // UPDATE EMAIL
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+                employee.email_addr = dto.Email;
+
+            // Audit
+            employee.RecordDate = DateTime.Now;
             employee.UpdatedBy = dto.CreatedBy ?? employee.UpdatedBy;
-            employee.RecordDate = DateTime.Now; // last update timestamp
 
-            employee.dept = dto.depart ?? employee.dept;
-            employee.emp_type = dto.emp_type ?? employee.emp_type;
-            employee.pay_freq = dto.pay_freq ?? employee.pay_freq;
-            employee.mfg_reg_rate = dto.mfg_reg_rate != 0 ? dto.mfg_reg_rate : employee.mfg_reg_rate;
-            employee.mfg_ot_rate = dto.mfg_ot_rate != 0 ? dto.mfg_ot_rate : employee.mfg_ot_rate;
-            employee.mfg_dt_rate = dto.mfg_dt_rate != 0 ? dto.mfg_dt_rate : employee.mfg_dt_rate;
+           
 
-            _context.EmployeeMst.Update(employee);
             _context.SaveChanges();
 
             return Ok(new { message = "Employee updated successfully." });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Server error", error = ex.Message });
+            return StatusCode(500, new
+            {
+                message = "Server error",
+                error = ex.Message
+            });
         }
     }
 
 
-    [HttpPut("UpdateEmployees/{empNum}")]
-    public IActionResult UpdateEmployees(string empNum, [FromBody] EmployeeDto dto)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(empNum) || dto == null)
-                return BadRequest(new { message = "Invalid request." });
 
-            var employee = _context.EmployeeMst.FirstOrDefault(e => e.emp_num == empNum);
-
-            if (employee == null)
-                return NotFound(new { message = "Employee not found." });
-
-            // Update only if new values are provided
-            employee.name = dto.Name ?? employee.name;
-            employee.PasswordHash = dto.PasswordHash ?? employee.PasswordHash;
-            employee.RoleID = dto.RoleID ?? employee.RoleID;
-            employee.IsActive = dto.IsActive ?? employee.IsActive;
-            employee.UpdatedBy = dto.CreatedBy ?? employee.UpdatedBy;  // same field reused  
-            employee.RecordDate = DateTime.Now; // last update timestamp
-
-            _context.EmployeeMst.Update(employee);
-            _context.SaveChanges();
-
-            return Ok(new { message = "Employee updated successfully." });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Server error", error = ex.Message });
-        }
-    }
 
 
     [HttpPut("EditMachineEmployee/{oldMachineNumber}")]

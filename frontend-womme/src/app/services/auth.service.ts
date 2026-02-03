@@ -33,6 +33,14 @@ export class AuthServices {
   }
   
 
+   forgotLogin(payload: any) {
+    return this.http.post(
+      `${this.baseURL}/api/Auth/forgot-login`,
+      payload
+    );
+  }
+
+
   
   setJwtToken(token: string): void {
     this.jwtToken = token;

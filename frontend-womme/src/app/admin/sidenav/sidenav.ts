@@ -47,6 +47,7 @@ export class SidenavComponent implements OnInit {
         { label: 'QC Dashboard', link: '/dashboard_qc', icon: faClipboardCheck, color: '#70eaadff' },
         { label: 'Verify Dashboard', link: '/dashboard_verify', icon: faUserCheck, color: '#70eae6ff' },
         //{ label: 'Dashboard', link:'/dashboard', icon: faTachometerAlt, color: '#70eae6ff' }, 
+        { label: 'Notifications', link: '/notifications', icon: faUserCheck, color: 'rgb(208, 112, 234)' },
 
         // Jobs & Transactions
         { label: 'Job Sync', link: '/jobs', icon: faSyncAlt, color: '#0097A7' },

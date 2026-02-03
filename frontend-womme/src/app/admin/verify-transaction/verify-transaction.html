@@ -6,21 +6,7 @@
   <main class="main-content">
     <section class="table-wrapper">
 
-      <!-- Search -->
-      <div class="dashboard-control-bar d-flex justify-content-between align-items-center mb-3"
-           style="gap: 1rem; padding-top: 2em;">
-        <div class="flex-grow-1 position-relative" style="min-width: 250px; max-width: 400px;">
-          <input
-            type="text"
-            pInputText
-            placeholder="Search Job / Serial No"
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="onSearchChange($event)"
-            class="form-control ps-5 pe-5 rounded-pill shadow-sm"
-            style="height: 45px;"
-          />
-        </div>
-      </div>
+      
 
 
 
@@ -32,6 +18,24 @@
             [(activeIndex)]="activeTabIndex"
             (onChange)="onTabChange($event)">
 
+            <div class="d-flex justify-content-between mb-2">
+              <input
+                pInputText
+                [(ngModel)]="globalSearchNew"
+                (input)="onGlobalSearchNew()"
+                placeholder="Search Job | Serial"
+                class="form-control"
+                style="width:50%;"
+              />
+
+              <button class="btn btn-success"
+                      (click)="exportExcel(newJobs,'NewJobs')">
+                Excel
+              </button>
+            </div>
+
+
+
             <p-tabPanel header="New Job">
 
               <p-table
@@ -39,17 +43,27 @@
                 [paginator]="true"
                 [rows]="50"
                 [loading]="isLoading"
-                [responsiveLayout]="'scroll'"
-                scrollHeight="400px">
+                sortMode="multiple"
+                scrollHeight="500px">
 
                 <ng-template pTemplate="header">
                   <tr>
                     <th style="background-color: #ECC391; padding: 10px;">S.No</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Job</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Serial No</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Qty</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Opr No</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Item</th>
+                    <th pSortableColumn="job" style="background-color: #ECC391; padding: 10px;">Job
+                      <p-sortIcon field="job"></p-sortIcon>
+                    </th>
+                    <th pSortableColumn="serialNo" style="background-color: #ECC391; padding: 10px;">Serial No
+                      <p-sortIcon field="serialNo"></p-sortIcon>
+                    </th>
+                    <th pSortableColumn="qtyReleased" style="background-color: #ECC391; padding: 10px;">Qty
+                      <p-sortIcon field="qtyReleased"></p-sortIcon>
+                    </th>
+                    <th pSortableColumn="operNum" style="background-color: #ECC391; padding: 10px;">Opr No
+                      <p-sortIcon field="operNum"></p-sortIcon>
+                    </th>
+                    <th pSortableColumn="item" style="background-color: #ECC391; padding: 10px;">Item
+                      <p-sortIcon field="item"></p-sortIcon>
+                    </th>
                     <th style="background-color:#ECC391;padding:10px;">Action</th>
                   </tr>
                 </ng-template>
@@ -83,7 +97,7 @@
                 [paginator]="true"
                 [rows]="50"
                 [loading]="isLoading"
-                scrollHeight="400px">
+                scrollHeight="500px">
 
                 <ng-template pTemplate="header">
                   <tr>
@@ -149,7 +163,7 @@
                 [paginator]="true"
                 [rows]="50"
                 [loading]="isLoading"
-                scrollHeight="400px">
+                scrollHeight="500px">
 
                 <ng-template pTemplate="header">
                   <tr>

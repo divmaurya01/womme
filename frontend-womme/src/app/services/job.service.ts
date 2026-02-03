@@ -358,6 +358,8 @@ export class JobService {
      headers: this.getHeaders()
     }); 
   }
+
+  
   GetAllWcMachines() {
     return this.http.get<any[]>(`${this.baseUrl}/Get/GetAllWcMachines`,{
             headers: this.getHeaders()
@@ -449,6 +451,9 @@ CheckPrevJob(jobData: any): Observable<any> {
       headers: this.getHeaders()
     });
   }
+
+
+
 
   updateJobLog(payload: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/Post/UpdateJobLog`, payload, {
@@ -637,6 +642,24 @@ CheckPrevJob(jobData: any): Observable<any> {
   }
 
 
+
+   getNotifications(): Observable<AssignedJob[]> {
+    return this.http.get<AssignedJob[]>(`${this.baseUrl}/Get/getNotifications`, {
+      headers: this.getHeaders()
+    });
+  }
+  
+
+respondToNotification(payload: any): Observable<any> {
+  const url = `${this.baseUrl}/Post/notifications`;
+  return this.http.post(url, payload, { headers: this.getHeaders() });
+}
+
+
+
+  
+
+
   CheckJobStatus(job: string, operation: string, transNum: string, serialNo: string): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/Post/CheckJobStatus`, {
     job,
@@ -645,6 +668,15 @@ CheckPrevJob(jobData: any): Observable<any> {
     serialNo
     });
   }
+
+  importCalendar(payload: any[]) {
+    return this.http.post(
+      `${this.baseUrl}/Post/importCalendar`,
+      payload,                         
+      { headers: this.getHeaders() }   
+    );
+  }
+
 
 
   unpostedCheckJobStatus(): Observable<AssignedJob[]> {

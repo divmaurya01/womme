@@ -38,177 +38,42 @@ namespace WommeAPI.Services
 
        public async Task<(List<JobMst> insertedRecords, List<JobMst> updatedRecords)> SyncJobMstAsync()
         {
-            const int batchSize = 300;
             var insertedRecords = new List<JobMst>();
             var updatedRecords = new List<JobMst>();
 
-            SyncLogger.Log("JobMst", "Sync started at: " + DateTime.Now);
+            var lastSync = await GetLastSyncDate("JobMst");
 
-            // ✅ Load local data as Lookup (supports duplicates)
+            var sourceData = await _sourceContext.JobMst
+                .AsNoTracking()
+                .Where(x => x.RecordDate > lastSync)
+                .ToListAsync();
+
             var localLookup = (await _localContext.JobMst.ToListAsync())
                 .Where(j => !string.IsNullOrEmpty(j.job))
                 .ToLookup(j => j.job!);
 
-            int totalRecords = await _sourceContext.JobMst.CountAsync();
-
-            for (int i = 0; i < totalRecords; i += batchSize)
+            foreach (var sourceItem in sourceData)
             {
-                var sourceBatch = await _sourceContext.JobMst
-                    .OrderBy(j => j.job)
-                    .Skip(i)
-                    .Take(batchSize)
-                    .ToListAsync();
+                if (string.IsNullOrEmpty(sourceItem.job))
+                    continue;
 
-                foreach (var sourceItem in sourceBatch)
+                var localItems = localLookup[sourceItem.job];
+
+                if (localItems.Any())
                 {
-                    if (string.IsNullOrEmpty(sourceItem.job))
-                        continue;
-
-                    var localItems = localLookup[sourceItem.job];
-
-                    // 🔄 UPDATE all matching local rows
-                    if (localItems.Any())
-                    {
-                        foreach (var localItem in localItems)
-                        {
-                            bool needsUpdate = false;
-
-                            var properties = typeof(JobMst).GetProperties()
-                                .Where(p => p.CanRead && p.CanWrite && p.Name != "RecordDate");
-
-                            foreach (var prop in properties)
-                            {
-                                var localValue = prop.GetValue(localItem);
-                                var sourceValue = prop.GetValue(sourceItem);
-
-                                if (!Equals(localValue, sourceValue))
-                                {
-                                    prop.SetValue(localItem, sourceValue);
-                                    needsUpdate = true;
-                                }
-                            }
-
-                            if (needsUpdate)
-                            {
-                                localItem.RecordDate = DateTime.Now;
-                                _localContext.JobMst.Update(localItem);
-                                updatedRecords.Add(localItem);
-
-                                SyncLogger.Log("JobMst-Updated", new Dictionary<string, object>
-                                {
-                                    { "job", localItem.job! }
-                                });
-                            }
-                        }
-                    }
-                    // ➕ INSERT if no local rows exist
-                    else
-                    {
-                        await _localContext.JobMst.AddAsync(sourceItem);
-                        insertedRecords.Add(sourceItem);
-
-                        SyncLogger.Log("JobMst-Inserted", new Dictionary<string, object>
-                        {
-                            { "job", sourceItem.job! }
-                        });
-                    }
-                }
-
-                await _localContext.SaveChangesAsync();
-            }
-
-            SyncLogger.Log(
-                "JobMst",
-                $"Sync completed. Inserted: {insertedRecords.Count}, Updated: {updatedRecords.Count}"
-            );
-
-            return (insertedRecords, updatedRecords);
-        }
-
-
-        public async Task<List<JobRouteMst>> SyncJobRouteAsync()
-        {
-            const int batchSize = 300; // You can tune this size based on performance 
-            var newRecords = new List<JobRouteMst>();
-
-            // Step 1: Get all source records (use AsNoTracking to reduce EF overhead)
-            var sytelineData = await _sourceContext.JobRouteMst
-                .AsNoTracking()
-                .ToListAsync();
-
-            // Step 2: Get only keys of existing records to compare
-            var existingKeys = await _localContext.JobRouteMst
-                .Select(r => new { r.Job, r.OperNum })
-                .ToListAsync();
-
-            // Step 3: Filter out already existing records
-            var filteredNewRecords = sytelineData
-                .Where(r => !existingKeys.Any(e => e.Job == r.Job && e.OperNum == r.OperNum))
-                .ToList();
-
-            if (filteredNewRecords.Any())
-            {
-                // Step 4: Insert in batches
-                for (int i = 0; i < filteredNewRecords.Count; i += batchSize)
-                {
-                    var batch = filteredNewRecords.Skip(i).Take(batchSize).ToList();
-
-                    await _localContext.JobRouteMst.AddRangeAsync(batch);
-                    await _localContext.SaveChangesAsync();
-
-                    // Logging after batch insert
-                    foreach (var item in batch)
-                    {
-                        SyncLogger.Log("JobRouteMst", new Dictionary<string, object>
-                {
-                    { "Job", item.Job! },
-                    { "OperNum", item.OperNum }
-                });
-
-                        newRecords.Add(item); // Add to return list
-                    }
-                }
-            }
-
-            return newRecords;
-        }
-
-        public async Task<(List<WcMst> insertedRecords, List<WcMst> updatedRecords)> SyncWcMstAsync()
-        {
-            const int batchSize = 300;
-            var insertedRecords = new List<WcMst>();
-            var updatedRecords = new List<WcMst>();
-
-            // Load all local data once into a dictionary for quick comparison
-            var localData = await _localContext.WcMst.ToDictionaryAsync(w => w.wc!);
-
-            var totalCount = await _sourceContext.WcMst.CountAsync();
-
-            for (int i = 0; i < totalCount; i += batchSize)
-            {
-                var batch = await _sourceContext.WcMst
-                    .OrderBy(w => w.wc)
-                    .Skip(i)
-                    .Take(batchSize)
-                    .ToListAsync();
-
-                foreach (var sourceItem in batch)
-                {
-                    if (sourceItem.wc == null) continue;
-
-                    if (localData.TryGetValue(sourceItem.wc, out var localItem))
+                    foreach (var localItem in localItems)
                     {
                         bool needsUpdate = false;
 
-                        // Use reflection to compare all properties except the key 'wc'
-                        foreach (var prop in typeof(WcMst).GetProperties())
+                        var props = typeof(JobMst).GetProperties()
+                            .Where(p => p.CanRead && p.CanWrite && p.Name != "RecordDate");
+
+                        foreach (var prop in props)
                         {
-                            if (prop.Name == "wc") continue;
-
-                            var sourceValue = prop.GetValue(sourceItem);
                             var localValue = prop.GetValue(localItem);
+                            var sourceValue = prop.GetValue(sourceItem);
 
-                            if (!object.Equals(sourceValue, localValue))
+                            if (!Equals(localValue, sourceValue))
                             {
                                 prop.SetValue(localItem, sourceValue);
                                 needsUpdate = true;
@@ -217,43 +82,114 @@ namespace WommeAPI.Services
 
                         if (needsUpdate)
                         {
-                            localItem.RecordDate = DateTime.Now; // optional timestamp
-                            _localContext.WcMst.Update(localItem);
+                            localItem.RecordDate = DateTime.Now;
+                            _localContext.JobMst.Update(localItem);
                             updatedRecords.Add(localItem);
-
-                            SyncLogger.Log("WcMst-Updated", new Dictionary<string, object>
-                    {
-                        { "wc", localItem.wc! }
-                    });
                         }
                     }
-                    else
-                    {
-                        //  New record
-                        await _localContext.WcMst.AddAsync(sourceItem);
-                        insertedRecords.Add(sourceItem);
-
-                        SyncLogger.Log("WcMst-Inserted", new Dictionary<string, object>
-                {
-                    { "wc", sourceItem.wc! }
-                });
-                    }
                 }
-
-                await _localContext.SaveChangesAsync();
+                else
+                {
+                    await _localContext.JobMst.AddAsync(sourceItem);
+                    insertedRecords.Add(sourceItem);
+                }
             }
+
+            await _localContext.SaveChangesAsync();
+
+            if (sourceData.Any())
+                await UpdateLastSyncDate("JobMst", sourceData.Max(x => x.RecordDate));
 
             return (insertedRecords, updatedRecords);
         }
-        
 
-       public async Task<(List<EmployeeMst> insertedRecords, List<EmployeeMst> updatedRecords)> SyncEmployeeMstAsync()
+
+
+       public async Task<List<JobRouteMst>> SyncJobRouteAsync()
         {
-            const int batchSize = 300;
-            var insertedRecords = new List<EmployeeMst>();
-            var updatedRecords = new List<EmployeeMst>();
+            var lastSync = await GetLastSyncDate("JobRouteMst");
 
-            // Load all local employees once into a dictionary
+            var sourceData = await _sourceContext.JobRouteMst
+                .AsNoTracking()
+                .Where(x => x.RecordDate > lastSync)
+                .ToListAsync();
+
+            var existingKeys = await _localContext.JobRouteMst
+                .Select(r => $"{r.Job}|{r.OperNum}")
+                .ToListAsync();
+
+            var keySet = existingKeys.ToHashSet();
+            var newRecords = new List<JobRouteMst>();
+
+            foreach (var src in sourceData)
+            {
+                var key = $"{src.Job}|{src.OperNum}";
+                if (keySet.Contains(key)) continue;
+
+                await _localContext.JobRouteMst.AddAsync(src);
+                newRecords.Add(src);
+            }
+
+            await _localContext.SaveChangesAsync();
+
+            if (sourceData.Any())
+                await UpdateLastSyncDate("JobRouteMst", sourceData.Max(x => x.RecordDate));
+
+            return newRecords;
+        }
+
+
+        public async Task<(List<WcMst>, List<WcMst>)> SyncWcMstAsync()
+        {
+            var inserted = new List<WcMst>();
+            var updated = new List<WcMst>();
+
+            var lastSync = await GetLastSyncDate("WcMst");
+
+            var sourceData = await _sourceContext.WcMst
+                .Where(x => x.RecordDate > lastSync)
+                .ToListAsync();
+
+            var localData = await _localContext.WcMst.ToDictionaryAsync(w => w.wc!);
+
+            foreach (var src in sourceData)
+            {
+                if (!localData.TryGetValue(src.wc!, out var local))
+                {
+                    await _localContext.WcMst.AddAsync(src);
+                    inserted.Add(src);
+                }
+                else
+                {
+                    local.RecordDate = DateTime.Now;
+                    updated.Add(local);
+                }
+            }
+
+            await _localContext.SaveChangesAsync();
+
+            if (sourceData.Any())
+                await UpdateLastSyncDate("WcMst", sourceData.Max(x => x.RecordDate));
+
+            return (inserted, updated);
+        }
+
+                
+
+            public async Task<(List<EmployeeMst> insertedRecords, List<EmployeeMst> updatedRecords)> SyncEmployeeMstAsync()
+                {
+                    const int batchSize = 300;
+                    var insertedRecords = new List<EmployeeMst>();
+                    var updatedRecords = new List<EmployeeMst>();
+
+                    var lastSync = await GetLastSyncDate("EmployeeMst");
+                    var sourceBatch = await _sourceContext.EmployeeMstSource
+                        .Where(x => x.RecordDate > lastSync)
+                        .ToListAsync();
+
+
+
+                    // Load all local employees once into a dictionary
             var localData = await _localContext.EmployeeMst.ToDictionaryAsync(e => e.emp_num!);
 
             var totalCount = await _sourceContext.EmployeeMstSource.CountAsync();
@@ -390,302 +326,227 @@ namespace WommeAPI.Services
                 }
 
                 await _localContext.SaveChangesAsync();
+                if (sourceBatch.Any())
+                await UpdateLastSyncDate("EmployeeMst", sourceBatch.Max(x => x.RecordDate));
+
             }
 
             return (insertedRecords, updatedRecords);
         }
         
 
-        public async Task<List<JobmatlMst>> SyncJobMatlMstAsync()
+       public async Task<List<JobmatlMst>> SyncJobMatlMstAsync()
         {
-            const int batchSize = 500;
             var insertedRecords = new List<JobmatlMst>();
 
-            // Use only Job + Item as key (normalize strings)
-            var existingKeys = new HashSet<string>(
-                await _localContext.JobMatlMst
-                    .Select(m => $"{m.Job!.Trim().ToUpper()}|{m.Item!.Trim().ToUpper()}")
-                    .ToListAsync()
-            );
+            var lastSync = await GetLastSyncDate("JobMatlMst");
 
-            // Get total source count
-            var totalCount = await _sourceContext.JobMatlMst.CountAsync();
+            var sourceData = await _sourceContext.JobMatlMst
+                .AsNoTracking()
+                .Where(x => x.RecordDate > lastSync)
+                .ToListAsync();
 
-            for (int i = 0; i < totalCount; i += batchSize)
+            var existingKeys = (await _localContext.JobMatlMst
+                .Select(m => $"{m.Job}|{m.Item}")
+                .ToListAsync()).ToHashSet();
+
+            foreach (var src in sourceData)
             {
-                var batch = await _sourceContext.JobMatlMst
-                    .OrderBy(m => m.Job)        // keep stable ordering to avoid Skip/Take issues
-                  //  .ThenBy(m => m.Suffix)
-                   // .ThenBy(m => m.OperNum)
-                   // .ThenBy(m => m.Sequence)
-                    .ThenBy(m => m.Item)
-                    .Skip(i)
-                    .Take(batchSize)
-                    .ToListAsync();
+                var key = $"{src.Job}|{src.Item}";
+                if (existingKeys.Contains(key)) continue;
 
-                var newRecords = batch
-                    .Where(m => !existingKeys.Contains(
-                        $"{m.Job!.Trim().ToUpper()}|{m.Item!.Trim().ToUpper()}"
-                    ))
-                    .ToList();
-
-                if (newRecords.Any())
-                {
-                    await _localContext.JobMatlMst.AddRangeAsync(newRecords);
-                    await _localContext.SaveChangesAsync();
-
-                    foreach (var item in newRecords)
-                    {
-                        SyncLogger.Log("JobmatlMst", new Dictionary<string, object>
-                {
-                    { "Job", item.Job! },
-                    { "Item", item.Item! }
-                });
-                    }
-
-                    insertedRecords.AddRange(newRecords);
-
-                    foreach (var m in newRecords)
-                    {
-                        existingKeys.Add($"{m.Job!.Trim().ToUpper()}|{m.Item!.Trim().ToUpper()}");
-                    }
-                }
+                await _localContext.JobMatlMst.AddAsync(src);
+                insertedRecords.Add(src);
             }
+
+            await _localContext.SaveChangesAsync();
+
+            if (sourceData.Any())
+                await UpdateLastSyncDate("JobMatlMst",
+                    sourceData.Max(x => x.RecordDate));
 
             return insertedRecords;
         }
 
          public async Task<List<JobTranMst>> SyncJobTranMstAsync()
-        {
-            const int batchSize = 300;
-            var newRecords = new List<JobTranMst>();
-
-            // Fetch all existing trans_num from the destination (local) DB
-            var existingKeys = new HashSet<decimal>(
-                await _localContext.JobTranMst.Select(t => t.trans_num).ToListAsync()
-           );
-
-            // Stream source data in batches
-            var totalCount = await _sourceContext.JobTranMst.CountAsync();
-
-            for (int i = 0; i < totalCount; i += batchSize)
             {
-                var batch = await _sourceContext.JobTranMst
-                    .OrderBy(t => t.trans_num)
-                    .Skip(i)
-                     .Take(batchSize)
+                var inserted = new List<JobTranMst>();
+
+                var lastSync = await GetLastSyncDate("JobTranMst");
+
+                var sourceData = await _sourceContext.JobTranMst
+                    .Where(x => x.RecordDate > lastSync)
                     .ToListAsync();
 
-                var newBatch = batch
-                     .Where(t => !existingKeys.Contains(t.trans_num))
-                    .ToList();
+                var existingKeys = (await _localContext.JobTranMst
+                    .Select(t => t.trans_num)
+                    .ToListAsync()).ToHashSet();
 
-                if (newBatch.Any())
+                foreach (var src in sourceData)
                 {
-                    await _localContext.JobTranMst.AddRangeAsync(newBatch);
-                    await _localContext.SaveChangesAsync();
+                    if (existingKeys.Contains(src.trans_num)) continue;
 
-                    foreach (var item in newBatch)
-                    {
-                        SyncLogger.Log("JobTranMst", new Dictionary<string, object>
-                 {
-                 { "trans_num", item.trans_num }
-                });
-
-                        // Also add to HashSet so next batches don’t insert again
-                        existingKeys.Add(item.trans_num);
-                    }
-
-                    newRecords.AddRange(newBatch);
+                    await _localContext.JobTranMst.AddAsync(src);
+                    inserted.Add(src);
                 }
+
+                await _localContext.SaveChangesAsync();
+
+                if (sourceData.Any())
+                    await UpdateLastSyncDate("JobTranMst",
+                        sourceData.Max(x => x.RecordDate));
+
+                return inserted;
             }
 
-            return newRecords;
-        }
 
          public async Task<List<JobSchMst>> SyncJobSchMstAsync()
-         {
-             const int batchSize = 300;
-             var newRecords = new List<JobSchMst>();
+        {
+            var inserted = new List<JobSchMst>();
 
-             // Step 1: Get all existing Job+Suffix combinations as HashSet for fast lookup
-             var existingKeys = await _localContext.JobSchMst
-                 .Select(s => new { s.Job, s.Suffix })
-                 .ToListAsync();
+            var lastSync = await GetLastSyncDate("JobSchMst");
 
-             var existingKeySet = new HashSet<string>(
-                 existingKeys.Select(e => $"{e.Job}_{e.Suffix}")
-             );
+            var sourceData = await _sourceContext.JobSchMst
+                .Where(x => x.RecordDate > lastSync)
+                .ToListAsync();
 
-             // Step 2: Read source data in batches
-             int skip = 0;
-             while (true)
-             {
-                 var batch = await _sourceContext.JobSchMst
-                     .OrderBy(s => s.Job) // Add an order to ensure batching consistency
-                     .Skip(skip)
-                     .Take(batchSize)
-                     .ToListAsync();
+            var existingKeys = (await _localContext.JobSchMst
+                .Select(x => $"{x.Job}_{x.Suffix}")
+                .ToListAsync()).ToHashSet();
 
-                if (!batch.Any())
-                    break;
+            foreach (var src in sourceData)
+            {
+                var key = $"{src.Job}_{src.Suffix}";
+                if (existingKeys.Contains(key)) continue;
 
-                 // Step 3: Filter out existing entries
-                var filtered = batch
-                     .Where(s => !existingKeySet.Contains($"{s.Job}_{s.Suffix}"))
-                    .ToList();
+                await _localContext.JobSchMst.AddAsync(src);
+                inserted.Add(src);
+            }
 
-                if (filtered.Any())
-                 {
-                    await _localContext.JobSchMst.AddRangeAsync(filtered);
-                     await _localContext.SaveChangesAsync();
-                 newRecords.AddRange(filtered);
+            await _localContext.SaveChangesAsync();
 
-                     // Log if needed
-                    foreach (var item in filtered)
-                    {
-                        SyncLogger.Log("JobSchMst", new Dictionary<string, object>
-                 {
-                 { "Job", item.Job! },
-                    { "Suffix", item.Suffix }
-                });
-                    }
-                }
+            if (sourceData.Any())
+                await UpdateLastSyncDate("JobSchMst",
+                    sourceData.Max(x => x.RecordDate));
 
-                 skip += batchSize;
-             }
+            return inserted;
+        }
 
-             return newRecords;
-         } 
          
 
          public async Task<List<ItemMst>> SyncItemMstAsync()
-        {
-            const int batchSize = 300;
-            var newRecords = new List<ItemMst>();
-
-            // Fetch existing keys (item + description)
-            var existingKeys = await _localContext.ItemMst
-                .Select(s => new { s.item, s.description })
-                .ToListAsync();
-
-            var existingKeySet = new HashSet<string>(
-                existingKeys.Select(e => $"{e.item}|{e.description}"),
-                StringComparer.OrdinalIgnoreCase
-            );
-
-            var insertedThisRun = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            int skip = 0;
-            while (true)
             {
-                var batch = await _sourceContext.ItemMst
+                var inserted = new List<ItemMst>();
 
-                    .OrderBy(x => x.item)
-                    .Skip(skip)
-                    .Take(batchSize)
+                var lastSync = await GetLastSyncDate("ItemMst");
+
+                var sourceData = await _sourceContext.ItemMst
+                    .Where(x => x.RecordDate > lastSync)
                     .ToListAsync();
 
-                if (!batch.Any())
-                    break;
+                var existingKeys = (await _localContext.ItemMst
+                    .Select(x => x.item)
+                    .ToListAsync()).ToHashSet();
 
-                // Filter only new records
-                var filtered = batch
-                    .Where(s =>
-                    {
-                        var key = $"{s.item}|{s.description}";
-                        return !existingKeySet.Contains(key) && !insertedThisRun.Contains(key);
-                    })
-                    .ToList();
-
-                if (filtered.Any())
+                foreach (var src in sourceData)
                 {
-                    foreach (var item in filtered)
-                    {
-                        item.item ??= "";
-                        item.description ??= ""; // Ensure description is never null
-                    }
+                    if (existingKeys.Contains(src.item)) continue;
 
-                    await _localContext.ItemMst.AddRangeAsync(filtered);
-                    await _localContext.SaveChangesAsync();
-                    newRecords.AddRange(filtered);
-
-                    foreach (var item in filtered)
-                    {
-                        var key = $"{item.item}|{item.description}";
-                        insertedThisRun.Add(key);
-
-                        SyncLogger.Log("ItemMst", new Dictionary<string, object>
-                {
-                    { "Item", item.item! },
-                    { "Description", item.description! }
-                });
-                    }
+                    await _localContext.ItemMst.AddAsync(src);
+                    inserted.Add(src);
                 }
 
-                skip += batchSize;
+                await _localContext.SaveChangesAsync();
+
+                if (sourceData.Any())
+                    await UpdateLastSyncDate("ItemMst",
+                        (DateTime)sourceData.Max(x => x.RecordDate));
+
+                return inserted;
             }
 
-            return newRecords;
-        }
 
        
         // For WomWcEmployee
         public async Task<List<WomWcEmployee>> SyncWomWcEmployeeAsync()
         {
-            const int batchSize = 300;
-            var newRecords = new List<WomWcEmployee>();
+            var inserted = new List<WomWcEmployee>();
 
-            // Step 1: Get all existing keys (WorkCenter + Employee)
-            var existingKeys = await _localContext.WomWcEmployee
-                .Select(s => new { s.Wc, s.EmpNum }) // assuming these two columns form unique key
+            var lastSync = await GetLastSyncDate("WomWcEmployee");
+
+            var sourceData = await _sourceContext.WomWcEmployee
+                .Where(x => x.RecordDate > lastSync)
                 .ToListAsync();
 
-            var existingKeySet = new HashSet<string>(
-                existingKeys.Select(e => $"{e.Wc}_{e.EmpNum}")
-            );
+            var existingKeys = (await _localContext.WomWcEmployee
+                .Select(x => $"{x.Wc}_{x.EmpNum}")
+                .ToListAsync()).ToHashSet();
 
-            // Step 2: Read source data in batches
-            int skip = 0;
-            while (true)
+            foreach (var src in sourceData)
             {
-                var batch = await _sourceContext.WomWcEmployee
-                    .OrderBy(s => s.Wc) // stable batching
-                    .Skip(skip)
-                    .Take(batchSize)
-                    .ToListAsync();
+                var key = $"{src.Wc}_{src.EmpNum}";
+                if (existingKeys.Contains(key)) continue;
 
-                if (!batch.Any())
-                    break;
-
-                // Step 3: Filter out existing entries
-                var filtered = batch
-                    .Where(s => !existingKeySet.Contains($"{s.Wc}_{s.EmpNum}"))
-                    .ToList();
-
-                if (filtered.Any())
-                {
-                    await _localContext.WomWcEmployee.AddRangeAsync(filtered);
-                    await _localContext.SaveChangesAsync();
-                    newRecords.AddRange(filtered);
-
-                    // Logging
-                    foreach (var item in filtered)
-                    {
-                        SyncLogger.Log("WomWcEmployee", new Dictionary<string, object>
-                {
-                    { "Wc", item.Wc! },
-                    { "EmpNum", item.EmpNum! }
-                });
-                    }
-                }
-
-                skip += batchSize;
+                await _localContext.WomWcEmployee.AddAsync(src);
+                inserted.Add(src);
             }
 
-            return newRecords;
+            await _localContext.SaveChangesAsync();
+
+            if (sourceData.Any())
+                await UpdateLastSyncDate("WomWcEmployee",
+                    sourceData.Max(x => x.RecordDate));
+
+            return inserted;
         }
+
+
+
+
+        public async Task<DateTime> GetLastSyncDate(string table)
+        {
+            var log = await _localContext.SyncLog
+                .FirstOrDefaultAsync(x => x.TableName == table);
+
+            return log?.LastSyncDate ?? new DateTime(2025, 10, 1);
+        }
+
+        public async Task UpdateLastSyncDate(string table, DateTime date)
+        {
+            var log = await _localContext.SyncLog
+                .FirstOrDefaultAsync(x => x.TableName == table);
+
+            if (log == null)
+            {
+                await _localContext.SyncLog.AddAsync(new SyncLog
+                {
+                    TableName = table,
+                    LastSyncDate = date
+                });
+            }
+            else
+            {
+                log.LastSyncDate = date;
+            }
+
+            await _localContext.SaveChangesAsync();
+        }
+
+
+
+
+
+
+
+
+
+
     }
+
+
+
+
+
 }
 
     

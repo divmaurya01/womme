@@ -14,6 +14,7 @@ import { LoaderService } from '../../services/loader.service';
 import { finalize, flatMap } from 'rxjs/operators';
 import { BrowserQRCodeReader } from '@zxing/browser';
 import { TabViewModule } from 'primeng/tabview';
+import * as XLSX from 'xlsx';
 
 
 @Component({
@@ -48,6 +49,14 @@ export class VerifyTransaction implements OnInit {
   totalRecordsNew = 0;
   totalRecordsOngoing = 0;
   totalRecordsCompleted = 0;
+  globalSearchNew: string = '';
+  globalSearchOngoing: string = '';
+  globalSearchCompleted: string = '';
+
+  allNewJobs: any[] = [];
+  allOngoingJobs: any[] = [];
+  allCompletedJobs: any[] = [];
+
 
 
 
@@ -100,18 +109,22 @@ export class VerifyTransaction implements OnInit {
             x.verify = false;
           });
 
-          this.newJobs = data.filter((x: any) =>
-            (!x.status || x.status === '') && x.isActive === false
-          );
+          this.newJobs = data.filter((x: { status: string; isActive: boolean; }) =>
+              (!x.status || x.status === '') && x.isActive === false
+            );
+
+            this.ongoingJobs = data.filter((x: { status: string; isActive: boolean; }) =>
+              x.status === '1' && x.isActive === true
+            );
+
+            this.allNewJobs = [...this.newJobs];
+            this.allOngoingJobs = [...this.ongoingJobs];
+
+            this.totalRecordsNew = this.newJobs.length;
+            this.totalRecordsOngoing = this.ongoingJobs.length;
 
 
-          this.ongoingJobs = data.filter((x: any) =>
-            x.status === '1' && x.isActive === true
-          );          
-
-          this.totalRecordsNew = this.newJobs.length;
-          this.totalRecordsOngoing = this.ongoingJobs.length;
-          this.totalRecordsCompleted = this.completedJobs.length;
+          
         },
         error: () => {
           Swal.fire('Error', 'Failed to load transactions', 'error');
@@ -282,8 +295,10 @@ loadCompletedJobs() {
     .subscribe({
       next: (res) => {
         this.completedJobs = res.data || [];
-        this.totalRecordsCompleted = res.totalRecords || this.completedJobs.length;
+        this.allCompletedJobs = [...this.completedJobs];   
+        this.totalRecordsCompleted = this.completedJobs.length;
       },
+
       error: () => {
         Swal.fire('Error', 'Failed to load completed jobs', 'error');
       }
@@ -386,4 +401,76 @@ loadCompletedJobs() {
         }
       });
   }
+
+  onGlobalSearchNew() {
+  const raw = this.globalSearchNew.toLowerCase().trim();
+
+  if (!raw) {
+    this.newJobs = [...this.allNewJobs];
+    return;
+  }
+
+  const keywords = raw.split('|').map(k => k.trim());
+
+  this.newJobs = this.allNewJobs.filter(job =>
+    keywords.some(keyword =>
+      Object.values(job).some(val =>
+        val?.toString().toLowerCase().includes(keyword)
+      )
+    )
+  );
+}
+
+onGlobalSearchOngoing() {
+  const raw = this.globalSearchOngoing.toLowerCase().trim();
+
+  if (!raw) {
+    this.ongoingJobs = [...this.allOngoingJobs];
+    return;
+  }
+
+  const keywords = raw.split('|').map(k => k.trim());
+
+  this.ongoingJobs = this.allOngoingJobs.filter(job =>
+    keywords.some(keyword =>
+      Object.values(job).some(val =>
+        val?.toString().toLowerCase().includes(keyword)
+      )
+    )
+  );
+}
+
+onGlobalSearchCompleted() {
+  const raw = this.globalSearchCompleted.toLowerCase().trim();
+
+  if (!raw) {
+    this.completedJobs = [...this.allCompletedJobs];
+    return;
+  }
+
+  const keywords = raw.split('|').map(k => k.trim());
+
+  this.completedJobs = this.allCompletedJobs.filter(job =>
+    keywords.some(keyword =>
+      Object.values(job).some(val =>
+        val?.toString().toLowerCase().includes(keyword)
+      )
+    )
+  );
+}
+
+
+exportExcel(data: any[], fileName: string) {
+  if (!data.length) return;
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, fileName + '.xlsx');
+}
+
+
+
+
+
 }

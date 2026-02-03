@@ -113,7 +113,7 @@ public class DeleteController : ControllerBase
                 if (dto == null ||
                     string.IsNullOrEmpty(dto.jobNumber) ||
                     string.IsNullOrEmpty(dto.serialNo) ||
-                    dto.oper_num == null)                    
+                    dto.oper_num <= 0)                    
                 {
                     return BadRequest(new { message = "Missing parameters" });
                 }

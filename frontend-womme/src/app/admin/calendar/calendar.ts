@@ -11,6 +11,8 @@ import { ButtonModule } from 'primeng/button';
 import Swal from 'sweetalert2';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
+
 @Component({
   selector: 'app-calendar-page',
   templateUrl: './calendar.html',
@@ -50,6 +52,11 @@ export class CalendarComponent implements OnInit {
   calendarDialog: boolean = false;
   showCalendarScreen: boolean = false;
 
+  allCalendars: any[] = [];      // full data from API
+  filteredCalendars: any[] = []; // table binding
+  globalSearch = '';
+
+
   selectedMonth: number = 0;
   openCalendarDialog: boolean = false; // controls dialog visibility
 
@@ -73,30 +80,51 @@ export class CalendarComponent implements OnInit {
       .pipe(finalize(() => this.loader.hide()))
       .subscribe({
         next: (res: any[]) => {
-          this.calendarList = (Array.isArray(res) ? res : []).map(entry => {
-            try {
-              const d = new Date(entry?.date);
-              if (isNaN(d.getTime())) throw new Error("Invalid date");
+          const list = (Array.isArray(res) ? res : []).map(entry => {
+            const d = new Date(entry.date);
+            return {
+              ...entry,
+              date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+              typeText: entry.flag === 0 ? 'Overtime' : 'Double Time'
+            };
+          });
 
-              return {
-                ...entry,
-                date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-              };
-            } catch (err) {
-              console.warn("Skipping invalid entry:", entry, err);
-              return null;
-            }
-          }).filter(Boolean); // remove nulls
+          this.allCalendars = list;            // ✅ full data
+          this.filteredCalendars = [...list]; // ✅ table data
 
-          this.fetchMarkedDates(); // fill markedDates
+          this.fetchMarkedDates();
         },
         error: err => {
           console.error("Failed to load calendars:", err);
-          this.calendarList = [];
+          this.allCalendars = [];
+          this.filteredCalendars = [];
         }
       });
   }
-  // showCalendarDialog = false;
+
+onGlobalSearch(value: string): void {
+  const rawSearch = value.toLowerCase().trim();
+
+  if (!rawSearch) {
+    this.filteredCalendars = [...this.allCalendars];
+    return;
+  }
+
+  const keywords = rawSearch
+    .split('|')
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
+
+  this.filteredCalendars = this.allCalendars.filter(item =>
+    keywords.some(keyword =>
+      Object.values(item).some(val =>
+        val?.toString().toLowerCase().includes(keyword)
+      )
+    )
+  );
+}
+
+
 
   // Open dialog
   openAddDialog(form?: any) {
@@ -184,6 +212,7 @@ export class CalendarComponent implements OnInit {
   }
   showValidation = false;
 
+
   submitCalendar() {
     this.submitted = true;
 
@@ -239,6 +268,65 @@ export class CalendarComponent implements OnInit {
       });
 
   }
+
+  onExcelUpload(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = (e: any) => {
+      const workbook = XLSX.read(e.target.result, { type: 'binary' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      const data = XLSX.utils.sheet_to_json(sheet);
+
+      // Transform excel rows to API payload
+      const payload = data.map((row: any) => ({
+        date: this.formatExcelDate(row.date),
+        flag: Number(row.flag),
+        calendarDescription: row.calendarDescription,
+        occasion: row.occasion
+      }));
+
+      this.uploadCalendarData(payload);
+    };
+
+    reader.readAsBinaryString(file);
+  }
+
+  formatExcelDate(value: any): string {
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+
+    if (typeof value === 'number') {
+      const date = XLSX.SSF.parse_date_code(value);
+      return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+    }
+
+    return value; // already yyyy-mm-dd
+  }
+
+  uploadCalendarData(payload: any[]) {
+    this.loader.show();
+
+    this.jobService.importCalendar(payload)   // <-- send ARRAY directly
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: () => {
+          Swal.fire('Success', 'Calendar imported successfully!', 'success');
+          this.loadCalendarList();
+          this.fetchMarkedDates();
+        },
+        error: err => {
+          console.error(err);
+          Swal.fire('Error', 'Failed to import calendar', 'error');
+        }
+      });
+  }
+
 
 
   deleteEntry(id: number, event: Event) {
@@ -307,7 +395,8 @@ export class CalendarComponent implements OnInit {
   getHoverText(date: any): string {
     const dateStr = `${date.year}-${String(date.month + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 
-    const entry = this.calendarList.find(x => x.date === dateStr);
+    const entry = this.allCalendars.find(x => x.date === dateStr);
+
     if (!entry) return '';
 
     return entry.flag === 0 ? 'Overtime' : 'Double Time';
@@ -315,15 +404,11 @@ export class CalendarComponent implements OnInit {
 
 
   getHoverTextFromString(dateStr: string): string {
-    if (!dateStr) return '';
-
-    // If markedDates not filled, attempt to ensure it's available
-    const flag = this.markedDates?.[dateStr];
-    if (flag === 0) return 'Overtime';
-    if (flag === 1) return 'Double Time';
-
-    return '';
+    const entry = this.allCalendars.find(x => x.date === dateStr);
+    if (!entry) return '';
+    return entry.flag === 0 ? 'Overtime' : 'Double Time';
   }
+
 
 
 
@@ -336,21 +421,22 @@ export class CalendarComponent implements OnInit {
 
   getDateClass(date: any): string {
 
-    // 1️⃣ Convert to real JavaScript date
-    const jsDate = new Date(date.year, date.month, date.day);
+    // PrimeNG month is ZERO-based — DO NOT modify
+    const fullDate = `${date.year}-${String(date.month + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 
-    // 2️⃣ If Sunday → always overtime
-    if (jsDate.getDay() === 0) {  // Sunday = 0
-      return "overtime-day";
+    // Sunday → always overtime
+    const jsDate = new Date(date.year, date.month, date.day);
+    if (jsDate.getDay() === 0) {
+      return 'overtime-day';
     }
 
-    // 3️⃣ For backend marked dates
-    const full = `${date.year}-${String(date.month + 1).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
-    const entry = this.calendarList.find(x => x.date === full);
+    // 🔥 USE allCalendars (not calendarList)
+    const entry = this.allCalendars.find(x => x.date === fullDate);
+    if (!entry) return '';
 
-    if (!entry) return "";
-    return entry.flag === 0 ? "overtime-day" : "doubletime-day";
+    return entry.flag === 0 ? 'overtime-day' : 'doubletime-day';
   }
+
 
   openCalendarForDate(dateStr: string, event: Event) {
     event.preventDefault();
@@ -379,5 +465,30 @@ export class CalendarComponent implements OnInit {
     this.dummyDate = new Date(this.selectedYear, month - 1, 1);
     this.showCalendarScreen = true;
   }
+
+  exportCalendarToExcel(): void {
+  if (!this.filteredCalendars || this.filteredCalendars.length === 0) {
+    Swal.fire('No Data', 'No Calendar data available to export', 'info');
+    return;
+  }
+
+  const exportData = this.filteredCalendars.map((cal, index) => ({
+    'Sr No': index + 1,
+    'Date': cal.date,
+    'Occasion': cal.occasion,
+    'Description': cal.calendarDescription,
+    'Type': cal.typeText   // Overtime / Double Time
+  }));
+
+  const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook: XLSX.WorkBook = {
+    Sheets: { 'Calendar': worksheet },
+    SheetNames: ['Calendar']
+  };
+
+  XLSX.writeFile(workbook, 'Calendar_List.xlsx');
+}
+
+
   
 }

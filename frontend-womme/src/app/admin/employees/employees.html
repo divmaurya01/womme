@@ -27,12 +27,22 @@
               type="text"
               pInputText
               placeholder="Search Employee"
-              [(ngModel)]="searchTerm"
-              (ngModelChange)="onSearchChange($event)"
+              [(ngModel)]="globalSearch"
+              (input)="onGlobalSearch()"
               class="form-control ps-5 pe-5 rounded-pill shadow-sm"
-              style="height: 45px; transition: all 0.3s;"
+              style="height: 45px;"
             />
+
           </div>
+
+          <button
+            type="button"
+            class="btn btn-success rounded-pill px-3 py-2 ms-2"
+            title="Export to Excel"
+            (click)="exportEmployeesToExcel()"style="cursor: pointer;">
+          <i class="fa-solid fa-file-excel me-2"></i>
+          Export
+          </button>
 
           <!-- Sync Button (Right Side) -->
           <div class="ms-auto">
@@ -50,6 +60,8 @@
               {{ syncMessage }}
             </div>
           </div>
+          
+
         </div>
 
       </div>
@@ -70,6 +82,18 @@
         <form #employeeForm="ngForm" (ngSubmit)="submitForm(employeeForm)" class="p-fluid">
           <div class="row g-3">
 
+            <!-- WOMM Login ID -->
+            <div class="col-md-6">
+              <label class="form-label">WOMM Login ID</label>
+              <input
+                type="text"
+                class="form-control"
+                [value]="newEmployee.loginID"
+                disabled
+              />
+            </div>
+
+
             <!-- Employee Number -->
             <div class="col-md-6">
               <label for="empNum" class="form-label">Employee Number<span class="text-danger">*</span></label>
@@ -87,11 +111,30 @@
             <div class="col-md-6">
               <label for="name" class="form-label">Name<span class="text-danger">*</span></label>
               <input id="name" type="text" class="form-control"
-                    [(ngModel)]="newEmployee.name" name="name" required />
+                    [(ngModel)]="newEmployee.name" name="name" disabled required />
               <div *ngIf="employeeForm.submitted && !newEmployee.name" class="text-danger small">
                 Name is required
               </div>
             </div>
+
+            <!-- Email -->
+            <div class="col-md-6">
+              <label for="email" class="form-label">
+                Email <span class="text-danger">*</span>
+              </label>
+              <input
+                id="email"
+                type="email"
+                class="form-control"
+                [(ngModel)]="newEmployee.email"
+                name="email"
+                required />
+              <div *ngIf="employeeForm.submitted && !newEmployee.email"
+                  class="text-danger small">
+                Email is required
+              </div>
+            </div>
+
 
             <!-- Password -->
             <div class="col-md-6">
@@ -131,7 +174,7 @@
                 type="text"
                 class="form-control"
                 [(ngModel)]="newEmployee.site_ref"
-                name="site_ref"
+                name="site_ref" disabled
                 required
               />
             </div>
@@ -159,7 +202,7 @@
 
             <!-- Submit Button -->
             <div class="col-12 text-end">
-              <button type="submit" class="btn btn-primary mt-3">
+              <button type="submit" class="custom-submit-btn mt-3">
                 {{ isEditMode ? 'Update' : 'Submit' }}
               </button>
             </div>
@@ -172,38 +215,74 @@
         <div class="card-body p-1">
           <p-table
             #dt
-            [value]="employees"
-            [lazy]="true"
-            [paginator]="true"
-            [rows]="10"
-            [totalRecords]="totalRecords"
-            (onLazyLoad)="loadEmployeesLazy($event)"
-            [loading]="isLoading"
+            [value]="filteredEmployees"
+            sortMode="multiple"
             [responsiveLayout]="'scroll'"
-            [scrollable]="true"
-            scrollHeight="400px"
             [resizableColumns]="true"
             [autoLayout]="true"
             columnResizeMode="expand"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
             class="p-datatable-sm p-datatable-striped custom-p-table"
+            [scrollable]="true"
+            scrollHeight="500px"
           >
             <ng-template pTemplate="header">
               <tr>
-                <th style="background-color: #ECC391;">Sr No.</th>
-                <th style="background-color: #ECC391;">Login ID</th>
-                <th style="background-color: #ECC391;">Employee No.</th>
-                <th style="background-color: #ECC391;">Name</th>
-                <th style="background-color: #ECC391;">Department</th>
-                <th style="background-color: #ECC391;">Emp. Type</th>
-                <th style="background-color: #ECC391;">Pay</th>
-                <th style="background-color: #ECC391;">Reg Rate</th>
-                <th style="background-color: #ECC391;">OT Rate</th>
-                <th style="background-color: #ECC391;">Doub Rate</th>
-                <th style="background-color: #ECC391;">Action</th>
+                <th style="background-color:#ECC391;">Sr No.</th>
+
+                <th pSortableColumn="loginID" style="background-color:#ECC391;">
+                  Login ID
+                  <p-sortIcon field="loginID" />
+                </th>
+
+                <th pSortableColumn="empNum" style="background-color:#ECC391;">
+                  Employee No.
+                  <p-sortIcon field="empNum" />
+                </th>
+
+                <th pSortableColumn="name" style="background-color:#ECC391;">
+                  Name
+                  <p-sortIcon field="name" />
+                </th>
+
+                <th pSortableColumn="email" style="background-color:#ECC391;">
+                  Email
+                  <p-sortIcon field="email" />
+                </th>
+
+                <th pSortableColumn="dept" style="background-color:#ECC391;">
+                  Department
+                  <p-sortIcon field="dept" />
+                </th>
+
+                <th pSortableColumn="emp_type" style="background-color:#ECC391;">
+                  Emp. Type
+                  <p-sortIcon field="emp_type" />
+                </th>
+
+                <th pSortableColumn="pay_freq" style="background-color:#ECC391;">
+                  Pay
+                  <p-sortIcon field="pay_freq" />
+                </th>
+
+                <th pSortableColumn="mfg_reg_rate" style="background-color:#ECC391;">
+                  Reg Rate
+                  <p-sortIcon field="mfg_reg_rate" />
+                </th>
+
+                <th pSortableColumn="mfg_ot_rate" style="background-color:#ECC391;">
+                  OT Rate
+                  <p-sortIcon field="mfg_ot_rate" />
+                </th>
+
+                <th pSortableColumn="mfg_dt_rate" style="background-color:#ECC391;">
+                  Doub Rate
+                  <p-sortIcon field="mfg_dt_rate" />
+                </th>
+
+                <th style="background-color:#ECC391;">Action</th>
               </tr>
             </ng-template>
+
 
             <ng-template pTemplate="body" let-emp let-rowIndex="rowIndex">
               <tr>
@@ -211,6 +290,7 @@
                 <td>{{ emp.loginID }}</td>
                 <td>{{ emp.empNum }}</td>
                 <td>{{ emp.name }}</td>
+                <td>{{ emp.email }}</td>
                 <td>{{ emp.dept }}</td>
                 <td>{{ emp.emp_type }}</td>
                 <td>{{ emp.pay_freq }}</td>

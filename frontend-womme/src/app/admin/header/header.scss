@@ -104,13 +104,14 @@
   }
 
   .btn-outline-secondary {
-    background-color: #f3e0c8;
+    background-color: #ECC391;
     border: none;
-    color: rgb(155, 155, 155);
+    color: white;
     cursor: pointer;
 
     &:hover {
-      background-color: #d2d5d6;
+      background-color: #D37A06;
+      color: #ddd;
     }
   }
 

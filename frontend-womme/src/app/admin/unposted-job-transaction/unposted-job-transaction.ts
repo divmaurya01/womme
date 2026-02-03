@@ -13,6 +13,7 @@ import { Subject } from 'rxjs';
 import { LoaderService } from '../../services/loader.service';
 import { finalize, flatMap } from 'rxjs/operators';
 import { BrowserQRCodeReader } from '@zxing/browser';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-unposted-job-transaction',
@@ -43,6 +44,11 @@ export class UnpostedJobTransaction implements OnInit {
   searchTerm: string = '';
   isLoading: boolean = false;
   isSidebarHidden = false;
+
+  allTransactions: any[] = [];
+  filteredTransactions: any[] = [];
+  globalSearch: string = '';
+
 
   activeJobTrans: any[] = [];
   showWizard: boolean = false;
@@ -95,7 +101,7 @@ export class UnpostedJobTransaction implements OnInit {
     this.role_id = userDetails.roleID;
 
     // Load unposted jobs
-    this.jobService.GetUnpostedTransactions(page, size, this.searchTerm, this.employeeCode)
+    this.jobService.GetUnpostedTransactions(0, 100000, '', this.employeeCode)
       .subscribe({
         next: (jobRes: any) => {
           const rawJobs = jobRes.data ?? [];
@@ -141,8 +147,11 @@ export class UnpostedJobTransaction implements OnInit {
               }
 
               // SINGLE ASSIGNMENT
-              this.transactions = filteredJobs;
-              this.totalRecords = filteredJobs.length;
+              this.allTransactions = filteredJobs;          // master copy
+              this.filteredTransactions = [...filteredJobs]; // table data
+              this.transactions = this.filteredTransactions; // for timers logic
+              this.totalRecords = this.filteredTransactions.length;
+
 
               // Load running transactions AFTER final list
               this.loadActiveJobTransactions();
@@ -551,6 +560,7 @@ export class UnpostedJobTransaction implements OnInit {
 
       return job;
     });
+    this.filteredTransactions = [...this.transactions]; 
   }
 
 
@@ -583,4 +593,52 @@ export class UnpostedJobTransaction implements OnInit {
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
   }
+
+
+  onGlobalSearch(): void {
+  const raw = this.globalSearch.toLowerCase().trim();
+
+  if (!raw) {
+    this.filteredTransactions = [...this.allTransactions];
+    this.transactions = this.filteredTransactions;
+    return;
+  }
+
+  const keywords = raw.split('|').map(k => k.trim());
+
+  this.filteredTransactions = this.allTransactions.filter(job =>
+    keywords.some(keyword =>
+      Object.values(job).some(val =>
+        val?.toString().toLowerCase().includes(keyword)
+      )
+    )
+  );
+
+  this.transactions = this.filteredTransactions;
+}
+
+exportToExcel(): void {
+  if (!this.filteredTransactions.length) return;
+
+  const exportData = this.filteredTransactions.map((x, i) => ({
+    'Sr No': i + 1,
+    'Job': x.jobNumber,
+    'Serial': x.serialNo,
+    'Qty': x.qtyReleased,
+    'Operation': x.operationNumber,
+    'WC': x.wcCode,
+    'Employee': x.emp_num,
+    'Machine': x.machine_id
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Jobs');
+  XLSX.writeFile(wb, 'UnpostedJobs.xlsx');
+}
+
+
+
+
+
 }

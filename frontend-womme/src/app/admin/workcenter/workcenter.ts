@@ -11,6 +11,7 @@ import { DialogModule } from 'primeng/dialog';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
 import { DropdownModule } from 'primeng/dropdown';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-workcenter',
@@ -36,6 +37,14 @@ export class workcenter implements OnInit {
   employees: any[] = [];
 
   workCenterDropdown: any[] = [];
+
+  
+  filteredWorkCenters: any[] = [];   // 🔥 for table
+  globalSearch = '';
+
+  formError: string | null = null;
+  isSubmitting = false;
+
 
   searchTerm = '';
   totalOperations = 0;
@@ -105,93 +114,123 @@ export class workcenter implements OnInit {
 
 
   // Load WorkCenters
-  loadWorkCenters(event?: any): void {
-    this.isOperationLoading = true;
-    const page = event?.first ? event.first / (event?.rows || 50) : 0;
-    const size = event?.rows || 50;
+  loadWorkCenters(): void {
+  this.loader.show();
 
-    this.loader.show();
+  this.jobService.GetWorkCenters(0, 100000, '')   // large size OR backend “all”
+    .pipe(finalize(() => this.loader.hide()))
+    .subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.workCenters = res.data.map((wc: any, index: number) => ({
+            entryNo: index + 1,
+            wc: wc.wc,
+            empNum: wc.empNum,
+            description: wc.description,
+            name: wc.name
+          }));
 
-    this.jobService.GetWorkCenters(page, size, this.searchTerm)
-      .pipe(finalize(() => {
-        this.loader.hide();
-        this.isOperationLoading = false;
-      }))
-      .subscribe({
-        next: (res) => {
-          if (res && res.data) {
-            this.workCenters = res.data.map((wc: any, index: number) => ({
-              entryNo: page * size + index + 1,
-              wc: wc.wc,
-              empNum: wc.empNum,
-              description: wc.description,
-              name: wc.name
-            }));
-
-            this.totalOperations = res.total || 0;
-          }
+          this.filteredWorkCenters = [...this.workCenters]; // 🔥 important
         }
-      });
+      }
+    });
+}
+
+
+onGlobalSearch(): void {
+  const rawSearch = this.globalSearch.toLowerCase().trim();
+
+  if (!rawSearch) {
+    this.filteredWorkCenters = [...this.workCenters];
+    return;
   }
 
+  const keywords = rawSearch
+    .split('|')
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
+
+  this.filteredWorkCenters = this.workCenters.filter(wc =>
+    keywords.some(keyword =>
+      Object.values(wc).some(value =>
+        value?.toString().toLowerCase().includes(keyword)
+      )
+    )
+  );
+}
 
 
 
-  // Load Employee list
-  loadEmployees(): void {
-    this.jobService.GetEmployees()
-      .subscribe({
-        next: (res) => {
-          if (res && res.data) {
-            this.employees = res.data.map((emp: any) => ({
-              ...emp,
-              displayText: `${emp.name} (${emp.emp_num})`
-            }));
-          } else {
-            this.employees = [];
-          }
-        },
-        error: (err) => {
-          console.error('Error loading employees:', err);
+
+
+
+ loadEmployees(): void {
+  this.jobService.getAllEmployees()
+    .subscribe({
+      next: (res) => {
+        if (Array.isArray(res)) {
+          this.employees = res.map((emp: any) => ({
+            ...emp,
+            displayText: `${emp.empName} (${emp.empNum})`
+          }));
+        } else {
+          this.employees = [];
         }
-      });
-  }
+      },
+      error: (err) => {
+        console.error('Error loading employees:', err);
+        this.employees = [];
+      }
+    });
+}
+
 
   // Assign Employee-WC
   assignEmployeeWC(): void {
-    if (!this.selectedEmployee || !this.selectedWorkCenter) {
-      Swal.fire('Validation', 'Please select both Employee and WorkCenter', 'warning');
-      return;
+      // Frontend validation
+      if (!this.selectedEmployee || !this.selectedWorkCenter) {
+        this.formError = 'Please select both Employee and WorkCenter.';
+        return;
+      }
+
+      this.formError = null;
+      this.isSubmitting = true;
+
+      const payload = {
+        empNum: this.selectedEmployee.empNum,
+        wc: this.selectedWorkCenter.wc,
+        name: this.selectedEmployee.empName,
+        description: this.selectedWorkCenter.description
+      };
+
+      this.loader.show();
+
+      this.jobService.addEmployeeWc(payload)
+        .pipe(finalize(() => {
+          this.loader.hide();
+          this.isSubmitting = false;
+        }))
+        .subscribe({
+          next: () => {
+            Swal.fire('Success', 'Employee-WC assigned successfully', 'success');
+
+            this.showAssignDialog = false;
+            this.selectedEmployee = null;
+            this.selectedWorkCenter = null;
+            this.formError = null;
+
+            this.loadWorkCenters();
+          },
+          error: (err) => {
+            // ✅ show backend error inside dialog
+            this.formError =
+              err?.error?.message ||
+              err?.message ||
+              'Failed to assign Employee to WorkCenter.';
+          }
+        });
     }
 
-    const payload = {
-      empNum: this.selectedEmployee.emp_num,   // ✅ correct
-      wc: this.selectedWorkCenter.wc,          // ✅ correct
-      name: this.selectedEmployee.name,        // ✅ correct
-      description: this.selectedWorkCenter.description
-    };
-
-    this.loader.show();
-    this.jobService.addEmployeeWc(payload)
-      .pipe(finalize(() => this.loader.hide()))
-      .subscribe({
-        next: () => {
-          Swal.fire('Success', 'Employee-WC assigned successfully', 'success');
-          this.showAssignDialog = false;
-          this.selectedEmployee = null;       // ✅ clear selection
-          this.selectedWorkCenter = null;     // ✅ clear selection
-          this.loadWorkCenters();
-        },
-        error: (err) => {          
-          const backendMsg =
-            err?.error?.message ||
-            err?.message ||
-            "Failed to assign Employee-WC";
-          Swal.fire('Error', backendMsg, 'error');
-          console.error('Error assigning Employee-WC:', err);
-        }
-      });
-  }
 
 
   // Delete Employee-WC mapping
@@ -221,4 +260,31 @@ export class workcenter implements OnInit {
       }
     });
   }
+
+
+  exportWorkCenterEmployeeToExcel(): void {
+    if (!this.filteredWorkCenters || this.filteredWorkCenters.length === 0) {
+      Swal.fire('No Data', 'No WorkCenter-Employee data available to export', 'info');
+      return;
+    }
+
+    const exportData = this.filteredWorkCenters.map((wc, index) => ({
+      'Sr No': index + 1,
+      'Work Center': wc.wc,
+      'Employee No': wc.empNum,
+      'Description': wc.description,
+      'Employee Name': wc.name
+    }));
+
+    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook: XLSX.WorkBook = {
+      Sheets: { 'WorkCenter-Employee': worksheet },
+      SheetNames: ['WorkCenter-Employee']
+    };
+
+    XLSX.writeFile(workbook, 'WorkCenter_Employee_Mapping.xlsx');
+  }
+
+
+
 }

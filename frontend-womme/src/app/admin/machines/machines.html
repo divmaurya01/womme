@@ -7,11 +7,30 @@
     <section class="table-wrapper">
 
       <!-- Add Machine Button -->
-      <div class="mb-3" style="padding-top: 2em;">
+      <div class="mb-3 d-flex justify-content-between align-items-center" style="padding-top: 2em;">
         <button class="btn custom-assign-btn" (click)="openAddDialog(machineForm)">
           + Machine
         </button>
+
+        <button class="btn btn-success" (click)="exportMachinesToExcel()"style="cursor: pointer;">
+          <i class="fa-solid fa-file-excel me-2"></i>
+          Export
+        </button>
       </div>
+
+
+      <div class="row mb-2">
+        <div class="col-md-4 ms-auto">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Search Machine..."
+            [(ngModel)]="globalSearch"
+            (input)="onGlobalSearch()"
+          />
+        </div>
+      </div>
+
 
       <!-- Dialog Box -->
       <p-dialog
@@ -103,28 +122,40 @@
         <div class="card-body p-1">
           <p-table
             #dt
-            [value]="filteredMachines()"
-            [paginator]="true"
-            [rows]="15"
+            [value]="filteredMachinesList"
             [responsiveLayout]="'scroll'"
-            [scrollable]="true"
-            scrollHeight="400px"
             [resizableColumns]="true"
             [autoLayout]="true"
-            columnResizeMode="expand"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
-            class="p-datatable-sm p-datatable-striped custom-p-table">
+            columnResizeMode="expand"  
+            sortMode="multiple"          
+            class="p-datatable-sm p-datatable-striped custom-p-table" 
+            [scrollable]="true"
+            scrollHeight="500px"               
+            >
 
             <ng-template pTemplate="header">
               <tr>
                 <th style="background-color: #ECC391;">Sr No.</th>
-                <th style="background-color: #ECC391;">Machine Number</th>
-                <th style="background-color: #ECC391;">Machine Name</th>
-                <th style="background-color: #ECC391;">Description</th>
+
+                <th pSortableColumn="machineNumber" style="background-color: #ECC391;">
+                  Machine Number
+                  <p-sortIcon field="machineNumber"></p-sortIcon>
+                </th>
+
+                <th pSortableColumn="machineName" style="background-color: #ECC391;">
+                  Machine Name
+                  <p-sortIcon field="machineName"></p-sortIcon>
+                </th>
+
+                <th pSortableColumn="machineDescription" style="background-color: #ECC391;">
+                  Description
+                  <p-sortIcon field="machineDescription"></p-sortIcon>
+                </th>
+
                 <th style="background-color: #ECC391;">Action</th>
               </tr>
             </ng-template>
+
 
             <ng-template pTemplate="body" let-machine let-rowIndex="rowIndex">
               <tr>

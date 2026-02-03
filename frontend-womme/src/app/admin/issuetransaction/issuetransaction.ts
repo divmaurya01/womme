@@ -8,6 +8,7 @@ import { TableModule, Table } from 'primeng/table';
 import Swal from 'sweetalert2';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-unposted-job-transaction',
@@ -32,10 +33,15 @@ export class Issuetransaction implements OnInit {
 
   totalRecords: number = 0;
   page: number = 0;
-  size: number = 50;
+  size: number = 200;
   searchTerm: string = '';
   isLoading: boolean = false;
   isSidebarHidden = false;
+  
+  filteredTransactions: any[] = [];
+  globalSearch: string = '';
+  
+
 
   constructor(
     private jobService: JobService,
@@ -47,42 +53,34 @@ export class Issuetransaction implements OnInit {
   }
 
   // ✅ Load only job data — nothing else
-  loadJobs(pageEvent?: any) {
-    this.isLoading = true;
-    this.loader.show();
+  loadJobs() {
+  this.isLoading = true;
+  this.loader.show();
 
-    const page = pageEvent?.first ? pageEvent.first / pageEvent.rows : this.page;
-    const size = pageEvent?.rows ?? this.size;
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  this.employeeCode = userDetails?.employeeCode;
 
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-    this.employeeCode = userDetails?.employeeCode;
-    this.role_id = userDetails.roleID;
+  this.jobService.GetIssuedTransactions(0, 100000, '', this.employeeCode)
+    .pipe(finalize(() => {
+      this.isLoading = false;
+      this.loader.hide();
+    }))
+    .subscribe({
+      next: (res: any) => {
+        this.transactions = (res.data ?? []).map((x: any) => ({
+          serialNo: x.serialNo?.trim(),
+          jobNumber: x.job?.trim(),
+          qtyReleased: x.qtyReleased,
+          item: x.item?.trim(),
+          operationNumber: x.operNum,
+          wcCode: x.wcCode?.trim()
+        }));
 
-    this.jobService.GetIssuedTransactions(page, size, this.searchTerm, this.employeeCode)
-      .pipe(finalize(() => {
-        this.isLoading = false;
-        this.loader.hide();
-      }))
-      .subscribe({
-        next: (res: any) => {
-          this.transactions = (res.data ?? []).map((x: any) => ({
-            serialNo: (x.serialNo ?? '').toString().trim(),
-            jobNumber: (x.job ?? '').toString().trim(),
-            qtyReleased: x.qtyReleased,
-            operationNumber: x.operNum ?? x.operationNumber,
-            wcCode: (x.wcCode ?? '').toString().trim(),
-            wcDescription: (x.wcDescription ?? '').toString().trim()
-          }));
+        this.filteredTransactions = [...this.transactions];
+      }
+    });
+}
 
-          this.totalRecords = res.totalRecords ?? 0;
-        },
-        error: (err) => {
-          this.loader.hide();
-          console.error('Error fetching job transactions:', err);
-          Swal.fire('Error', 'Failed to load jobs', 'error');
-        }
-      });
-  }
 
 
   startIssueJob(job: any) {
@@ -130,10 +128,43 @@ export class Issuetransaction implements OnInit {
     });
   }
 
-  onSearchChange(value: string) {
-    this.searchTerm = value;
-    this.loadJobs({ first: 0, rows: this.size });
+  onGlobalSearch(): void {
+    const raw = this.globalSearch.toLowerCase().trim();
+
+    if (!raw) {
+      this.filteredTransactions = [...this.transactions];
+      return;
+    }
+
+    const keys = raw.split('|').map(k => k.trim());
+
+    this.filteredTransactions = this.transactions.filter(job =>
+      keys.some(keyword =>
+        Object.values(job).some(val =>
+          val?.toString().toLowerCase().includes(keyword)
+        )
+      )
+    );
   }
+
+  exportToExcel(): void {
+    if (!this.filteredTransactions.length) return;
+
+    const exportData = this.filteredTransactions.map((x, i) => ({
+      'Sr No': i + 1,
+      'Job': x.jobNumber,
+      'Serial': x.serialNo,
+      'Item': x.item,
+      'Qty': x.qtyReleased,
+      'Operation': x.operationNumber
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+    XLSX.writeFile(wb, 'IssuedTransactions.xlsx');
+  }
+
 
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;

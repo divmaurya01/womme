@@ -16,7 +16,7 @@
        <section class="section" *ngIf="roleId === 4 || (roleId !== 4 && roleId !== 5)">
           <h3 class="section-title">Transaction Overview</h3>
           <div class="cards-grid">
-            <div class="card green">
+            <div class="card green" (click)="goToTransaction('running')">
               <div class="card-header">
                 <span>RUNNING</span>
                 <i class="bi bi-lightning-charge"></i>
@@ -24,7 +24,7 @@
               <h1>{{ transaction.runningJobs }}</h1>
             </div>
 
-            <div class="card yellow">
+            <div class="card yellow" (click)="goToTransaction('paused')">
               <div class="card-header">
                 <span>PAUSED</span>
                 <i class="bi bi-pause-circle"></i>
@@ -32,7 +32,7 @@
               <h1>{{ transaction.pausedJobs }}</h1>
             </div>
 
-            <div class="card red">
+            <div class="card red" (click)="goToTransaction('critical')">
               <div class="card-header">
                 <span>ONGOING CRITICAL</span>
                 <i class="bi bi-exclamation-triangle"></i>
@@ -40,7 +40,7 @@
               <h1>{{ transaction.ongoingCriticalJobs }}</h1>
             </div>
 
-            <div class="card orange">
+            <div class="card orange" (click)="goToTransaction('extended')">
               <div class="card-header">
                 <span>EXTENDED</span>
                 <i class="bi bi-clock-history"></i>
@@ -48,7 +48,7 @@
               <h1>{{ transaction.extendedJobs }}</h1>
             </div>
 
-            <div class="card gray">
+            <div class="card gray" (click)="goToTransaction('completed')">
               <div class="card-header">
                 <span>NORMAL COMPLETED</span>
                 <i class="bi bi-check2-circle"></i>
@@ -63,7 +63,7 @@
         <section class="section" *ngIf="roleId === 5 || (roleId !== 4 && roleId !== 5)">
           <h3 class="section-title">QC Overview</h3>
           <div class="cards-grid">
-            <div class="card green">
+            <div class="card green" (click)="goToQC('running')">
               <div class="card-header">
                 <span>RUNNING</span>
                 <i class="bi bi-lightning-charge"></i>
@@ -71,7 +71,7 @@
               <h1>{{ qc.runningQCJobs }}</h1>
             </div>
 
-            <div class="card yellow">
+            <div class="card yellow" (click)="goToQC('paused')">
               <div class="card-header">
                 <span>PAUSED</span>
                 <i class="bi bi-pause-circle"></i>
@@ -79,7 +79,7 @@
               <h1>{{ qc.pausedQCJobs }}</h1>
             </div>
 
-            <div class="card red">
+            <div class="card red" (click)="goToQC('critical')">
               <div class="card-header">
                 <span>ONGOING CRITICAL</span>
                 <i class="bi bi-exclamation-triangle"></i>
@@ -87,7 +87,7 @@
               <h1>{{ qc.ongoingCriticalQCJobs }}</h1>
             </div>
 
-            <div class="card orange">
+            <div class="card orange" (click)="goToQC('extended')">
               <div class="card-header">
                 <span>EXTENDED</span>
                 <i class="bi bi-clock-history"></i>
@@ -95,7 +95,7 @@
               <h1>{{ qc.extendedQCJobs }}</h1>
             </div>
 
-            <div class="card gray">
+            <div class="card gray" (click)="goToQC('completed')">
               <div class="card-header">
                 <span>NORMAL COMPLETED</span>
                 <i class="bi bi-check2-circle"></i>
@@ -109,7 +109,7 @@
        <section class="section" *ngIf="roleId !== 4 && roleId !== 5">
           <h3 class="section-title">VERIFY OPERATIONS OVERVIEW</h3>
           <div class="cards-grid">
-            <div class="card green">
+            <div class="card green" (click)="goToVerify('running')">
               <div class="card-header">
                 <span>RUNNING</span>
                 <i class="bi bi-lightning-charge"></i>
@@ -117,7 +117,7 @@
               <h1>{{ verify.runningVerifyJobs }}</h1>
             </div>
 
-            <div class="card yellow">
+            <div class="card yellow" (click)="goToVerify('paused')">
               <div class="card-header">
                 <span>PAUSED</span>
                 <i class="bi bi-pause-circle"></i>
@@ -125,7 +125,7 @@
               <h1>{{ verify.pausedVerifyJobs }}</h1>
             </div>
 
-            <div class="card red">
+            <div class="card red" (click)="goToVerify('critical')">
               <div class="card-header">
                 <span>ONGOING CRITICAL</span>
                 <i class="bi bi-exclamation-triangle"></i>
@@ -133,7 +133,7 @@
               <h1>{{ verify.ongoingCriticalVerifyJobs }}</h1>
             </div>
 
-            <div class="card orange">
+            <div class="card orange" (click)="goToVerify('extended')">
               <div class="card-header">
                 <span>EXTENDED</span>
                 <i class="bi bi-clock-history"></i>
@@ -141,7 +141,7 @@
               <h1>{{ verify.extendedVerifyJobs }}</h1>
             </div>
 
-            <div class="card gray">
+            <div class="card gray" (click)="goToVerify('completed')">
               <div class="card-header">
                 <span>NORMAL COMPLETED</span>
                 <i class="bi bi-check2-circle"></i>

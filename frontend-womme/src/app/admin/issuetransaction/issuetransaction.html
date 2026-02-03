@@ -8,54 +8,76 @@
 
       <!-- Search -->
       <div class="dashboard-control-bar d-flex justify-content-between align-items-center mb-3"
-           style="gap: 1rem; padding-top: 2em;">
-        <div class="flex-grow-1 position-relative" style="min-width: 250px; max-width: 400px;">
-          <input
-            type="text"
-            pInputText
-            placeholder="Search Job"
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="onSearchChange($event)"
-            class="form-control ps-5 pe-5 rounded-pill shadow-sm"
-            style="height: 45px;"
-          />
-        </div>
+          style="gap:1rem; padding-top:2em;">
+
+        <input
+          type="text"
+          pInputText
+          placeholder="Search Job | Serial | WC"
+          [(ngModel)]="globalSearch"
+          (input)="onGlobalSearch()"
+          class="form-control rounded-pill"
+          style="max-width:400px;"
+
+        />
+
+        <button class="btn btn-success" (click)="exportToExcel()">
+          <i class="fa fa-file-excel"></i> Export
+        </button>
+
       </div>
+
 
       <!-- Table -->
       <div class="card p-1 mt-3 shadow-sm">
         <div class="card-body p-1">
 
           <p-table
-            [value]="transactions"
-            [lazy]="true"
-            [paginator]="true"
-            [rows]="50"
-            [totalRecords]="totalRecords"
-            (onLazyLoad)="loadJobs($event)"
-            [loading]="isLoading"
-            [responsiveLayout]="'scroll'"
-            [scrollable]="true"
-            scrollHeight="400px"
-            [resizableColumns]="true"
-            [autoLayout]="true"
-          >
+          #dt
+          [value]="filteredTransactions"
+          [paginator]="true"
+          [rows]="200"
+          sortMode="multiple"
+          [scrollable]="true"
+          scrollHeight="500px"
+          [loading]="isLoading"
+        >
+
             <ng-template pTemplate="header">
               <tr>
-                <th style="background-color: #ECC391; padding: 10px;">S.No</th>
-                <th style="background-color: #ECC391; padding: 10px;">Job</th>
-                <th style="background-color: #ECC391; padding: 10px;">Serial No</th>
-                <th style="background-color: #ECC391; padding: 10px;">Qty</th>
-                <th style="background-color: #ECC391; padding: 10px;">Opr No.</th>                
-                <th style="background-color: #ECC391; padding: 10px;">Action</th>
+                <th style="background-color:#ECC391;">S.No</th>
+
+                <th style="background-color:#ECC391;" pSortableColumn="jobNumber">
+                  Job <p-sortIcon field="jobNumber"></p-sortIcon>
+                </th>
+
+                <th style="background-color:#ECC391;" pSortableColumn="serialNo">
+                  Serial No <p-sortIcon field="serialNo"></p-sortIcon>
+                </th>
+
+                <th style="background-color:#ECC391;" pSortableColumn="item">
+                  Item <p-sortIcon field="item"></p-sortIcon>
+                </th>
+
+                <th style="background-color:#ECC391;" pSortableColumn="qtyReleased">
+                  Qty <p-sortIcon field="qtyReleased"></p-sortIcon>
+                </th>
+
+                <th style="background-color:#ECC391;" pSortableColumn="operationNumber">
+                  Opr No <p-sortIcon field="operationNumber"></p-sortIcon>
+                </th>
+
+                <th style="background-color:#ECC391;">Action</th>
               </tr>
-            </ng-template>
+              </ng-template>
+
 
             <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
               <tr>
                 <td>{{ rowIndex + 1 }}</td>
                 <td>{{ job.jobNumber }}</td>
                 <td>{{ job.serialNo }}</td>
+                <td>{{ job.item }}</td>
                 <td>{{ job.qtyReleased }}</td>
                 <td>{{ job.operationNumber }}</td>               
                 <td>

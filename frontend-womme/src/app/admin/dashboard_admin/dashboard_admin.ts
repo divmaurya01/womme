@@ -3,6 +3,9 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { SidenavComponent } from "../sidenav/sidenav";
 import { HeaderComponent } from "../header/header";
 import { JobService } from '../../services/job.service';
+import { Router, RouterModule } from '@angular/router';
+
+
 
 @Component({
   selector: 'app-dashboard-overview',
@@ -13,7 +16,8 @@ import { JobService } from '../../services/job.service';
     CommonModule,
     DatePipe,
     SidenavComponent,
-    HeaderComponent
+    HeaderComponent,
+    RouterModule
   ]
 })
 export class DashboardOverviewComponent {
@@ -62,7 +66,7 @@ export class DashboardOverviewComponent {
   hoveredRow: number = -1;
   roleId: number = 0;
 
-  constructor(private jobService: JobService) {}
+  constructor(private jobService: JobService, private router: Router) {}
 
   ngOnInit() {
     
@@ -70,6 +74,8 @@ export class DashboardOverviewComponent {
     this.roleId = userDetails.roleID;    
     this.applyRoleRules();    
     this.loadUtilizationData(); 
+    
+
   }
 
   toggleSidebar() {
@@ -204,6 +210,77 @@ getStatusBadgeClass(status: string): string {
       return 'badge badge-secondary';
   }
 }
+
+goToTransaction(type: string) {
+  const ss_id =
+    this.router.routerState.snapshot.root.queryParams['ss_id']
+    || localStorage.getItem('ss_id');
+
+  if (!ss_id) {
+    console.warn('ss_id missing');
+    return;
+  }
+
+  const route =
+    type === 'completed'
+      ? '/postedjobtransaction'
+      : '/unpostedjobtransaction';
+
+  const fullUrl = `${route}?ss_id=${encodeURIComponent(ss_id)}`;
+
+  console.log('➡️ Navigating to:', fullUrl);
+
+  this.router.navigate([route], {
+    queryParams: { ss_id }
+  });
+}
+
+goToQC(type: string) {
+  const ss_id =
+    this.router.routerState.snapshot.root.queryParams['ss_id']
+    || localStorage.getItem('ss_id');
+
+  if (!ss_id) {
+    console.warn('❌ ss_id missing');
+    return;
+  }
+
+  const route =
+    type === 'completed'
+      ? '/postedjobtransaction'
+      : '/qualitychecker';
+
+  const fullUrl = `${route}?status=${type}&ss_id=${encodeURIComponent(ss_id)}`;
+  console.log('➡️ QC URL:', fullUrl);
+
+  this.router.navigate([route], {
+    queryParams: { status: type, ss_id }
+  });
+}
+
+goToVerify(type: string) {
+  const ss_id =
+    this.router.routerState.snapshot.root.queryParams['ss_id']
+    || localStorage.getItem('ss_id');
+
+  if (!ss_id) {
+    console.warn('❌ ss_id missing');
+    return;
+  }
+
+  const route =
+    type === 'completed'
+      ? '/postedjobtransaction'
+      : '/verify-transaction';
+
+  const fullUrl = `${route}?status=${type}&ss_id=${encodeURIComponent(ss_id)}`;
+  console.log('➡️ Verify URL:', fullUrl);
+
+  this.router.navigate([route], {
+    queryParams: { status: type, ss_id }
+  });
+}
+
 
 
 
