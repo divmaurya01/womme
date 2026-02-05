@@ -23,6 +23,15 @@
               ],
               "tsConfig": "tsconfig.app.json",
               "inlineStyleLanguage": "scss",
+              "allowedCommonJsDependencies": [
+                          "canvg",
+                          "html2canvas",
+                          "html2pdf.js",
+                          "sweetalert2",
+                          "file-saver",
+                          "raf",
+                          "rgbcolor"
+                        ],
               "assets": [
                           "src/assets",
                           "src/favicon.ico"

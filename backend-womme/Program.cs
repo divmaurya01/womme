@@ -85,18 +85,16 @@ builder.Services.AddDbContext<SytelineDbContext>(options =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAngularDevClient",
+    options.AddPolicy("AllowAll",
         policy =>
         {
-            policy.WithOrigins(
-                    "http://localhost:4200",
-                    "http://localhost:4000"
-                )
+            policy
+                .AllowAnyOrigin()
                 .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
+                .AllowAnyMethod();
         });
 });
+
 
 
 var app = builder.Build();  
@@ -111,7 +109,7 @@ if (!Directory.Exists(profileImagesPath))
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseRouting();
-app.UseCors("AllowAngularDevClient");
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 // Add Logging Middleware

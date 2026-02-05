@@ -105,53 +105,48 @@ public class DeleteController : ControllerBase
         }
     }
 
-    [HttpDelete("DeleteJobTransaction")]
-        public async Task<IActionResult> DeleteJobTransaction([FromBody] DeleteJobTransactionDto dto)
+    [HttpDelete("DeleteJobTransaction/{jobNumber}/{serialNo}/{operNum}")]
+        public async Task<IActionResult> DeleteJobTransaction(
+            string jobNumber,
+            string serialNo,
+            int operNum)
         {
+            if (string.IsNullOrEmpty(jobNumber) ||
+                string.IsNullOrEmpty(serialNo) ||
+                operNum <= 0)
+            {
+                return BadRequest(new { message = "Missing parameters" });
+            }
+
+            var records = _context.JobTranMst
+                .Where(j =>
+                    j.job == jobNumber &&
+                    j.SerialNo == serialNo &&
+                    j.oper_num == operNum);
+
+            if (!records.Any())
+                return NotFound(new { message = "No Serial number found" });
+
+            _context.JobTranMst.RemoveRange(records);
+            await _context.SaveChangesAsync();
+
+            bool deletedInSyteline = false;
             try
             {
-                if (dto == null ||
-                    string.IsNullOrEmpty(dto.jobNumber) ||
-                    string.IsNullOrEmpty(dto.serialNo) ||
-                    dto.oper_num <= 0)                    
-                {
-                    return BadRequest(new { message = "Missing parameters" });
-                }
-    
-                // ✅ Step 1: Delete from local JobTranMst table
-                var records = _context.JobTranMst
-                    .Where(j => j.job == dto.jobNumber && j.SerialNo == dto.serialNo && j.oper_num== dto.oper_num);
-    
-                if (!records.Any())
-                    return NotFound(new { message = "No Serial number found with given details" });
-    
-                _context.JobTranMst.RemoveRange(records);
-                await _context.SaveChangesAsync();
-    
-                // ✅ Step 2: Delete from Syteline jobtran_mst table
-                bool deletedInSyteline = false;
-                try
-                {
-                    deletedInSyteline = await _sytelineService.DeleteJobFromSytelineAsync(dto.jobNumber, dto.serialNo,dto.oper_num);
-                }
-                catch (Exception sytelineEx)
-                {
-                    // Optional: you can log this or return partial success
-                    Console.WriteLine($"[DeleteJobTransaction] Failed to delete in Syteline: {sytelineEx.Message}");
-                }
-    
-                return Ok(new
-                {
-                    message = "Job deleted successfully",
-                    deletedInLocal = true,
-                    deletedInSyteline
-                });
+                deletedInSyteline =
+                    await _sytelineService.DeleteJobFromSytelineAsync(
+                        jobNumber, serialNo, operNum);
             }
-            catch (Exception ex)
+            catch { }
+
+            return Ok(new
             {
-                return StatusCode(500, new { error = ex.Message });
-            }
+                message = "Job deleted successfully",
+                deletedInLocal = true,
+                deletedInSyteline
+            });
         }
+
  
 
   

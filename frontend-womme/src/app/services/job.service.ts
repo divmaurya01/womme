@@ -382,18 +382,17 @@ export class JobService {
     });
   }
 
-deleteJobTransaction(jobNumber: string, serialNumber: string, operationNumber: number): Observable<any> {
-  const body = { 
-    jobNumber, 
-    serialNo: serialNumber,
-    oper_num: operationNumber 
-  };
+deleteJobTransaction(
+    jobNumber: string,
+    serialNumber: string,
+    operationNumber: number
+  ): Observable<any> {
 
-  return this.http.delete<any>(
-    `${this.baseUrl}/delete/DeleteJobTransaction`,
-    { headers: this.getHeaders(), body }
-  );
-}
+    return this.http.delete<any>(
+      `${this.baseUrl}/delete/DeleteJobTransaction/${jobNumber}/${serialNumber}/${operationNumber}`,
+      { headers: this.getHeaders() }
+    );
+  }
 
 
   deleteMachineMaster(entryNo: number): Observable<any> {
