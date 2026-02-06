@@ -25,6 +25,13 @@
           <i class="fa fa-file-excel"></i> Export
         </button>
 
+        <button class="btn btn-primary"
+          [disabled]="!selectedJobs.length"
+          (click)="startSelectedJobs()">
+          ▶ Start Selected ({{ selectedJobs.length }})
+        </button>
+
+
       </div>
 
 
@@ -33,62 +40,68 @@
         <div class="card-body p-1">
 
           <p-table
-          #dt
-          [value]="filteredTransactions"
-          [paginator]="true"
-          [rows]="200"
-          sortMode="multiple"
-          [scrollable]="true"
-          scrollHeight="500px"
-          [loading]="isLoading"
-        >
+              #dt
+              [value]="filteredTransactions"
+              [(selection)]="selectedJobs"
+              dataKey="id"
+              sortMode="multiple"
+              [paginator]="true"
+              [rows]="200"
+              [scrollable]="true"
+              scrollHeight="500px"
+              [loading]="isLoading"
+            >
+              <ng-template pTemplate="header">
+                <tr>
+                  <th style="background-color: #ECC391;">
+                    <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+                  </th>
 
-            <ng-template pTemplate="header">
-              <tr>
-                <th style="background-color:#ECC391;">S.No</th>
+                  <th style="background-color: #ECC391;">S.No</th>
+                  <th pSortableColumn="jobNumber" style="background-color: #ECC391;">
+                    Job <p-sortIcon field="jobNumber"></p-sortIcon>
+                  </th>
 
-                <th style="background-color:#ECC391;" pSortableColumn="jobNumber">
-                  Job <p-sortIcon field="jobNumber"></p-sortIcon>
-                </th>
+                  <th pSortableColumn="serialNo" style="background-color: #ECC391;">
+                    Serial No <p-sortIcon field="serialNo"></p-sortIcon>
+                  </th>
 
-                <th style="background-color:#ECC391;" pSortableColumn="serialNo">
-                  Serial No <p-sortIcon field="serialNo"></p-sortIcon>
-                </th>
-
-                <th style="background-color:#ECC391;" pSortableColumn="item">
-                  Item <p-sortIcon field="item"></p-sortIcon>
-                </th>
-
-                <th style="background-color:#ECC391;" pSortableColumn="qtyReleased">
-                  Qty <p-sortIcon field="qtyReleased"></p-sortIcon>
-                </th>
-
-                <th style="background-color:#ECC391;" pSortableColumn="operationNumber">
-                  Opr No <p-sortIcon field="operationNumber"></p-sortIcon>
-                </th>
-
-                <th style="background-color:#ECC391;">Action</th>
-              </tr>
+                  <th pSortableColumn="operationNumber" style="background-color: #ECC391;">
+                    Opr No <p-sortIcon field="operationNumber"></p-sortIcon>
+                  </th>
+                  <th pSortableColumn="item" style="background-color: #ECC391;">
+                    Item <p-sortIcon field="item"></p-sortIcon> 
+                  </th>
+                  <th style="background-color: #ECC391;">Qty</th>
+                  
+                  <th style="background-color: #ECC391;">Action</th>
+                </tr>
               </ng-template>
 
+              <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+                <tr>
+                  <td>
+                    <p-tableCheckbox [value]="job"></p-tableCheckbox>
+                  </td>
 
-            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
-              <tr>
-                <td>{{ rowIndex + 1 }}</td>
-                <td>{{ job.jobNumber }}</td>
-                <td>{{ job.serialNo }}</td>
-                <td>{{ job.item }}</td>
-                <td>{{ job.qtyReleased }}</td>
-                <td>{{ job.operationNumber }}</td>               
-                <td>
-                    <button class="btn btn-success rounded-circle d-flex align-items-center justify-content-center issue-btn" (click)="startIssueJob(job)">
-                        <i class="pi pi-arrow-right"></i>
+                  <td>{{ rowIndex + 1 }}</td>
+                  <td>{{ job.jobNumber }}</td>
+                  <td>{{ job.serialNo }}</td>
+                  <td>{{ job.operationNumber }}</td>
+                  <td>{{ job.item }}</td>
+                  <td>{{ job.qtyReleased }}</td>
+                 
+
+                  <td>
+                    <button class="btn btn-success btn-sm"
+                      (click)="startIssueJob(job)">
+                      Start
                     </button>
-                </td>
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
 
-              </tr>
-            </ng-template>
-          </p-table>
 
         </div>
       </div>

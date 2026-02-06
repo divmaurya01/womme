@@ -2092,6 +2092,38 @@ public class PostController : ControllerBase
     }
 
 
+[HttpPost("startIssueJobs")]
+    public async Task<IActionResult> StartIssueJobs(
+        [FromBody] StartMultipleJobsDto request)
+    {
+        if (request?.Jobs == null || !request.Jobs.Any())
+            return BadRequest("No jobs provided");
+
+        var results = new List<object>();
+
+        foreach (var job in request.Jobs)
+        {
+            try
+            {
+                await StartIssueJob(job); // reuse existing logic
+                results.Add(new { job.JobNumber, success = true });
+            }
+            catch (Exception ex)
+            {
+                results.Add(new
+                {
+                    job.JobNumber,
+                    success = false,
+                    error = ex.Message
+                });
+            }
+        }
+
+        return Ok(results);
+    }
+
+
+
 
     [HttpPost("StartSingleQCJob")]
     public async Task<IActionResult> StartSingleQCJob([FromBody] StartJobRequestDto jobDto)

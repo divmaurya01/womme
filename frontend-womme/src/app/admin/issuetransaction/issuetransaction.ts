@@ -41,7 +41,7 @@ export class Issuetransaction implements OnInit {
   filteredTransactions: any[] = [];
   globalSearch: string = '';
   
-
+  selectedJobs: any[] = [];
 
   constructor(
     private jobService: JobService,
@@ -67,7 +67,8 @@ export class Issuetransaction implements OnInit {
     }))
     .subscribe({
       next: (res: any) => {
-        this.transactions = (res.data ?? []).map((x: any) => ({
+        this.transactions = (res.data ?? []).map((x: any, index: number) => ({
+          id: `${x.job?.trim()}_${x.serialNo?.trim()}_${x.operNum}_${x.wcCode?.trim()}`,
           serialNo: x.serialNo?.trim(),
           jobNumber: x.job?.trim(),
           qtyReleased: x.qtyReleased,
@@ -76,6 +77,7 @@ export class Issuetransaction implements OnInit {
           wcCode: x.wcCode?.trim()
         }));
 
+
         this.filteredTransactions = [...this.transactions];
       }
     });
@@ -83,20 +85,26 @@ export class Issuetransaction implements OnInit {
 
 
 
-  startIssueJob(job: any) {
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-    const employeeCode = userDetails.employeeCode || '';
+private buildStartPayload(job: any) {
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const employeeCode = userDetails.employeeCode || '';
 
-    const payload = {
-      JobNumber: job.jobNumber,
-      SerialNo: job.serialNo,
-      OperationNumber: job.operationNumber,
-      Wc: job.wcCode,
-      Item: job.item ?? null,
-      QtyReleased: job.qtyReleased,
-      EmpNum: employeeCode,
-      loginuser: employeeCode
-    };
+  return {
+    JobNumber: job.jobNumber,
+    SerialNo: job.serialNo,
+    OperationNumber: job.operationNumber,
+    Wc: job.wcCode,
+    Item: job.item ?? null,
+    QtyReleased: job.qtyReleased,
+    EmpNum: employeeCode,
+    loginuser: employeeCode
+  };
+}
+
+
+
+  startIssueJob(job: any) {
+    const payload = this.buildStartPayload(job);
 
     Swal.fire({
       title: 'Start Job?',
@@ -166,7 +174,61 @@ export class Issuetransaction implements OnInit {
   }
 
 
+  async startSelectedJobs() {
+    if (!this.selectedJobs.length) return;
+
+    this.isLoading = true;
+    
+
+    let successCount = 0;
+    let failedJobs: string[] = [];
+
+    for (const job of this.selectedJobs) {
+      const payload = this.buildStartPayload(job);
+
+      try {
+        await this.jobService.startIssueJob(payload).toPromise();
+        successCount++;
+      } catch (err) {
+        console.error('Failed job:', job.jobNumber, err);
+        failedJobs.push(`${job.jobNumber} (${job.serialNo})`);
+      }
+    }
+
+    this.loader.hide();
+    this.isLoading = false;
+    this.selectedJobs = [];
+
+    this.loadJobs();
+
+    // ✅ FINAL RESULT POPUP
+    if (failedJobs.length === 0) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Jobs Started',
+        text: `${successCount} job(s) started successfully.`,
+      });
+    } else {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Partial Success',
+        html: `
+          <p><b>${successCount}</b> job(s) started successfully.</p>
+          <p><b>${failedJobs.length}</b> job(s) failed:</p>
+          <small>${failedJobs.join('<br>')}</small>
+        `,
+      });
+    }
+  }
+
+
+
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
   }
+
+
+  
+
+
 }

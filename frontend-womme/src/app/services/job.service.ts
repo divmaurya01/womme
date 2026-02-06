@@ -835,16 +835,16 @@ updateMachineEmployee(machineNumber: string, payload: any) {
     );
   }
   //Job QR Download
+
+
   GenerateQrWithJob(job: string) {
     const payload = {
       job: job,
       qrType: 'JOB'
     };
 
-    return this.http.post(`${this.baseUrl}/QRCode/GenerateQrWithJob`, payload, {
-      headers: this.getHeaders(),           
-      responseType: 'blob',        
-      withCredentials: true                  
+    return this.http.post(`${this.baseUrl}/QRCode/GenerateQrWithJob`, payload, {                
+      responseType: 'blob',                        
     });
   }
 

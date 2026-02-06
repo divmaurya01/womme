@@ -2662,6 +2662,12 @@ public class SyncLog
     public DateTime LastSyncDate { get; set; }
 }
 
+public class StartMultipleJobsDto
+{
+    public List<StartJobRequestDto> Jobs { get; set; }
+}
+
+
 
  
 

@@ -119,6 +119,11 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
 
   downloadQr(job: string) {
     this.loader.show();
+    if (!job?.trim()) {
+      console.warn('Blocked QR download — job not ready');
+      return;
+    }
+    
     this.jobService.GenerateQrWithJob(job)
     .pipe(finalize(() => this.loader.hide()))
     .subscribe((blob: Blob) => {
