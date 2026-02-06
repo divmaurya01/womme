@@ -37,7 +37,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   transactions: any[] = [];
   totalRecords: number = 0;
   page: number = 0;
-  size: number = 50;
+  size: number = 5000;
   searchTerm: string = '';
   isLoading: boolean = false;
   isSidebarHidden = false;
