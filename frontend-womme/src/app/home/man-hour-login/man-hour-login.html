@@ -1,15 +1,15 @@
 <div class="login-wrapper">
   <div class="login-container">
+
     <!-- Left Panel -->
     <div class="left-panel">
       <div class="logo">
-        <img src="assets/images/WOMLogo.png" style=" display: block;
-          margin: auto;
-          width: 50%;">
+        <img src="assets/images/WOMLogo.png" style="display:block;margin:auto;width:50%;">
       </div>
-      <h2 class="title">Login</h2>
-      <!-- Employee ID -->
 
+      <h2 class="title">Login</h2>
+
+      <!-- Employee ID -->
       <label for="userID">Employee Login</label>
       <div class="input-group" [ngClass]="{ 'invalid': submitted && !userID }">
         <input
@@ -17,14 +17,16 @@
           type="text"
           placeholder="Enter your user ID"
           [(ngModel)]="userID"
+          (keyup.enter)="login()"
         />
         <i class="fa-solid fa-user icon"></i>
       </div>
-        <div class="error-message" *ngIf="submitted && !userID">
+
+      <div class="error-message" *ngIf="submitted && !userID">
         Please enter your Employee ID
       </div>
-      <!-- Password -->
 
+      <!-- Password -->
       <label for="password">Password</label>
       <div class="input-group" [ngClass]="{ invalid: submitted && !password }" style="position: relative;">
         <input
@@ -32,22 +34,22 @@
           [type]="showPassword ? 'text' : 'password'"
           placeholder="Enter your password"
           [(ngModel)]="password"
+          (keyup.enter)="login()"
         />
-        <!-- <i class="fa-solid fa-lock icon"></i> -->
- 
-        <!-- Eye Icon for Show/Hide -->
+
         <i
           class="fa"
           [ngClass]="showPassword ? 'fa-eye':'fa-eye-slash'"
           (click)="togglePassword()"
-          style="position: absolute; right: 15px; top: 15px; cursor: pointer;"
-        ></i>
+          style="position:absolute;right:15px;top:15px;cursor:pointer;">
+        </i>
       </div>
- 
+
       <div class="error-message" *ngIf="submitted && !password">
         Password cannot be empty
-      </div>    
-  <!-- Toast messages -->
+      </div>
+
+      <!-- Toast messages -->
       <div class="toast error" *ngIf="errorMessage">{{ errorMessage }}</div>
       <div class="toast success" *ngIf="successMessage">{{ successMessage }}</div>
 
@@ -57,15 +59,10 @@
         <a href="#" (click)="openForgotPopup('USERID')">Forgot User ID?</a>
       </div>
 
-
+      <!-- Login Button -->
       <button class="login-button" (click)="login()">Log in</button>
 
-      <!-- <p class="signup-link">
-        Don't have an account? <a href="#">Sign up</a>
-      </p> -->
-    </div>  
-
-
+    </div>
 
     <!-- Right Panel -->
     <div class="right-panel">
@@ -77,58 +74,53 @@
         />
       </div>
     </div>
+
   </div>
 
+  <!-- Forgot Dialog -->
   <p-dialog
-      header="{{ forgotType === 'PASSWORD' ? 'Forgot Password' : 'Forgot User ID' }}"
-      [(visible)]="showForgotPopup"
-      [modal]="true"
-      [closable]="true"
-      [dismissableMask]="true"
-      [style]="{ width: '450px' }"
-      [baseZIndex]="10000"
-      [styleClass]="'custom-dialog'"
-    >
+    header="{{ forgotType === 'PASSWORD' ? 'Forgot Password' : 'Forgot User ID' }}"
+    [(visible)]="showForgotPopup"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '450px' }"
+    [baseZIndex]="10000"
+    [styleClass]="'custom-dialog'">
 
-      <div class="p-fluid">
+    <div class="p-fluid">
 
-        <!-- Name -->
-        <div class="mb-3">
-          <label class="form-label">Full Name</label>
-          <input
-            type="text"
-            class="form-control"
-            [(ngModel)]="forgotForm.name"
-            placeholder="Enter your full name"
-          />
-        </div>
-
-        <!-- Email -->
-        <div class="mb-3">
-          <label class="form-label">Email</label>
-          <input
-            type="email"
-            class="form-control"
-            [(ngModel)]="forgotForm.email"
-            placeholder="Enter your registered email"
-          />
-        </div>
-
-        <!-- Error -->
-        <div *ngIf="forgotError" class="text-danger text-center mb-2">
-          {{ forgotError }}
-        </div>
-
-        <!-- Footer -->
-        <div class="text-end">
-          <button
-            class="custom-submit-btn"
-            (click)="submitForgotRequest()">
-            Submit
-          </button>
-        </div>
-
+      <div class="mb-3">
+        <label class="form-label">Full Name</label>
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="forgotForm.name"
+          placeholder="Enter your full name"
+        />
       </div>
-    </p-dialog>
+
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input
+          type="email"
+          class="form-control"
+          [(ngModel)]="forgotForm.email"
+          placeholder="Enter your registered email"
+        />
+      </div>
+
+      <div *ngIf="forgotError" class="text-danger text-center mb-2">
+        {{ forgotError }}
+      </div>
+
+      <div class="text-end">
+        <button class="custom-submit-btn" (click)="submitForgotRequest()">
+          Submit
+        </button>
+      </div>
+
+    </div>
+  </p-dialog>
 
 </div>

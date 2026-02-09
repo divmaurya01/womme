@@ -31,6 +31,9 @@ export class Issuetransaction implements OnInit {
   role_id: number = 0;
   transactions: any[] = [];
 
+  allTransactions: any[] = [];     // master list
+
+
   totalRecords: number = 0;
   page: number = 0;
   size: number = 200;
@@ -49,39 +52,96 @@ export class Issuetransaction implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+    this.employeeCode = userDetails?.employeeCode;
+    this.role_id = userDetails?.roleID;
+
     this.loadJobs();
   }
 
-  // ✅ Load only job data — nothing else
-  loadJobs() {
-  this.isLoading = true;
-  this.loader.show();
+ private empMatches(jobEmpNum: string, employeeCode: string): boolean {
+  if (!jobEmpNum || !employeeCode) return false;
 
-  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-  this.employeeCode = userDetails?.employeeCode;
-
-  this.jobService.GetIssuedTransactions(0, 100000, '', this.employeeCode)
-    .pipe(finalize(() => {
-      this.isLoading = false;
-      this.loader.hide();
-    }))
-    .subscribe({
-      next: (res: any) => {
-        this.transactions = (res.data ?? []).map((x: any, index: number) => ({
-          id: `${x.job?.trim()}_${x.serialNo?.trim()}_${x.operNum}_${x.wcCode?.trim()}`,
-          serialNo: x.serialNo?.trim(),
-          jobNumber: x.job?.trim(),
-          qtyReleased: x.qtyReleased,
-          item: x.item?.trim(),
-          operationNumber: x.operNum,
-          wcCode: x.wcCode?.trim()
-        }));
-
-
-        this.filteredTransactions = [...this.transactions];
-      }
-    });
+  return jobEmpNum
+    .split(',')
+    .map(e => e.trim())
+    .includes(employeeCode);
 }
+
+
+
+  loadJobs() {
+    this.isLoading = true;
+    this.loader.show();
+
+    this.jobService
+      .GetIssuedTransactions(0, 100000, '', this.employeeCode)
+      .pipe(finalize(() => {
+        this.isLoading = false;
+        this.loader.hide();
+      }))
+      .subscribe({
+        next: (jobRes: any) => {
+          const rawJobs = jobRes.data ?? [];
+
+          // 🔹 Load next-operation info (SAME as unposted)
+          this.jobService.getIsNextJobActive().subscribe({
+            next: (nextRes: any) => {
+
+              // --------------------------------------
+              // Build job|serial → next operations map
+              // --------------------------------------
+              const nextOpMap = new Map<string, number[]>();
+
+              (nextRes.data ?? []).forEach((x: any) => {
+                const key = `${x.job}|${x.serialNo}`;
+                if (!nextOpMap.has(key)) nextOpMap.set(key, []);
+                nextOpMap.get(key)!.push(Number(x.nextOper));
+              });
+
+              // --------------------------------------
+              // Normalize jobs
+              // --------------------------------------
+              let jobs = rawJobs.map((x: any) => ({
+                id: `${x.job?.trim()}_${x.serialNo?.trim()}_${x.operNum}_${x.wcCode?.trim()}`,
+                serialNo: x.serialNo?.trim(),
+                jobNumber: x.job?.trim(),
+                qtyReleased: x.qtyReleased,
+                item: x.item?.trim(),
+                operationNumber: x.operNum,
+                wcCode: x.wcCode?.trim(),
+                emp_num: x.empNum?.trim() ?? '' // IMPORTANT
+              }));
+
+              // --------------------------------------
+              // ROLE-BASED FILTERING
+              // --------------------------------------
+              if (this.role_id === 2) {
+              jobs = jobs.filter((job: { emp_num: string; }) =>
+                this.empMatches(job.emp_num, this.employeeCode)
+              );
+            }
+
+
+              // --------------------------------------
+              // FINAL ASSIGNMENT (ONCE)
+              // --------------------------------------
+              this.allTransactions = jobs;
+              this.filteredTransactions = [...jobs];
+              this.transactions = this.filteredTransactions;
+              this.totalRecords = jobs.length;
+
+              console.log('Final ISSUE jobs shown:', jobs.length);
+            }
+          });
+        },
+        error: err => {
+          console.error(err);
+          this.loader.hide();
+          this.isLoading = false;
+        }
+      });
+  }
 
 
 
@@ -140,13 +200,13 @@ private buildStartPayload(job: any) {
     const raw = this.globalSearch.toLowerCase().trim();
 
     if (!raw) {
-      this.filteredTransactions = [...this.transactions];
+      this.filteredTransactions = [...this.allTransactions];
       return;
     }
 
     const keys = raw.split('|').map(k => k.trim());
 
-    this.filteredTransactions = this.transactions.filter(job =>
+    this.filteredTransactions = this.allTransactions.filter(job =>
       keys.some(keyword =>
         Object.values(job).some(val =>
           val?.toString().toLowerCase().includes(keyword)
@@ -154,6 +214,7 @@ private buildStartPayload(job: any) {
       )
     );
   }
+
 
   exportToExcel(): void {
     if (!this.filteredTransactions.length) return;

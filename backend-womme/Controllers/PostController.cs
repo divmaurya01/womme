@@ -3452,145 +3452,164 @@ public class PostController : ControllerBase
 
     
     [HttpPost("GetTransactionOverview")]
-public async Task<IActionResult> GetTransactionOverview(
-    [FromBody] TransactionOverviewRequest request)
-{
-    try
+    public async Task<IActionResult> GetTransactionOverview(
+        [FromBody] TransactionOverviewRequest request)
     {
-        var now = DateTime.Now;
-
-        bool todayOnly = request.todayOnly == 1;
-        bool includeTransaction = request.includeTransaction == 1;
-        bool includeQC = request.includeQC == 1;
-        bool includeVerify = request.IncludeVerify == 1;
-
-        var query = _context.JobTranMst.AsQueryable();
-
-        // ================================
-        // TODAY FILTER (OPTIONAL)
-        // ================================
-        if (todayOnly)
+        try
         {
-            var today = now.Date;
-            query = query.Where(j =>
-                j.trans_date.HasValue &&
-                j.trans_date.Value.Date == today);
+            var now = DateTime.Now;
+
+            bool todayOnly = request.todayOnly == 1;
+            bool includeTransaction = request.includeTransaction == 1;
+            bool includeQC = request.includeQC == 1;
+            bool includeVerify = request.IncludeVerify == 1;
+
+            var query = _context.JobTranMst.AsQueryable();
+
+            // ================================
+            // TODAY FILTER (OPTIONAL)
+            // ================================
+            if (todayOnly)
+            {
+                var today = now.Date;
+                query = query.Where(j =>
+                    j.trans_date.HasValue &&
+                    j.trans_date.Value.Date == today);
+            }
+
+            // ================================
+            // LOAD ALL ROWS (needed for implicit completion check)
+            // ================================
+            var allRows = await query.ToListAsync();
+
+            // ================================
+            // GET LATEST TRANSACTION PER JOB
+            // ================================
+            List<JobTranMst> GetLatestJobs(Func<JobTranMst, bool> filter)
+            {
+                return allRows
+                    .Where(filter)
+                    .GroupBy(j => new
+                    {
+                        j.job,
+                        j.SerialNo,
+                        j.wc,
+                        j.oper_num
+                    })
+                    .Select(g => g
+                        .OrderByDescending(x => x.trans_num)
+                        .First())
+                    .ToList();
+            }
+
+            var normalJobs = includeTransaction
+                ? GetLatestJobs(j => j.trans_type != "M" && j.wc != "VERIFY")
+                : new List<JobTranMst>();
+
+            var qcJobs = includeQC
+                ? GetLatestJobs(j => j.trans_type == "M")
+                : new List<JobTranMst>();
+
+            var verifyJobs = includeVerify
+                ? GetLatestJobs(j => j.wc == "VERIFY")
+                : new List<JobTranMst>();
+
+            // ================================
+            // HELPER: IMPLICIT COMPLETION
+            // ================================
+            bool IsImplicitlyCompleted(JobTranMst job)
+            {
+                return allRows.Any(x =>
+                    x.job == job.job &&
+                    x.SerialNo == job.SerialNo &&
+                    x.oper_num > job.oper_num
+                );
+            }
+
+            // ================================
+            // COMMON CALCULATIONS
+            // ================================
+            int CountRunning(List<JobTranMst> list) =>
+                list.Count(j =>
+                    j.status == "1" &&
+                    !IsImplicitlyCompleted(j));
+
+            int CountPaused(List<JobTranMst> list) =>
+                list.Count(j => j.status == "2");
+
+            int CountExtended(List<JobTranMst> list) =>
+                list.Count(j =>
+                    (j.status == "3" || IsImplicitlyCompleted(j)) &&
+                    j.a_hrs.HasValue &&
+                    j.a_hrs.Value > 8);
+
+            int CountNormalCompleted(List<JobTranMst> list) =>
+                list.Count(j =>
+                    (j.status == "3" || IsImplicitlyCompleted(j)) &&
+                    (!j.a_hrs.HasValue || j.a_hrs.Value <= 8));
+
+            int CountOngoingCritical(List<JobTranMst> list) =>
+                list.Count(j =>
+                    (j.status == "1" || j.status == "2") &&
+                    !IsImplicitlyCompleted(j) &&
+                    j.start_time.HasValue &&
+                    (now - j.start_time.Value).TotalHours > 8);
+
+            // ================================
+            // BUILD OVERVIEWS
+            // ================================
+            var transactionOverview = includeTransaction ? new
+            {
+                RunningJobs = CountRunning(normalJobs),
+                PausedJobs = CountPaused(normalJobs),
+                ExtendedJobs = CountExtended(normalJobs),
+                NormalCompletedJobs = CountNormalCompleted(normalJobs),
+                OngoingCriticalJobs = CountOngoingCritical(normalJobs)
+            } : null;
+
+            var qcOverview = includeQC ? new
+            {
+                RunningQCJobs = CountRunning(qcJobs),
+                PausedQCJobs = CountPaused(qcJobs),
+                ExtendedQCJobs = CountExtended(qcJobs),
+                NormalCompletedQCJobs = CountNormalCompleted(qcJobs),
+                OngoingCriticalQCJobs = CountOngoingCritical(qcJobs)
+            } : null;
+
+            var verifyOverview = includeVerify ? new
+            {
+                RunningVerifyJobs = CountRunning(verifyJobs),
+                PausedVerifyJobs = CountPaused(verifyJobs),
+                ExtendedVerifyJobs = CountExtended(verifyJobs),
+                NormalCompletedVerifyJobs = CountNormalCompleted(verifyJobs),
+                OngoingCriticalVerifyJobs = CountOngoingCritical(verifyJobs)
+            } : null;
+
+            // ================================
+            // RESPONSE
+            // ================================
+            return Ok(new
+            {
+                success = true,
+                todayOnly,
+                includeTransaction,
+                includeQC,
+                includeVerify,
+                TransactionOverview = transactionOverview,
+                QCOverview = qcOverview,
+                VerifyOverview = verifyOverview
+            });
         }
-
-        // ================================
-        // GET LATEST TRANSACTION PER JOB
-        // ================================
-        async Task<List<JobTranMst>> GetLatestJobs(IQueryable<JobTranMst> q)
+        catch (Exception ex)
         {
-            return await q
-                .GroupBy(j => new
-                {
-                    j.job,
-                    j.SerialNo,
-                    j.wc,
-                    j.oper_num
-                })
-                .Select(g => g
-                    .OrderByDescending(x => x.trans_num)
-                    .FirstOrDefault()!)
-                .ToListAsync();
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "Error while fetching transaction overview",
+                error = ex.Message
+            });
         }
-
-        var normalJobs = includeTransaction
-            ? await GetLatestJobs(query.Where(j => j.trans_type != "M" && j.wc != "VERIFY"))
-            : new List<JobTranMst>();
-
-        var qcJobs = includeQC
-            ? await GetLatestJobs(query.Where(j => j.trans_type == "M"))
-            : new List<JobTranMst>();
-
-        var verifyJobs = includeVerify
-            ? await GetLatestJobs(query.Where(j => j.wc == "VERIFY"))
-            : new List<JobTranMst>();
-
-        // ================================
-        // COMMON CALCULATIONS
-        // ================================
-        int CountRunning(List<JobTranMst> list) =>
-            list.Count(j => j.status == "1");
-
-        int CountPaused(List<JobTranMst> list) =>
-            list.Count(j => j.status == "2");
-
-        int CountExtended(List<JobTranMst> list) =>
-            list.Count(j =>
-                j.status == "3" &&
-                j.a_hrs.HasValue &&
-                j.a_hrs.Value > 8);
-
-        int CountOngoingCritical(List<JobTranMst> list) =>
-            list.Count(j =>
-                (j.status == "1" || j.status == "2") &&  
-                j.start_time.HasValue &&
-                (now - j.start_time.Value).TotalHours > 8);
-
-        int CountNormalCompleted(List<JobTranMst> list) =>
-            list.Count(j =>
-                j.status == "3" &&
-                (!j.a_hrs.HasValue || j.a_hrs.Value <= 8));
-
-
-        // ================================
-        // BUILD OVERVIEWS
-        // ================================
-        var transactionOverview = includeTransaction ? new
-        {
-            RunningJobs = CountRunning(normalJobs),
-            PausedJobs = CountPaused(normalJobs),
-            ExtendedJobs = CountExtended(normalJobs),
-            NormalCompletedJobs = CountNormalCompleted(normalJobs),
-            OngoingCriticalJobs = CountOngoingCritical(normalJobs)
-        } : null;
-
-        var qcOverview = includeQC ? new
-        {
-            RunningQCJobs = CountRunning(qcJobs),
-            PausedQCJobs = CountPaused(qcJobs),
-            ExtendedQCJobs = CountExtended(qcJobs),
-            NormalCompletedQCJobs = CountNormalCompleted(qcJobs),
-            OngoingCriticalQCJobs = CountOngoingCritical(qcJobs)
-        } : null;
-
-        var verifyOverview = includeVerify ? new
-        {
-            RunningVerifyJobs = CountRunning(verifyJobs),
-            PausedVerifyJobs = CountPaused(verifyJobs),
-            ExtendedVerifyJobs = CountExtended(verifyJobs),
-            NormalCompletedVerifyJobs = CountNormalCompleted(verifyJobs),
-            OngoingCriticalVerifyJobs = CountOngoingCritical(verifyJobs)
-        } : null;
-
-        // ================================
-        // RESPONSE
-        // ================================
-        return Ok(new
-        {
-            success = true,
-            todayOnly,
-            includeTransaction,
-            includeQC,
-            includeVerify,
-            TransactionOverview = transactionOverview,
-            QCOverview = qcOverview,
-            VerifyOverview = verifyOverview
-        });
     }
-    catch (Exception ex)
-    {
-        return StatusCode(500, new
-        {
-            success = false,
-            message = "Error while fetching transaction overview",
-            error = ex.Message
-        });
-    }
-}
-
 
 
 

@@ -122,15 +122,24 @@ export class workcenter implements OnInit {
     .subscribe({
       next: (res) => {
         if (res && res.data) {
-          this.workCenters = res.data.map((wc: any, index: number) => ({
-            entryNo: index + 1,
-            wc: wc.wc,
-            empNum: wc.empNum,
-            description: wc.description,
-            name: wc.name
-          }));
+          this.workCenters = res.data.map((wc: any, index: number) => {
+            const womFormatted = wc.womm_id
+              ? `WME00${wc.womm_id.toString().padStart(3, '0')}`
+              : '';
 
-          this.filteredWorkCenters = [...this.workCenters]; // 🔥 important
+            return {
+              entryNo: index + 1,
+              wc: wc.wc,
+              empNum: wc.empNum,
+              description: wc.description,
+              name: wc.name,
+              womm_id: wc.womm_id,
+              womSearch: womFormatted.toLowerCase() 
+            };
+          });
+
+          this.filteredWorkCenters = [...this.workCenters];
+
         }
       }
     });
@@ -160,6 +169,10 @@ onGlobalSearch(): void {
 }
 
 
+formatWomMid(womm_id: number | null): string {
+  if (!womm_id) return '-';
+  return `WME00${womm_id.toString().padStart(3, '0')}`;
+}
 
 
 
@@ -200,7 +213,7 @@ onGlobalSearch(): void {
         empNum: this.selectedEmployee.empNum,
         wc: this.selectedWorkCenter.wc,
         name: this.selectedEmployee.empName,
-        description: this.selectedWorkCenter.description
+        description: this.selectedWorkCenter.description,
       };
 
       this.loader.show();
@@ -273,7 +286,8 @@ onGlobalSearch(): void {
       'Work Center': wc.wc,
       'Employee No': wc.empNum,
       'Description': wc.description,
-      'Employee Name': wc.name
+      'Employee Name': wc.name,
+      
     }));
 
     const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(exportData);

@@ -56,6 +56,8 @@ export class VerifyTransaction implements OnInit {
   allNewJobs: any[] = [];
   allOngoingJobs: any[] = [];
   allCompletedJobs: any[] = [];
+  nextOpMap = new Map<string, number[]>();
+
 
 
 
@@ -73,9 +75,19 @@ export class VerifyTransaction implements OnInit {
   ngOnInit(): void {
     this.loadJobs({
       first: 0,
-      rows: 50
+      rows: 5000
     });
     this.loadCompletedJobs();
+  }
+
+
+  private empMatches(jobEmpNum: string, employeeCode: string): boolean {
+    if (!jobEmpNum || !employeeCode) return false;
+
+    return jobEmpNum
+      .split(',')
+      .map(e => e.trim())
+      .includes(employeeCode);
   }
 
 
@@ -102,14 +114,46 @@ export class VerifyTransaction implements OnInit {
       }))
       .subscribe({
         next: (res: any) => {
-          const data = res.data || [];
+        let data = res.data || [];
 
-          data.forEach((x: any) => {
-            x.isRemarkSaved = !!x.remark;   // if backend sends remark later
-            x.verify = false;
-          });
+        const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+        const employeeCode = userDetails.employeeCode || '';
 
-          this.newJobs = data.filter((x: { status: string; isActive: boolean; }) =>
+        // --------------------------------------
+        // LOAD NEXT-OPERATION INFO (same as unposted)
+        // --------------------------------------
+        this.jobService.getIsNextJobActive().subscribe({
+          next: (nextRes: any) => {
+
+            this.nextOpMap.clear();
+
+            (nextRes.data ?? []).forEach((x: any) => {
+              const key = `${x.job}|${x.serialNo}`;
+              if (!this.nextOpMap.has(key)) this.nextOpMap.set(key, []);
+              this.nextOpMap.get(key)!.push(Number(x.nextOper));
+            });
+
+            // --------------------------------------
+            // APPLY BOTH FILTERS
+            // --------------------------------------
+            data = data.filter((job: any) => {
+              const key = `${job.job}|${job.serialNo}`;
+              const nextOps = this.nextOpMap.get(key) ?? [];
+
+              return (
+                nextOps.includes(Number(job.operNum)) &&          // ✅ next operation
+                this.empMatches(job.empNum, employeeCode)        // ✅ employee match
+              );
+            });
+
+            // UI flags
+            data.forEach((x: any) => {
+              x.isRemarkSaved = !!x.remark;
+              x.verify = false;
+            });
+
+            // Tabs
+            this.newJobs = data.filter((x: { status: string; isActive: boolean; }) =>
               (!x.status || x.status === '') && x.isActive === false
             );
 
@@ -122,15 +166,16 @@ export class VerifyTransaction implements OnInit {
 
             this.totalRecordsNew = this.newJobs.length;
             this.totalRecordsOngoing = this.ongoingJobs.length;
+          }
+        });
+      },
 
-
-          
-        },
         error: () => {
           Swal.fire('Error', 'Failed to load transactions', 'error');
         }
       });
   }
+
 
 
 
@@ -286,6 +331,9 @@ loadCompletedJobs() {
   this.isLoading = true;
   this.loaderService.show();
 
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const employeeCode = userDetails.employeeCode || '';
+
   this.jobService
     .GetCompletedVerifyJob()
     .pipe(finalize(() => {
@@ -294,16 +342,21 @@ loadCompletedJobs() {
     }))
     .subscribe({
       next: (res) => {
-        this.completedJobs = res.data || [];
-        this.allCompletedJobs = [...this.completedJobs];   
+        const data = res.data || [];
+
+        this.completedJobs = data.filter((job: any) =>
+          this.empMatches(job.empNum, employeeCode)
+        );
+
+        this.allCompletedJobs = [...this.completedJobs];
         this.totalRecordsCompleted = this.completedJobs.length;
       },
-
       error: () => {
         Swal.fire('Error', 'Failed to load completed jobs', 'error');
       }
     });
 }
+
 
 
 

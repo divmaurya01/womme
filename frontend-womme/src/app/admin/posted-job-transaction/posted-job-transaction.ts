@@ -64,6 +64,10 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
   employees: any[] = [];
   machines: any[] = [];
   editingRows: { [transNum: string]: PostedTransaction } = {};
+  sortField = '';
+  sortOrder: 1 | -1 = 1;
+
+  allTransactions: PostedTransaction[] = [];
 
 
   editingKey: string | null = null;
@@ -98,7 +102,7 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
   loadJobsLazy(event?: any) {
     this.isLoading = true;
     const page = event?.first ? event.first / event?.rows : 0;
-    const size = event?.rows || 50;
+    const size = event?.rows || 5000;
 
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     const employeeCode = userDetails.employeeCode || '';
@@ -126,8 +130,7 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
           }, {});
 
           // Build final array
-          this.transactions = Object.values(grouped).map((group: any[]) => { // <- type annotation added
-            // Sort ascending by trans_date
+          this.transactions = Object.values(grouped).map((group: any[]) => { 
            
             group.sort((a, b) => new Date(a.trans_date).getTime() - new Date(b.trans_date).getTime());
 
@@ -147,6 +150,9 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
 
           });
 
+          
+          
+          this.allTransactions = [...this.transactions];
           this.totalRecords = this.transactions.length;
           this.isLoading = false;
         },
@@ -156,11 +162,30 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
       });
   }
 
-  // Search handler
+ 
+
   onSearchChange(term: string) {
-    this.searchTerm = term;
-    this.dt.reset(); // triggers lazy loading
+    const value = term.toLowerCase().trim();
+
+    if (!value) {
+      this.transactions = [...this.allTransactions];
+      return;
+    }
+
+    const keywords = value.split('|').map(k => k.trim()).filter(Boolean);
+
+    this.transactions = this.allTransactions.filter(job =>
+      keywords.some(keyword =>
+        job.jobNumber?.toLowerCase().includes(keyword) ||
+        job.serialNumber?.toLowerCase().includes(keyword) ||
+        job.employee_name?.toLowerCase().includes(keyword) ||
+        job.machine_name?.toLowerCase().includes(keyword) ||
+        job.workCenter?.toLowerCase().includes(keyword) ||
+        job.operationNumber?.toString().includes(keyword)
+      )
+    );
   }
+
 
   // Sidebar toggle
   toggleSidebar(): void {

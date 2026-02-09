@@ -46,7 +46,7 @@ export class JobListComponent implements OnInit {
   loadJobsLazy(event?: any) {
     this.isLoading = true;
     const page = event?.first ? event.first / event?.rows : 0;
-    const size = event?.rows || 50;
+    const size = event?.rows || 5000;
 
     const userDetails = JSON.parse(localStorage.getItem("userDetails") || "{}");
     const loggedInEmpCode = userDetails.employeeCode;
@@ -179,10 +179,28 @@ export class JobListComponent implements OnInit {
       }
     });
   }
-    onSearchChange(term: string) {
-    this.searchTerm = term;
-    this.dt.reset(); // triggers reload first page
+    
+
+  onGlobalSearch(event: Event): void {
+    const input = (event.target as HTMLInputElement).value
+      .toLowerCase()
+      .trim();
+
+    if (!input) {
+      this.dt.clear();
+      return;
+    }
+
+    // multiple keywords support: a|b|c
+    const keywords = input.split('|').map(k => k.trim());
+
+    this.dt.filterGlobal(keywords.join(' '), 'contains');
   }
+
+
+
+
+
     ngAfterViewInit(): void {
     this.dtTrigger.next(true);
   }

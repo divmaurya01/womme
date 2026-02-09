@@ -81,7 +81,7 @@ export class ItemComponent implements OnInit {
   loadJobsLazy(event?: any): void {
     this.isLoading = true;
     const page = event?.first ? event.first / event?.rows : 0;
-    const size = event?.rows || 50;
+    const size = event?.rows || 5000;
     this.loader.show();
     this.jobService
       .GetItems(page, size, this.searchTerm)

@@ -29,6 +29,8 @@ export class MachineComponent implements OnInit {
 
   filteredMachinesList: any[] = [];
   globalSearch = '';
+  role_id: number = 0;
+
 
 
   newMachine: any = {
@@ -48,6 +50,8 @@ editingMachineEntryNo: number | null = null;
   constructor(private jobService: JobService,private loader:LoaderService) {}
 
   ngOnInit(): void {
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+    this.role_id = userDetails?.roleID;
     this.loadMachines();
   }
 

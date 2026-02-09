@@ -40,7 +40,7 @@ export class UnpostedJobTransaction implements OnInit {
   matchedData: any = {};
   totalRecords: number = 0;
   page: number = 0;
-  size: number = 50;
+  size: number = 5000;
   searchTerm: string = '';
   isLoading: boolean = false;
   isSidebarHidden = false;
@@ -48,6 +48,9 @@ export class UnpostedJobTransaction implements OnInit {
   allTransactions: any[] = [];
   filteredTransactions: any[] = [];
   globalSearch: string = '';
+
+
+
 
 
   activeJobTrans: any[] = [];
@@ -137,7 +140,7 @@ export class UnpostedJobTransaction implements OnInit {
               }));
 
               // Apply next-job filter ONLY for role 4
-              if (this.role_id === 4) {
+              if (this.role_id === 4 || this.role_id === 2) {
                 filteredJobs = filteredJobs.filter((job: any) => {
                   const key = `${job.jobNumber}|${job.serialNo}`;
                   const nextOps = nextOpMap.get(key) ?? [];
@@ -348,7 +351,7 @@ export class UnpostedJobTransaction implements OnInit {
           this.matchedData.machineNumber = parsed.machineNumber;
 
           // If role_id is 4, auto-fill empNum as current employee
-          if (this.role_id === 4) {
+          if (this.role_id === 4 || this.role_id === 2) {
             parsed.empNum = this.employeeCode;
             this.scannedData = parsed;
             this.matchedData.empNum = this.employeeCode;
@@ -372,7 +375,7 @@ export class UnpostedJobTransaction implements OnInit {
   nextStep() {
     if (!this.stepValid) return;
 
-    if (this.wizardStep === 3 && this.role_id === 4) {
+    if (this.wizardStep === 3 && (this.role_id === 4 || this.role_id === 2)) {
       
       this.finishWizard();
     } else {

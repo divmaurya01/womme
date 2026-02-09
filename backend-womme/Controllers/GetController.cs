@@ -23,34 +23,34 @@ public class GetController : ControllerBase
     [HttpGet]
     public IActionResult GetWorkcenters(int page = 0, int size = 50, string search = "")
     {
-        var query = _context.WomWcEmployee.AsQueryable();
+        var query =
+            from wc in _context.WomWcEmployee
+            join emp in _context.EmployeeMst
+                on wc.EmpNum equals emp.emp_num            select new
+            {
+                wc.Wc,
+                wc.EmpNum,
+                wc.Description,
+                wc.Name,
+                emp.womm_id
+            };
 
         if (!string.IsNullOrEmpty(search))
-            query = query.Where(e => (e.Wc ?? "").Contains(search));
+        {
+            query = query.Where(x => (x.Wc ?? "").Contains(search));
+        }
 
         var total = query.Count();
 
         var data = query
-            .OrderByDescending(e => e.Wc) // order for consistent paging
+            .OrderByDescending(x => x.Wc)
             .Skip(page * size)
             .Take(size)
-            .Select(e => new
-            {
-                e.Wc,
-                e.EmpNum,
-                e.Description,
-                e.Name
-
-            })
             .ToList();
-
-        foreach (var item in data)
-        {
-            Console.WriteLine($"Wc: {item.Wc}, EmpNum: {item.EmpNum}, Description: {item.Description}, Name: {item.Name}");
-        }
 
         return Ok(new { data, total });
     }
+
 
 
     [HttpGet]
@@ -1119,7 +1119,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
         var query = from jr in _context.JobRouteMst
                     join jm in _context.JobMst on jr.Job equals jm.job
                     join wm in _context.WcMst on jr.Wc equals wm.wc
-                    where wm.dept == "OPR" && jm.CreateDate >= fromDate
+                    where jm.CreateDate >= fromDate
                     select new
                     {
                         Job = jr.Job,

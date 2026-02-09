@@ -8,9 +8,13 @@
 
       <!-- Add Machine Button -->
       <div class="mb-3 d-flex justify-content-between align-items-center" style="padding-top: 2em;">
-        <button class="btn custom-assign-btn" (click)="openAddDialog(machineForm)">
+        <button
+          *ngIf="role_id !== 2"
+          class="btn custom-assign-btn"
+          (click)="openAddDialog(machineForm)">
           + Machine
         </button>
+
 
         <button class="btn btn-success" (click)="exportMachinesToExcel()"style="cursor: pointer;">
           <i class="fa-solid fa-file-excel me-2"></i>
@@ -164,14 +168,25 @@
                 <td>{{ machine.machineName }}</td>
                 <td>{{ machine.machineDescription }}</td>
                 <td class="text-nowrap">
-                  <a href="#" class="btn btn-primary btn-sm mx-1 edit-job" title="Edit"
-                     (click)="editMachine($event, machine)">
+                  <a
+                    *ngIf="role_id !== 2"
+                    href="#"
+                    class="btn btn-primary btn-sm mx-1 edit-job"
+                    title="Edit"
+                    (click)="editMachine($event, machine)">
                     <i class="fa-solid fa-pencil"></i>
                   </a>
-                  <a href="#" class="btn btn-danger btn-sm mx-1 delete-job" title="Delete"
-                     (click)="deleteMachine($event, machine.entryNo)">
+
+                  <a
+                    *ngIf="role_id !== 2"
+                    href="#"
+                    class="btn btn-danger btn-sm mx-1 delete-job"
+                    title="Delete"
+                    (click)="deleteMachine($event, machine.entryNo)">
                     <i class="fa-solid fa-trash"></i>
                   </a>
+
+
                     <a href="#" class="btn btn-success btn-sm mx-1 download-job" title="Download QR"
                       (click)="downloadMachineQR($event, machine.machineNumber)">
                       <i class="fa-solid fa-download"></i>

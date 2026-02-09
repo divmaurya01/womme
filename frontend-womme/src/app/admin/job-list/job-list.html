@@ -13,12 +13,13 @@
           <input
             type="text"
             pInputText
-            placeholder="Search Job"
+            placeholder="Search Job | Item | WC"
             [(ngModel)]="searchTerm"
-            (ngModelChange)="onSearchChange($event)"
+            (input)="onGlobalSearch($event)"
             class="form-control ps-5 pe-5 rounded-pill shadow-sm"
-            style="height: 45px; transition: all 0.3s;"
+            style="height: 45px;"
           />
+
           
         </div>
 
@@ -43,20 +44,22 @@
       <div class="card p-1 mt-3 shadow-sm">
         <div class="card-body p-1">
           <p-table
-               #dt
-              [value]="operations"              
-              [paginator]="true"
-              [rows]="50"
-              [loading]="isLoading"
-              [responsiveLayout]="'scroll'"
-              [scrollable]="true"
-              scrollHeight="400px"
-              [resizableColumns]="true"
-              [autoLayout]="true"
-              columnResizeMode="expand"
-              [showCurrentPageReport]="true"
-              currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            #dt
+            [value]="operations"
+            [paginator]="true"
+            [rows]="5000"
+            [loading]="isLoading"
+            [responsiveLayout]="'scroll'"
+            [scrollable]="true"
+            scrollHeight="400px"
+            [resizableColumns]="true"
+            [autoLayout]="true"
+            columnResizeMode="expand"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
+            [globalFilterFields]="['job','item','wc','empName']"
           >
+
 
             <ng-template pTemplate="header">
               <tr>

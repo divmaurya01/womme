@@ -90,6 +90,12 @@
                   <p-sortIcon field="wc"></p-sortIcon>
                 </th>
 
+                <th pSortableColumn="womMid" style="background-color: #ECC391;">
+                  WOM ID
+                  <p-sortIcon field="womMid"></p-sortIcon>
+                </th>
+
+
                 <th pSortableColumn="empNum" style="background-color: #ECC391;">
                   Employee No
                   <p-sortIcon field="empNum"></p-sortIcon>
@@ -114,6 +120,7 @@
               <tr>
                 <td>{{ dt.first + rowIndex + 1 }}</td>
                 <td>{{ wc.wc }}</td>
+                <td>{{ formatWomMid(wc.womm_id) }}</td>
                 <td>{{ wc.empNum }}</td>
                 <td>{{ wc.description }}</td>
                 <td>{{ wc.name }}</td>

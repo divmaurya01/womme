@@ -38,35 +38,62 @@
           <p-table
             #dt
             [value]="transactions"
-            [lazy]="true"
             [paginator]="true"
-            [rows]="50"
-            [totalRecords]="totalRecords"
-            (onLazyLoad)="loadJobsLazy($event)"
+            [rows]="5000"
             [loading]="isLoading"
-            [responsiveLayout]="'scroll'"
-            [scrollable]="true"
+            sortMode="multiple"
+            responsiveLayout="scroll"
             scrollHeight="400px"
             [resizableColumns]="true"
             [autoLayout]="true"
-            [rowExpandMode]="'multiple'"
-            [expandedRowKeys]="expandedRows" 
+            rowExpandMode="multiple"
+            [expandedRowKeys]="expandedRows"
             dataKey="serialNumber"
           >
+
           <ng-template pTemplate="header">
-              <tr>
-                <th style="background-color: #ECC391;">S.No</th>
-                <th style="background-color: #ECC391;">Job</th>
-                <th style="background-color: #ECC391;">Serial No</th>
-                <th style="background-color: #ECC391;">Timer (HH:mm:ss)</th>
-                <th style="background-color: #ECC391;">Opr No.</th>
-                <th style="background-color: #ECC391;">Emp Name</th>
-                <th style="background-color: #ECC391;">Machine Name</th>
-                <th style="background-color: #ECC391;">Work Center</th>
-                <th style="background-color: #ECC391;"></th>
-                
-              </tr>
-            </ng-template>
+            <tr>
+              <th style="background-color:#ECC391;">S.No</th>
+
+              <th pSortableColumn="jobNumber" style="background-color:#ECC391;">
+                Job
+                <p-sortIcon field="jobNumber"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="serialNumber" style="background-color:#ECC391;">
+                Serial No
+                <p-sortIcon field="serialNumber"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="timerHours" style="background-color:#ECC391;">
+                Timer (HH:mm:ss)
+                <p-sortIcon field="timerHours"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="operationNumber" style="background-color:#ECC391;">
+                Opr No.
+                <p-sortIcon field="operationNumber"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="employee_name" style="background-color:#ECC391;">
+                Emp Name
+                <p-sortIcon field="employee_name"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="machine_name" style="background-color:#ECC391;">
+                Machine Name
+                <p-sortIcon field="machine_name"></p-sortIcon>
+              </th>
+
+              <th pSortableColumn="workCenter" style="background-color:#ECC391;">
+                Work Center
+                <p-sortIcon field="workCenter"></p-sortIcon>
+              </th>
+
+              <th style="background-color:#ECC391;"></th>
+            </tr>
+          </ng-template>
+
             <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
               
               <tr (click)="toggleRow(job)" [ngClass]="{'row-expanded': isRowExpanded(job)}">

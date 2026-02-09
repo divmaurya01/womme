@@ -1,123 +1,174 @@
 <app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
 <div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
   <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
 
   <main class="main-content">
-    <!-- LOADER OVERLAY -->
+
+    <!-- Loader -->
     <div *ngIf="isLoading" class="loader-overlay">
-    <div class="loader-box">
+      <div class="loader-box">
         <div class="spinner"></div>
         <p>Loading Job Progress…</p>
-    </div>
+      </div>
     </div>
 
     <section class="table-wrapper p-4">
-       <div class="table-scroll-wrapper">
-        <table class="table job-table">
 
-            <thead>
+      <!-- Search -->
+      <input
+        type="text"
+        pInputText
+        placeholder="Search job | item | description"
+        [(ngModel)]="searchTerm"
+        (input)="onGlobalSearch($event)"
+        class="form-control mb-3"
+        style="max-width:360px; font-size:12px;"
+      />
+
+      <!-- TABLE -->
+      <p-table
+        #dt
+        [value]="jobs"
+        dataKey="job"
+        [rows]="5000"
+        [paginator]="true"
+        [scrollable]="true"
+        scrollHeight="70vh"
+        [globalFilterFields]="['job','item','itemDesc','qty']"
+      >
+
+        <!-- HEADER -->
+        <ng-template pTemplate="header">
+          <tr class="main-header">
+            <th style="width:40px" style="background-color:#ECC391;padding:10px;"></th>
+            <th pSortableColumn="job" style="background-color:#ECC391;padding:10px;">
+              Job No <p-sortIcon field="job"></p-sortIcon>
+            </th>
+            <th pSortableColumn="item" style="background-color:#ECC391;padding:10px;">
+              Item <p-sortIcon field="item"></p-sortIcon>
+            </th>
+            <th pSortableColumn="itemDesc" style="background-color:#ECC391;padding:10px;">
+              Description <p-sortIcon field="itemDesc"></p-sortIcon>
+            </th>
+            <th pSortableColumn="qty" style="background-color:#ECC391;padding:10px;">
+              Qty <p-sortIcon field="qty"></p-sortIcon>
+            </th>
+            <th pSortableColumn="jobDate" style="background-color:#ECC391;padding:10px;">
+              Job Date <p-sortIcon field="jobDate"></p-sortIcon>
+            </th>
+            <th style="background-color:#ECC391;padding:10px;">Total Hrs</th>
+          </tr>
+        </ng-template>
+
+        <!-- ROW -->
+        <ng-template pTemplate="body" let-job let-expanded="expanded">
+          <tr>
+            <td>
+              <button
+                pButton
+                type="button"
+                pRipple
+                class="p-button-text p-button-sm"
+                [pRowToggler]="job"
+                [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+              </button>
+            </td>
+
+            <td>{{ job.job }}</td>
+            <td>{{ job.item }}</td>
+            <td>{{ job.itemDesc }}</td>
+            <td>{{ job.qty }}</td>
+            <td>{{ job.jobDate | date:'dd-MM-yyyy' }}</td>
+            <td>{{ job.totalHrs }}</td>
+          </tr>
+        </ng-template>
+
+        <!-- ROW EXPANSION -->
+        <ng-template pTemplate="rowexpansion" let-job>
             <tr>
-                <th style="background-color: #ECC391; padding: 10px;">Job No</th>
-                <th style="background-color: #ECC391; padding: 10px;">Item</th>
-                <th style="background-color: #ECC391; padding: 10px;">Description</th>
-                <th style="background-color: #ECC391; padding: 10px;">Qty</th>
-                            <th style="background-color: #ECC391; padding: 10px;">Job Date</th>
-                <th style="background-color: #ECC391; padding: 10px;">Total Hrs Completed</th>
-            </tr>
-            </thead>
+                <td colspan="7">
 
-            <tbody>
-            <!-- LEVEL 1: JOB ROWS -->
-            <ng-container *ngFor="let job of jobs">
-                <tr class="job-row" (click)="toggleJob(job.job)" [class.selected]="selectedJob === job.job">
-                <td>{{ job.job }}</td>
-                <td>{{ job.item }}</td>
-                <td>{{ job.itemDesc }}</td>
-                <td>{{ job.qty }}</td>
-                <td>{{ job.jobDate | date:'dd-MM-yyyy' }}</td>
-                <td>{{ job.totalHrs }}</td>
-                </tr>
+                <div class="level2-wrapper">
 
-                <!-- LEVEL 2: SERIAL ROWS -->
-                <ng-container *ngIf="expandedJobs[job.job]">
-                <tr>
-                    <td colspan="6" class="p-0">
-                    <div class="level2-wrapper">
-                        <!-- LEVEL 2 HEADER -->
-                        <table class="table table-sm  inner-table  w-100">
-                        <thead>
-                            <tr>
-                            <th style="background-color:#f4e0c8; padding:10px; width:15%;">Job Serial No</th>
-                            <th style="background-color:#f4e0c8; padding:10px;">Total Operation</th>
-                            <th style="background-color:#f4e0c8; padding:10px;">Running Operation</th>
-                            <th style="background-color:#f4e0c8; padding:10px;">Completed Operation</th>
-                            <!-- <th style="background-color:#f4e0c8; padding:10px; width:10%;">Start Time</th>
-                            <th style="background-color:#f4e0c8; padding:10px; width:10%;">End Time</th> -->
-                            <th style="background-color:#f4e0c8; padding:10px; width:15%;">Total Running Hrs</th>
-                            </tr>
-                        </thead>
-                        </table>
+                    <!-- LEVEL 2 -->
+                    <table class="table table-sm w-100">
+                    <thead class="level2-header">
+                        <tr>
+                        <th>Serial</th>
+                        <th>Total Ops</th>
+                        <th>Running</th>
+                        <th>Completed</th>
+                        <th>Running Hrs</th>
+                        </tr>
+                    </thead>
 
-                        <!-- LEVEL 2 SERIAL ROWS -->
+                    <tbody>
                         <ng-container *ngFor="let s of getSerials(job)">
-                        <div class="serial-block">
-                            <table class="table table-sm table-bordered inner-table mb-1 w-100 clickable">
-                            <tbody>
-                                <tr (click)="toggleSerial(s, $event)" [class.selected]="expandedSerial[s]">
-                                <td style="width:15%;">{{ s }}</td>
-                                <td style="width:15%;">{{ getTotalOperation(s) }}</td>
-                                <td style="width:15%;">{{ getRunningOperation(s) }}</td>
-                                <td style="width:25%;">{{ getCompletedOperation(s) }}</td>
-                                <!-- <td style="width:15%;"[ngClass]="getStatusClass(getSerialStatus(s))" class="status-cell" >{{ getSerialStatus(s) }}</td> -->
-                                <!-- <td style="width:10%;">{{ getSerialStart(s) }}</td>
-                                <td style="width:10%;">{{ getSerialEnd(s) }}</td> -->
-                                <td style="width:10%;">{{ getSerialRunningHrs(s) }}</td>
-                                </tr>
-                            </tbody>
-                            </table>
+                        
+                        <!-- SERIAL ROW -->
+                        <tr (click)="toggleSerial(s, $event)" class="cursor-pointer">
+                            <td>{{ s }}</td>
+                            <td>{{ getTotalOperation(s) }}</td>
+                            <td>{{ getRunningOperation(s) }}</td>
+                            <td>{{ getCompletedOperation(s) }}</td>
+                            <td>{{ getSerialRunningHrs(s) }}</td>
+                        </tr>
 
-                            <!-- LEVEL 3: OPERATIONS TABLE -->
-                            <table class="table  inner-table" *ngIf="expandedSerial[s]">
-                            <thead>
+                        <!-- LEVEL 3 (MUST BE INSIDE SAME ngFor) -->
+                        <tr *ngIf="expandedSerial[s]">
+                            <td colspan="5">
+
+                            <table class="table table-sm w-100 mt-2">
+                                <thead class="level3-header">
                                 <tr>
-                                <th style="background-color: #d8f8ee; padding: 10px;">Job Serial no.</th>
-                                <th style="background-color: #d8f8ee; padding: 10px;">Operation</th>
-                                <th style="background-color: #d8f8ee; padding: 10px;">Employees</th>
-                                <th style="background-color: #d8f8ee; padding: 10px; ">Start</th>
-                                <th style="background-color: #d8f8ee; padding: 10px;">End</th>
-                                <th style="background-color: #d8f8ee; padding: 10px; text-align: center;">Status</th>
-                                <th style="background-color: #d8f8ee; padding: 10px;">Running Hrs</th>
+                                    <th>Operation</th>
+                                    <th>Employee</th>
+                                    <th>Start</th>
+                                    <th>End</th>
+                                    <th>Status</th>
+                                    <th>Hrs</th>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let op of getOperations(s)">
-                                <td>{{ s }}</td>
-                                <td>{{ op.operNo }}</td>
-                                <td>{{ op.employees.join(', ') }}</td>
-                                <td>{{ op.start }}</td>
-                                <td>{{ op.end || '-' }}</td>
-                                    <td class="status-cell">
-                                    <span
-                                        class="status-badge"
-                                        [ngClass]="getStatusClass(op.status)">
-                                        {{ op.status }}
-                                    </span>
-                                    </td>
-                                <td>{{ op.runningHrs }}</td>
-                                </tr>
-                            </tbody>
-                            </table>
-                        </div>
-                        </ng-container>
-                    </div>
-                    </td>
-                </tr>
-                </ng-container>
-            </ng-container>
+                                </thead>
 
-            </tbody>
-        </table>
-       </div>  
+                                <tbody>
+                                <tr *ngFor="let op of getOperations(s)">
+                                    <td>{{ op.operNo }}</td>
+                                    <td>{{ op.employees.join(', ') }}</td>
+                                    <td>{{ op.start }}</td>
+                                    <td>{{ op.end || '-' }}</td>
+                                    <td class="status-cell">
+                                      <span
+                                        class="status-badge"
+                                        [ngClass]="{
+                                          'status-running': op.status === 'Running' || op.status === '1',
+                                          'status-paused':  op.status === 'Paused'  || op.status === '2',
+                                          'status-done':    op.status === 'Completed' || op.status === '3'
+                                        }">
+                                        {{ op.status }}
+                                      </span>
+                                    </td>
+
+                                    <td>{{ op.runningHrs }}</td>
+                                </tr>
+                                </tbody>
+                            </table>
+
+                            </td>
+                        </tr>
+
+                        </ng-container>
+                    </tbody>
+                    </table>
+
+                </div>
+
+                </td>
+            </tr>
+            </ng-template>
+
+
+      </p-table>
     </section>
   </main>
 </div>
