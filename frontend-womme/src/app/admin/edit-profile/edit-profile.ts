@@ -7,6 +7,7 @@ import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import Swal from 'sweetalert2';
  
 @Component({
   selector: 'app-edit-profile',
@@ -16,12 +17,17 @@ import { finalize } from 'rxjs/operators';
   imports: [HeaderComponent, SidenavComponent, CommonModule, FormsModule],
 })
 export class EditProfileComponent implements OnInit {
+ 
   employeeCode = '';
   emp_num = 0;
   userName = '';
   roleID = 0;
   passwordHash = '';
   isActive = false;
+  womm_id: number | string = '';
+  roleName: string = '';
+formError = '';
+  rolesList: { roleID: number; roleName: string }[] = [];
  
   showPassword = false;
   editDetailsMode = false;
@@ -34,59 +40,92 @@ export class EditProfileComponent implements OnInit {
   isSidebarHidden = false;
   loggedInUser: any;
  
-  constructor(private jobService: JobService,private loader:LoaderService) {}
+  constructor(private jobService: JobService, private loader: LoaderService) {}
  
   ngOnInit(): void {
     const userData = localStorage.getItem('userDetails');
+ 
     if (userData) {
       this.loggedInUser = JSON.parse(userData);
       this.employeeCode = this.loggedInUser.employeeCode;
-      this.fetchUserFromDb(this.employeeCode);
+ 
+      // 1️⃣ Load roles first
+      this.loadRoles();
     } else {
       console.warn('No userDetails found in localStorage.');
     }
   }
  
-  fetchUserFromDb(empCode: string): void {
-  console.log("Fetching user for:", empCode);
-
-  this.loader.show();
-  this.jobService.UserMaster()
-    .pipe(finalize(() => this.loader.hide()))
-    .subscribe({
-      next: (users: any[]) => {
-        console.log("Users from DB:", users);
-
-        const matchedUser = users.find(u => u.employeeCode === empCode);
-
-        if (matchedUser) {
-          this.emp_num = matchedUser.emp_num;
-          this.userName = matchedUser.userName;
-          this.roleID = matchedUser.roleID;
-          this.passwordHash = matchedUser.passwordHash;
-          this.isActive = matchedUser.isActive;
-
-          // ✅ Ensure fallback to default image
-          if (matchedUser.profileImage && matchedUser.profileImage.trim() !== "") {
-            this.profileImage = `${this.jobService.fileBaseUrl}/ProfileImages/${matchedUser.profileImage.split('/').pop()}`;
-          } else {
-            this.profileImage = '../../../assets/images/favicon-96x96.png';
-          }
-
-          console.log("Matched User:", matchedUser);
-          console.log("Resolved profileImage:", this.profileImage);
-        } else {
-          console.warn(`No user found with employeeCode: ${empCode}`);
-          this.profileImage = '../../../assets/images/favicon-96x96.png'; // fallback if no user
-        }
+  // ✅ Load all roles
+  loadRoles(): void {
+    this.jobService.getAllRole().subscribe({
+      next: (roles: any[]) => {
+        this.rolesList = roles.map(r => ({
+          roleID: r.roleID,
+          roleName: r.roleName
+        }));
+ 
+        // 2️⃣ After roles loaded → fetch user
+        this.fetchUserFromDb(this.employeeCode);
       },
       error: (err) => {
-        console.error("Failed to fetch users from DB:", err);
-        this.profileImage = '../../../assets/images/favicon-96x96.png'; // fallback if error
+        console.error("Failed to fetch roles:", err);
       }
     });
   }
-
+ 
+  // ✅ Fetch user
+  fetchUserFromDb(empCode: string): void {
+    this.loader.show();
+ 
+    this.jobService.UserMaster()
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: (users: any[]) => {
+ 
+          const matchedUser = users.find(u => u.emp_num === empCode);
+ 
+          if (matchedUser) {
+ 
+            this.emp_num = matchedUser.emp_num;
+            this.userName = matchedUser.name;
+            this.roleID = matchedUser.roleID;
+            this.passwordHash = matchedUser.passwordHash;
+            this.isActive = matchedUser.isActive;
+ 
+            this.womm_id = 'WME' +
+              matchedUser.womm_id.toString().padStart(5, '0');
+ 
+            // ✅ Set role name from rolesList
+            const role = this.rolesList.find(r => r.roleID === this.roleID);
+            this.roleName = role ? role.roleName : 'Unknown';
+ 
+            // Profile Image
+            if (matchedUser.profileImage?.trim()) {
+              this.profileImage =
+                `${this.jobService.fileBaseUrl}/ProfileImages/${matchedUser.profileImage.split('/').pop()}`;
+            } else {
+              this.profileImage = '../../../assets/images/favicon-96x96.png';
+            }
+          } else {
+            console.warn(`No user found with employeeCode: ${empCode}`);
+            this.profileImage = '../../../assets/images/favicon-96x96.png';
+          }
+        },
+        error: (err) => {
+          console.error("Failed to fetch users from DB:", err);
+          this.profileImage = '../../../assets/images/favicon-96x96.png';
+        }
+      });
+  }
+ 
+  // ✅ Role dropdown change
+  onRoleChange(selectedRoleID: number): void {
+    this.roleID = +selectedRoleID;
+ 
+    const role = this.rolesList.find(r => r.roleID === this.roleID);
+    this.roleName = role ? role.roleName : '';
+  }
  
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
@@ -106,6 +145,7 @@ export class EditProfileComponent implements OnInit {
  
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
+ 
     if (input.files && input.files[0]) {
       this.selectedFile = input.files[0];
  
@@ -117,38 +157,75 @@ export class EditProfileComponent implements OnInit {
     }
   }
  
- saveProfileImage(): void {
-  if (!this.selectedFile) {
-    alert("Please select an image first.");
+  saveProfileImage(): void {
+ 
+    if (!this.selectedFile) {
+      alert("Please select an image first.");
+      return;
+    }
+ 
+    const formData = new FormData();
+    formData.append('emp_num', this.employeeCode);
+    formData.append('profileImage', this.selectedFile);
+ 
+    this.loader.show();
+ 
+    this.jobService.updateUserProfileImages(formData)
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: (res: any) => {
+          this.profileImage = res.imageUrl;
+          this.previewImage = null;
+          this.selectedFile = null;
+          this.editImageMode = false;
+ 
+          const storedUser = JSON.parse(localStorage.getItem('userDetails')!);
+          storedUser.profileImage = res.imageUrl;
+          localStorage.setItem('userDetails', JSON.stringify(storedUser));
+ 
+          window.dispatchEvent(new Event('profile-updated'));
+        },
+        error: (err) => {
+          console.error("Failed to update image:", err);
+          alert("Failed to update profile image.");
+        }
+      });
+  }
+ 
+ 
+  saveProfileDetails() {
+  // Basic validation (example: username required)
+  if (!this.userName || !this.roleID) {
+    this.formError = 'Please fill all required fields.';
     return;
   }
-
-  const formData = new FormData();
-  formData.append('emp_num', this.employeeCode);
-  formData.append('profileImage', this.selectedFile);
-
+ 
+  const payload = {
+    emp_num: this.emp_num,
+    name: this.userName.trim(),
+    roleID: this.roleID,
+    passwordHash: this.passwordHash,  // keep existing password
+    isActive: this.isActive,
+    createdBy: this.loggedInUser?.employeeCode || 'system admin',
+    profileImage: this.profileImage
+  };
+ 
   this.loader.show();
-  this.jobService.updateUserProfileImages(formData)
+ 
+  // Call update API
+  this.jobService.updateEmployee(this.emp_num.toString(), payload)
     .pipe(finalize(() => this.loader.hide()))
     .subscribe({
-      next: (res: any) => {
-        this.profileImage = res.imageUrl;
-        this.previewImage = null;
-        this.selectedFile = null;
-        this.editImageMode = false;
-
-        const storedUser = JSON.parse(localStorage.getItem('userDetails')!);
-        storedUser.profileImage = res.imageUrl;
-        localStorage.setItem('userDetails', JSON.stringify(storedUser));
-
-        window.dispatchEvent(new Event('profile-updated'));
+      next: () => {
+        Swal.fire('Updated', 'Profile updated successfully.', 'success');
+        this.editDetailsMode = false;
+        this.fetchUserFromDb(this.employeeCode); // Refresh displayed data
       },
       error: (err) => {
-        console.error("Failed to update image:", err);
-        alert("Failed to update profile image.");
+        this.formError = err.error?.message || 'Error updating profile.';
       }
     });
 }
-
-  
+ 
+ 
 }
