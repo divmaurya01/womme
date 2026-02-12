@@ -21,7 +21,10 @@ import { finalize } from 'rxjs/operators';
 
 
 export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
-  isSidebarHidden = false;
+ // admin-dashboard.component.ts
+isSidebarHidden: boolean = window.innerWidth <= 1024;
+
+
   constructor(private jobService: JobService, private loader: LoaderService) { }
 
   @ViewChildren(BaseChartDirective) charts!: QueryList<BaseChartDirective>;

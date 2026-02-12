@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
 import { JobService } from '../../services/job.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -34,7 +34,7 @@ export class CalendarComponent implements OnInit {
   selectedType: number = 0;
   calendarList: any[] = [];
   successMessage = '';
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   markedDates: { [key: string]: number } = {}; // YYYY-MM-DD -> flag
   showCalendar = false;
   showCalendarDialog = false;
@@ -67,6 +67,7 @@ export class CalendarComponent implements OnInit {
   constructor(private jobService: JobService, private cdr: ChangeDetectorRef, private loader: LoaderService) { }
 
   ngOnInit() {
+    this.checkScreenSize();
     this.loadCalendarList();
     this.fetchMarkedDates();
     for (let y = 2000; y <= 2050; y++) {
@@ -74,6 +75,18 @@ export class CalendarComponent implements OnInit {
     }
   }
 
+   @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   loadCalendarList() {
     this.loader.show();
     this.jobService.GetAllCalendars()

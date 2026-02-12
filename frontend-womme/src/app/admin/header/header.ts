@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, NgZone } from '@angular/core';
+import { Component, Output, EventEmitter, NgZone, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { JobService } from '../../services/job.service';
 import { Router, NavigationEnd } from '@angular/router';
@@ -23,7 +23,12 @@ export class HeaderComponent {
 
   showUserGroup = false;
   isSidebarOpen = false;
+  
 
+
+  closeSidebar(): void {
+    this.isSidebarOpen = false;
+  }
   userName: string = 'User Name';
   profileImage: string = 'assets/images/admin.png';
 
@@ -68,6 +73,14 @@ randomToken: string | null = null;
   toggleUserGroup(): void {
     this.showUserGroup = !this.showUserGroup;
   }
+  @HostListener('document:click', ['$event'])
+clickOutside(event: Event) {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.navbar-user-group') && !target.closest('.user-toggle-btn')) {
+    this.showUserGroup = false;
+  }
+}
+
 
   logout(): void {
     localStorage.removeItem('userDetails');

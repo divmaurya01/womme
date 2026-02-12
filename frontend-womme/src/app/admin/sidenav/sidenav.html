@@ -1,14 +1,15 @@
-<aside class="sidebar">
+
+<aside class="sidebar" [class.open]="!isSidebarHidden">
+
   <ng-container *ngFor="let section of groupedSidebarItems">
     <div class="sidebar-section-title">{{ section.title }}</div>
 
     <ul
-      cdkDropList
-      [cdkDropListData]="section.items"
+      
       class="sidebar-list"
-      (cdkDropListDropped)="dropItem($event, section)"
+     
     >
-      <li class="sidebar-item" *ngFor="let item of section.items" cdkDrag>
+      <li class="sidebar-item" *ngFor="let item of section.items" >
       <a
         class="sidebar-anchor d-flex align-items-center gap-2"
         [routerLink]="item.link"

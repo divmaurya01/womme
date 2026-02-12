@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, NgZone } from '@angular/core';
+import { Component, OnInit, ViewChild, NgZone, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobService } from '../../services/job.service';
@@ -62,7 +62,7 @@ export class VerifyTransaction implements OnInit {
 
 
 
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
 
   constructor(
     private jobService: JobService,
@@ -73,11 +73,35 @@ export class VerifyTransaction implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadJobs({
       first: 0,
       rows: 5000
     });
     this.loadCompletedJobs();
+       this.route.queryParams.subscribe(params => {
+      const status = params['status'];
+      if (status === 'running') {
+        this.activeTabIndex = 1; // On Going Jobs tab
+        
+      } 
+       else if (status === 'paused') {
+        this.activeTabIndex = 1;
+       }
+
+        else if (status === 'critical') {
+        this.activeTabIndex = 1;
+       }
+        else if (status === 'extended') {
+        this.activeTabIndex = 2;
+       }
+  
+      else if (status === 'completed') {
+        this.activeTabIndex = 2; // Completed Jobs tab
+      } else {
+        this.activeTabIndex = 0; // New Jobs
+      }
+    });
   }
 
 
@@ -89,7 +113,18 @@ export class VerifyTransaction implements OnInit {
       .map(e => e.trim())
       .includes(employeeCode);
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
 
   toggleSidebar() {
     this.isSidebarHidden = !this.isSidebarHidden;

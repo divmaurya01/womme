@@ -54,8 +54,8 @@ public class PostController : ControllerBase
                 return Conflict(new { message = $"Machine with number {machine.MachineNumber} already exists." });
             }
 
-            machine.CreatedAt = DateTime.Now;
-            machine.UpdatedAt = DateTime.Now;
+            machine.CreatedAt = DateTime.UtcNow;
+            machine.UpdatedAt = DateTime.UtcNow;
 
             _context.MachineMaster.Add(machine);
             await _context.SaveChangesAsync();
@@ -74,8 +74,8 @@ public class PostController : ControllerBase
     {
         try
         {
-            log.CreatedAt = DateTime.Now;
-            log.UpdatedAt = DateTime.Now;
+            log.CreatedAt = DateTime.UtcNow;
+            log.UpdatedAt = DateTime.UtcNow;
 
             _context.EmployeeLog.Add(log);
             await _context.SaveChangesAsync();
@@ -202,8 +202,8 @@ public class PostController : ControllerBase
 
             if (lastPaused != null)
             {
-                lastPaused.end_time = DateTime.Now;
-                lastPaused.a_hrs = (decimal)((lastPaused.end_time ?? DateTime.Now) - lastPaused.start_time.Value).TotalHours;
+                lastPaused.end_time = DateTime.UtcNow;
+                lastPaused.a_hrs = (decimal)((lastPaused.end_time ?? DateTime.UtcNow) - lastPaused.start_time.Value).TotalHours;
                 lastPaused.UpdatedBy = dto.loginuser;
                 _context.JobTranMst.Update(lastPaused);
                 await _context.SaveChangesAsync();
@@ -249,9 +249,9 @@ public class PostController : ControllerBase
                 qty_complete = 0,
                 oper_num = dto.OperationNumber,
                 next_oper = int.TryParse(nextOperation, out var val) ? val : (int?)null,
-                trans_date = DateTime.Now,
-                RecordDate = DateTime.Now,
-                CreateDate = DateTime.Now,
+                trans_date = DateTime.UtcNow,
+                RecordDate = DateTime.UtcNow,
+                CreateDate = DateTime.UtcNow,
                 CreatedBy = dto.loginuser,
                 UpdatedBy = dto.loginuser,
                 completed_flag = false,
@@ -268,7 +268,7 @@ public class PostController : ControllerBase
                 posted = 1,
                 job_rate = employee,
                 Uf_MovedOKToStock = 0,
-                start_time = DateTime.Now,
+                start_time = DateTime.UtcNow,
                 status = "1",
                 RowPointer = Guid.NewGuid()
             };
@@ -307,7 +307,7 @@ public class PostController : ControllerBase
             if (lastJob == null)
                 return BadRequest(new { message = "No active job found to pause." });
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var startTime = lastJob.start_time ?? lastJob.trans_date ?? now;
 
             TimeSpan duration = now - startTime;
@@ -440,7 +440,7 @@ public class PostController : ControllerBase
 
         try
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             // Get last job row
                     var lastJob = await _context.JobTranMst
@@ -471,7 +471,7 @@ public class PostController : ControllerBase
                     if (lastJob.status == "2")
                     {
                         if (lastJob.end_time == null)
-                            lastJob.end_time = DateTime.Now;
+                            lastJob.end_time = DateTime.UtcNow;
 
                         lastJob.a_hrs = (decimal)(lastJob.end_time.Value - lastJob.start_time.Value).TotalHours;
                         lastJob.UpdatedBy = dto.loginuser;
@@ -755,9 +755,9 @@ public class PostController : ControllerBase
                             end_time = currentEndTime,
 
                             status = "1",
-                            trans_date = DateTime.Now,
-                            RecordDate = DateTime.Now,
-                            CreateDate = DateTime.Now,
+                            trans_date = DateTime.UtcNow,
+                            RecordDate = DateTime.UtcNow,
+                            CreateDate = DateTime.UtcNow,
                             CreatedBy = firstRow.CreatedBy,
                             UpdatedBy = firstRow.UpdatedBy,
                             RowPointer = Guid.NewGuid()
@@ -806,9 +806,9 @@ public class PostController : ControllerBase
                         end_time = firstRow.start_time.Value.AddHours((double)totalHours), 
 
                         status = "3",
-                        trans_date = DateTime.Now,
-                        RecordDate = DateTime.Now,
-                        CreateDate = DateTime.Now,
+                        trans_date = DateTime.UtcNow,
+                        RecordDate = DateTime.UtcNow,
+                        CreateDate = DateTime.UtcNow,
                         CreatedBy = firstRow.UpdatedBy,
                         UpdatedBy = firstRow.UpdatedBy,
                         RowPointer = Guid.NewGuid()
@@ -1019,9 +1019,9 @@ public class PostController : ControllerBase
 
                     qcgroup = lastqcgroup,
 
-                    trans_date = DateTime.Now,
-                    RecordDate = DateTime.Now,
-                    CreateDate = DateTime.Now,
+                    trans_date = DateTime.UtcNow,
+                    RecordDate = DateTime.UtcNow,
+                    CreateDate = DateTime.UtcNow,
                     CreatedBy = dto.UpdatedBy,
                     UpdatedBy = dto.UpdatedBy,
 
@@ -1209,9 +1209,9 @@ public class PostController : ControllerBase
                     status = "1",
                     qcgroup = lastqcgroup,
 
-                    trans_date = DateTime.Now,
-                    RecordDate = DateTime.Now,
-                    CreateDate = DateTime.Now,
+                    trans_date = DateTime.UtcNow,
+                    RecordDate = DateTime.UtcNow,
+                    CreateDate = DateTime.UtcNow,
                     CreatedBy = dto.UpdatedBy,
                     UpdatedBy = dto.UpdatedBy,
 
@@ -1263,9 +1263,9 @@ public class PostController : ControllerBase
                 qcgroup = lastqcgroup,
                 
 
-                trans_date = DateTime.Now,
-                RecordDate = DateTime.Now,
-                CreateDate = DateTime.Now,
+                trans_date = DateTime.UtcNow,
+                RecordDate = DateTime.UtcNow,
+                CreateDate = DateTime.UtcNow,
                 CreatedBy = dto.UpdatedBy,
                 UpdatedBy = dto.UpdatedBy,
 
@@ -1508,9 +1508,9 @@ public class PostController : ControllerBase
                 IsActive = dto.IsActive ?? true,
                 site_ref = dto.site_ref,
                 CreatedBy = dto.CreatedBy,
-                CreateDate = DateTime.Now,
+                CreateDate = DateTime.UtcNow,
                 UpdatedBy = dto.CreatedBy ?? "system",
-                RecordDate = DateTime.Now,
+                RecordDate = DateTime.UtcNow,
                 dept = dto.depart,
                 emp_type = dto.emp_type,
                 pay_freq = dto.pay_freq,
@@ -1657,7 +1657,7 @@ public class PostController : ControllerBase
         if (!jobs.Any())
             return NotFound("No jobs found for this pool.");
 
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
 
         var newJobs = new List<JobPool>();
 
@@ -1675,8 +1675,8 @@ public class PostController : ControllerBase
                 Qty = job.Qty,
                 Item = job.Item,
                 Status_ID = 3,        // Completed
-                Status_Time = DateTime.Now,
-                CreatedAt = DateTime.Now
+                Status_Time = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
             };
 
             newJobs.Add(newJob);
@@ -1702,7 +1702,7 @@ public class PostController : ControllerBase
         if (!jobs.Any())
             return NotFound("No jobs found for this pool.");
 
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
 
         var newJobs = new List<JobPool>();
 
@@ -1720,8 +1720,8 @@ public class PostController : ControllerBase
                 Qty = job.Qty,
                 Item = job.Item,
                 Status_ID = 2,        // Completed
-                Status_Time = DateTime.Now,
-                CreatedAt = DateTime.Now
+                Status_Time = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
             };
 
             newJobs.Add(newJob);
@@ -1747,7 +1747,7 @@ public class PostController : ControllerBase
         if (!jobs.Any())
             return NotFound("No jobs found for this pool.");
 
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
 
         var newJobs = new List<JobPool>();
 
@@ -1765,8 +1765,8 @@ public class PostController : ControllerBase
                 Qty = job.Qty,
                 Item = job.Item,
                 Status_ID = 1,        // Completed
-                Status_Time = DateTime.Now,
-                CreatedAt = DateTime.Now
+                Status_Time = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
             };
 
             newJobs.Add(newJob);
@@ -1782,8 +1782,8 @@ public class PostController : ControllerBase
     [HttpPost("CreateRolePageMapping")]
     public async Task<IActionResult> CreateRolePageMapping([FromBody] RolePageMapping request)
     {
-        request.CreatedAt = DateTime.Now;
-        request.UpdatedAt = DateTime.Now;
+        request.CreatedAt = DateTime.UtcNow;
+        request.UpdatedAt = DateTime.UtcNow;
 
         _context.RolePageMapping.Add(request);
         await _context.SaveChangesAsync();
@@ -1881,11 +1881,11 @@ public class PostController : ControllerBase
             dto.Emp_Num,
             dto.Name ?? string.Empty,
             0,                // noteexistsflag default
-            DateTime.Now,     // recorddate
+            DateTime.UtcNow,     // recorddate
             Guid.NewGuid(),   // rowpointer
             "system",         // createdby
             "system",         // updatedby
-            DateTime.Now,     // createdate
+            DateTime.UtcNow,     // createdate
             0                 // inworkflow default
         );
 
@@ -1920,10 +1920,10 @@ public class PostController : ControllerBase
             MachineId = dto.machineNumber.Trim(),
             MachineDescription = dto.machineDescription.Trim(),
             NoteExistsFlag = 0,
-            RecordDate = DateTime.Now,
+            RecordDate = DateTime.UtcNow,
             CreatedBy = "womme",
             UpdatedBy = "womme",
-            CreateDate = DateTime.Now,
+            CreateDate = DateTime.UtcNow,
             InWorkflow = 0
         };
 
@@ -1972,9 +1972,9 @@ public class PostController : ControllerBase
                     qty_complete = 0,
                     oper_num = jobDto.OperationNumber,
                     next_oper = nextOper,
-                    trans_date = DateTime.Now,
-                    RecordDate = DateTime.Now,
-                    CreateDate = DateTime.Now,
+                    trans_date = DateTime.UtcNow,
+                    RecordDate = DateTime.UtcNow,
+                    CreateDate = DateTime.UtcNow,
                     CreatedBy = jobDto.loginuser,
                     UpdatedBy = jobDto.loginuser,
                     completed_flag = false,
@@ -1991,8 +1991,8 @@ public class PostController : ControllerBase
                     posted = 1,
                     job_rate = 0,
                     Uf_MovedOKToStock = 0,
-                    start_time = DateTime.Now,
-                    end_time = DateTime.Now,
+                    start_time = DateTime.UtcNow,
+                    end_time = DateTime.UtcNow,
                     status = "1",
                     qcgroup = "",
                     RowPointer = Guid.NewGuid()
@@ -2015,14 +2015,14 @@ public class PostController : ControllerBase
                     qty_complete = 1,
                     oper_num = jobDto.OperationNumber,
                     next_oper = nextOper,
-                    trans_date = DateTime.Now,
-                    RecordDate = DateTime.Now,
-                    CreateDate = DateTime.Now,
+                    trans_date = DateTime.UtcNow,
+                    RecordDate = DateTime.UtcNow,
+                    CreateDate = DateTime.UtcNow,
                     CreatedBy = jobDto.loginuser,
                     UpdatedBy = jobDto.loginuser,
                     completed_flag = true,
                     suffix = 0,
-                    trans_type = "M",
+                    trans_type = "D",
                     qty_scrapped = 0,
                     qty_moved = 1,
                     pay_rate = "R",
@@ -2034,8 +2034,8 @@ public class PostController : ControllerBase
                     posted = 1,
                     job_rate = 0,
                     Uf_MovedOKToStock = 0,
-                    start_time = DateTime.Now,
-                    end_time = DateTime.Now,
+                    start_time = DateTime.UtcNow,
+                    end_time = DateTime.UtcNow,
                     status = "3",
                     qcgroup = "",
                     RowPointer = Guid.NewGuid()
@@ -2092,35 +2092,6 @@ public class PostController : ControllerBase
     }
 
 
-[HttpPost("startIssueJobs")]
-    public async Task<IActionResult> StartIssueJobs(
-        [FromBody] StartMultipleJobsDto request)
-    {
-        if (request?.Jobs == null || !request.Jobs.Any())
-            return BadRequest("No jobs provided");
-
-        var results = new List<object>();
-
-        foreach (var job in request.Jobs)
-        {
-            try
-            {
-                await StartIssueJob(job); // reuse existing logic
-                results.Add(new { job.JobNumber, success = true });
-            }
-            catch (Exception ex)
-            {
-                results.Add(new
-                {
-                    job.JobNumber,
-                    success = false,
-                    error = ex.Message
-                });
-            }
-        }
-
-        return Ok(results);
-    }
 
 
 
@@ -2199,9 +2170,9 @@ public class PostController : ControllerBase
 
                 if (lastJob.status == "2" && lastJob.start_time.HasValue)
                 {
-                    TimeSpan duration = DateTime.Now - lastJob.start_time.Value;
+                    TimeSpan duration = DateTime.UtcNow - lastJob.start_time.Value;
                     lastJob.a_hrs = (decimal)duration.TotalHours;
-                    lastJob.end_time = DateTime.Now;
+                    lastJob.end_time = DateTime.UtcNow;
                     _context.JobTranMst.Update(lastJob);
                 }
             }
@@ -2242,9 +2213,9 @@ public class PostController : ControllerBase
                 qty_complete = 0,
                 oper_num = jobDto.OperationNumber,
                 next_oper = int.TryParse(nextOperation, out var val) ? val : (int?)null,
-                trans_date = DateTime.Now,
-                RecordDate = DateTime.Now,
-                CreateDate = DateTime.Now,
+                trans_date = DateTime.UtcNow,
+                RecordDate = DateTime.UtcNow,
+                CreateDate = DateTime.UtcNow,
                 CreatedBy = jobDto.loginuser,
                 UpdatedBy = jobDto.loginuser,
                 completed_flag = false,
@@ -2261,7 +2232,7 @@ public class PostController : ControllerBase
                 posted = 1,
                 job_rate = employeeRate,
                 Uf_MovedOKToStock = 0,
-                start_time = DateTime.Now,
+                start_time = DateTime.UtcNow,
                 status = "1",
                 qcgroup = qcGroupNumber,
                 RowPointer = Guid.NewGuid()
@@ -2377,9 +2348,9 @@ public class PostController : ControllerBase
 
                         if (lastJob.status == "2" && lastJob.start_time.HasValue)
                         {
-                            TimeSpan duration = DateTime.Now - lastJob.start_time.Value;
+                            TimeSpan duration = DateTime.UtcNow - lastJob.start_time.Value;
                             lastJob.a_hrs = (decimal)duration.TotalHours;
-                            lastJob.end_time = DateTime.Now;
+                            lastJob.end_time = DateTime.UtcNow;
                             _context.JobTranMst.Update(lastJob);
                         }
                     }
@@ -2415,9 +2386,9 @@ public class PostController : ControllerBase
                         qty_complete = 0,
                         oper_num = jobDto.OperationNumber,
                         next_oper = int.TryParse(nextOperation, out var val) ? val : (int?)null,
-                        trans_date = DateTime.Now,
-                        RecordDate = DateTime.Now,
-                        CreateDate = DateTime.Now,
+                        trans_date = DateTime.UtcNow,
+                        RecordDate = DateTime.UtcNow,
+                        CreateDate = DateTime.UtcNow,
                         CreatedBy = jobDto.loginuser,
                         UpdatedBy = jobDto.loginuser,
                         completed_flag = false,
@@ -2434,7 +2405,7 @@ public class PostController : ControllerBase
                         posted = 1,
                         job_rate = employeeRate,
                         Uf_MovedOKToStock = 0,
-                        start_time = DateTime.Now,
+                        start_time = DateTime.UtcNow,
                         status = "1",
                         qcgroup = qcGroupNumber,
                         RowPointer = Guid.NewGuid()
@@ -2498,7 +2469,7 @@ public class PostController : ControllerBase
             if (lastJob == null)
                 return BadRequest(new { message = "No active job found to pause." });
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var startTime = lastJob.start_time ?? lastJob.trans_date ?? now;
 
             // 🔹 Calculate worked hours and amount
@@ -2622,7 +2593,7 @@ public class PostController : ControllerBase
 
         try
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             // 🔹 Get last job (running or paused)
             var latestJob = await _context.JobTranMst
@@ -2944,9 +2915,9 @@ public class PostController : ControllerBase
                             end_time = currentEndTime,
 
                             status = "1",
-                            trans_date = DateTime.Now,
-                            RecordDate = DateTime.Now,
-                            CreateDate = DateTime.Now,
+                            trans_date = DateTime.UtcNow,
+                            RecordDate = DateTime.UtcNow,
+                            CreateDate = DateTime.UtcNow,
                             CreatedBy = firstRow.CreatedBy,
                             UpdatedBy = firstRow.UpdatedBy,
                             RowPointer = Guid.NewGuid()
@@ -2995,9 +2966,9 @@ public class PostController : ControllerBase
                         end_time = firstRow.start_time.Value.AddHours((double)totalHours), 
 
                         status = "3",
-                        trans_date = DateTime.Now,
-                        RecordDate = DateTime.Now,
-                        CreateDate = DateTime.Now,
+                        trans_date = DateTime.UtcNow,
+                        RecordDate = DateTime.UtcNow,
+                        CreateDate = DateTime.UtcNow,
                         CreatedBy = firstRow.UpdatedBy,
                         UpdatedBy = firstRow.UpdatedBy,
                         RowPointer = Guid.NewGuid()
@@ -3131,7 +3102,7 @@ public class PostController : ControllerBase
                 if (lastJob.status != "1") // only active jobs can be paused
                     continue;
 
-                var now = DateTime.Now;
+                var now = DateTime.UtcNow;
                 var startTime = lastJob.start_time ?? lastJob.trans_date ?? now;
                 TimeSpan duration = now - startTime;
                 decimal totalHoursDecimal = (decimal)duration.TotalHours;
@@ -3232,7 +3203,7 @@ public class PostController : ControllerBase
 
         try
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var addedJobs = new List<decimal>();
 
             // ✅ Get last used trans_num once
@@ -3397,10 +3368,10 @@ public class PostController : ControllerBase
             Description = dto.Description?.Trim(),
             Name = dto.Name?.Trim(),
             NoteExistsFlag = 0,
-            RecordDate = DateTime.Now,
+            RecordDate = DateTime.UtcNow,
             CreatedBy = "womme",
             UpdatedBy = "womme",
-            CreateDate = DateTime.Now,
+            CreateDate = DateTime.UtcNow,
             InWorkflow = 0
         };
 
@@ -3457,7 +3428,7 @@ public class PostController : ControllerBase
     {
         try
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             bool todayOnly = request.todayOnly == 1;
             bool includeTransaction = request.includeTransaction == 1;
@@ -3620,7 +3591,7 @@ public class PostController : ControllerBase
     {
         try
         {
-            var today = DateTime.Now.Date;
+            var today = DateTime.UtcNow.Date;
             bool todayOnly = filter.TodayOnly == 1;
             bool includeTransaction = filter.IncludeTransaction == 1;
             bool includeQC = filter.IncludeQC == 1;
@@ -3643,6 +3614,7 @@ public class PostController : ControllerBase
             {
                 var normalData = await allTransQuery
                     .Where(j => j.trans_type != "M" && j.wc != "VERIFY")
+                 
                     .ToListAsync();
 
                 latestNormal = normalData
@@ -3769,7 +3741,7 @@ public class PostController : ControllerBase
 
             job.qty_scrapped = 1;
             job.UpdatedBy = dto.LoginUser;
-            job.RecordDate = DateTime.Now;
+            job.RecordDate = DateTime.UtcNow;
 
             _context.JobTranMst.Update(job);
             await _context.SaveChangesAsync();
@@ -3833,7 +3805,7 @@ public class PostController : ControllerBase
         notification.ResponseBody = dto.ResponseBody;
         notification.ResponseStatus = "RESPONDED";
         notification.Status = "RESPONDED";
-        notification.UpdatedDate = DateTime.Now;
+        notification.UpdatedDate = DateTime.UtcNow;
 
         _context.SaveChanges();
 

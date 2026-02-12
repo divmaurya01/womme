@@ -31,7 +31,8 @@ interface SidebarGroup {
   encapsulation: ViewEncapsulation.None,
 })
 export class SidenavComponent implements OnInit {
-  @Input() isSidebarHidden: boolean = false;
+@Input() isSidebarHidden!: boolean;
+
   @Output() sectionSelected = new EventEmitter<string>();
  
   currentUrl: string = '';
@@ -105,6 +106,9 @@ onItemClickAndNavigate(item: SidebarItem): void {
  
   this.sectionSelected.emit(item.label); // still emit section
   this.router.navigate([item.link], { queryParams: { ss_id } });
+   if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;
+    }
 }
  
   ngOnInit(): void {

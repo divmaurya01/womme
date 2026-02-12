@@ -332,7 +332,7 @@ public class SchedulerController : ControllerBase
 
                 if (srcItems.Any())
                     await _syncService.UpdateLastSyncDate("ItemMst",
-                        srcItems.Max(x => x.RecordDate ?? DateTime.Now));
+                        srcItems.Max(x => x.RecordDate ?? DateTime.UtcNow));
 
                 // ===================== 5️⃣ WOM_WC_EMPLOYEE =====================
                 var srcWom = await _sourceContext.WomWcEmployee

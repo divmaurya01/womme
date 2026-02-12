@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -34,7 +34,7 @@ export class JobPoolDetails implements OnInit {
   jobs: any[] = [];
   poolStatus: 'idle' | 'running' | 'paused' | 'completed' = 'idle';
   globalTimer: string = '00:00:00';
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   poolNumber:any;
   private timerInterval: any;
   private poolStartTime: Date | null = null; // first running start
@@ -44,6 +44,7 @@ export class JobPoolDetails implements OnInit {
   constructor(private jobService: JobService, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
   // Read query param
     this.route.queryParams.subscribe(params => {
       this.poolNumber = params['jobPoolNumber'];
@@ -58,7 +59,18 @@ export class JobPoolDetails implements OnInit {
   ngOnDestroy(): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   toggleSidebar() {
     this.isSidebarHidden = !this.isSidebarHidden;
   }

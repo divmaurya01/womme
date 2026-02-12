@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { JobService } from '../../services/job.service';
 import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
@@ -31,7 +31,7 @@ import * as XLSX from 'xlsx';
   ]
 })
 export class EmployeesComponent implements OnInit {
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   employees: any[] = [];
   searchTerm = '';
   totalRecords = 0;
@@ -64,8 +64,21 @@ export class EmployeesComponent implements OnInit {
   constructor(private jobService: JobService, private loader: LoaderService) {}
 
   ngOnInit(): void {
+    this,this.checkScreenSize();
     this.loadRoles();
     this.loadEmployees();
+  }
+    @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
   }
 
   toggleSidebar(): void {

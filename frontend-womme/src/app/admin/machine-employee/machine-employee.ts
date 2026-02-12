@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
 import { CommonModule } from '@angular/common';
@@ -43,7 +43,7 @@ interface Machine {
 export class MachineEmployeeComponent implements OnInit {
   showForm = false;
   formError: string | null = null;
-  isSidebarHidden = false;
+  isSidebarHidden = window.innerWidth <= 1024;
 
   machines: any[] = [];       // table data
   machinesList: Machine[] = [];   // machine dropdown
@@ -66,11 +66,23 @@ export class MachineEmployeeComponent implements OnInit {
   constructor(private jobService: JobService, private loader: LoaderService) {}
 
   ngOnInit() {
+    this.checkScreenSize();
     this.loadMachines();
     this.loadMachinesList();
     this.loadWcList();
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
  /** Fetch machine table */
 loadMachines() {
   this.loader.show();

@@ -145,7 +145,7 @@ namespace WommeAPI.Controllers
                     : "Forgot User ID Request",
                 Details = $"Request raised for {dto.Flag}",
                 Status = "PENDING",
-                CreatedDate = DateTime.Now
+                CreatedDate = DateTime.UtcNow
             };
 
             _context.Notification.Add(notification);
@@ -211,7 +211,7 @@ namespace WommeAPI.Controllers
                     ? "SENT"
                     : "PARTIAL";
 
-            notification.UpdatedDate = DateTime.Now;
+            notification.UpdatedDate = DateTime.UtcNow;
             _context.SaveChanges();
 
             if (!adminResponse.IsSuccessStatusCode || !userResponse.IsSuccessStatusCode)

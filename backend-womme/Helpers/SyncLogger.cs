@@ -20,7 +20,7 @@ namespace WommeAPI.Helpers
             var logFilePath = Path.Combine(logDirectory, $"{tableName}_SyncLog.txt");
             var sb = new StringBuilder();
 
-            sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Table: {tableName}");
+            sb.AppendLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}] Table: {tableName}");
             foreach (var kvp in primaryKeys)
             {
                 sb.AppendLine($"  {kvp.Key}: {kvp.Value}");
@@ -34,7 +34,7 @@ namespace WommeAPI.Helpers
         public static void Log(string tableName, string message)
         {
             var logFilePath = Path.Combine(logDirectory, $"{tableName}_SyncLog.txt");
-            var logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
+            var logEntry = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
             File.AppendAllText(logFilePath, logEntry);
         }
     }

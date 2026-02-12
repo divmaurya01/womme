@@ -79,9 +79,9 @@ public class UpdateController : ControllerBase
 
             // Save relative path to DB
             user.ProfileImage = $"ProfileImages/{fileName}";
-            //  user.updatedAt = DateTime.Now;
+            //  user.updatedAt = DateTime.UtcNow;
 
-            _context.EmployeeMst.Update(user);
+          
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -125,7 +125,7 @@ public class UpdateController : ControllerBase
                 employee.email_addr = dto.Email;
 
             // Audit
-            employee.RecordDate = DateTime.Now;
+            employee.RecordDate = DateTime.UtcNow;
             employee.UpdatedBy = dto.CreatedBy ?? employee.UpdatedBy;
 
            
@@ -174,7 +174,7 @@ public class UpdateController : ControllerBase
             dto.MachineDescription!,
             dto.Name!,
             "system",
-            DateTime.Now,
+            DateTime.UtcNow,
             oldMachineNumber);         // old machine number (lookup)
 
         return Ok(new { message = "Machine employee updated successfully." });

@@ -1,5 +1,5 @@
 
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SidenavComponent } from "../sidenav/sidenav";
 import { HeaderComponent } from "../header/header";
@@ -14,7 +14,7 @@ import { JobService } from '../../services/job.service';
 })
 export class ProductionQcDashboardComponent {
   selectedCard: string = '';
-  isSidebarHidden = false;
+     isSidebarHidden = window.innerWidth <= 1024;
 
   // ✅ Data objects
   transaction = {
@@ -51,11 +51,23 @@ currentPage = 1;
   constructor(private jobService: JobService) {}
 
   ngOnInit() {
+    this.checkScreenSize();
     this.loadOverview();
     this.loadUtilizationData();
     this.loadTransactionData();  // ✅ also load job table data
   }
+    @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   toggleSidebar() {
     this.isSidebarHidden = !this.isSidebarHidden;
   }

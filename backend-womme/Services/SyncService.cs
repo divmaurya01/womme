@@ -82,7 +82,7 @@ namespace WommeAPI.Services
 
                         if (needsUpdate)
                         {
-                            localItem.RecordDate = DateTime.Now;
+                            localItem.RecordDate = DateTime.UtcNow;
                             _localContext.JobMst.Update(localItem);
                             updatedRecords.Add(localItem);
                         }
@@ -161,7 +161,7 @@ namespace WommeAPI.Services
                 }
                 else
                 {
-                    local.RecordDate = DateTime.Now;
+                    local.RecordDate = DateTime.UtcNow;
                     updated.Add(local);
                 }
             }
@@ -241,7 +241,7 @@ namespace WommeAPI.Services
                         if (needsUpdate)
                         {
                             localItem.UpdatedBy = sourceItem.UpdatedBy;
-                            localItem.RecordDate = DateTime.Now;
+                            localItem.RecordDate = DateTime.UtcNow;
 
                             _localContext.EmployeeMst.Update(localItem);
                             updatedRecords.Add(localItem);
@@ -289,7 +289,7 @@ namespace WommeAPI.Services
                             ytd_med = sourceItem.ytd_med,
                             ytd_tip_cr = sourceItem.ytd_tip_cr,
                             NoteExistsFlag = sourceItem.NoteExistsFlag,
-                            RecordDate = DateTime.Now,
+                            RecordDate = DateTime.UtcNow,
                             RowPointer = sourceItem.RowPointer,
                             CreatedBy = sourceItem.CreatedBy,
                             UpdatedBy = sourceItem.UpdatedBy,

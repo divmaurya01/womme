@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobService } from '../../services/job.service';
@@ -20,7 +20,7 @@ import * as XLSX from 'xlsx';
   imports: [CommonModule, FormsModule, HeaderComponent, SidenavComponent, TableModule, DialogModule]
 })
 export class OperationMastersComponent implements OnInit {
-  isSidebarHidden = false;
+  isSidebarHidden = window.innerWidth <= 1024;
   showForm = false;
   operations: any[] = [];
   searchText = '';
@@ -43,7 +43,20 @@ export class OperationMastersComponent implements OnInit {
   constructor(private jobService: JobService,private loader:LoaderService) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadOperations();
+  }
+   @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
   }
 
   toggleSidebar(): void {

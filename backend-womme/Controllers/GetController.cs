@@ -550,7 +550,7 @@ public class GetController : ControllerBase
     {
         try
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             var allJobs = await _context.JobTranMst
                 .Where(jt => jt.SerialNo != null)
@@ -654,7 +654,7 @@ public class GetController : ControllerBase
 
             if (lastActive != null && job != null && job.EstimatedHours.HasValue)
             {
-                var elapsedHours = (DateTime.Now - lastActive.StatusTime).TotalHours;
+                var elapsedHours = (DateTime.UtcNow - lastActive.StatusTime).TotalHours;
                 if (elapsedHours > (double)job.EstimatedHours.Value)
                 {
                     overtimeCount++;
@@ -2516,7 +2516,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                     item = jobMaster?.item ?? "",
                     remark = j.Remark ?? "", 
                     total_a_hrs = j.a_hrs,  
-                    //  endTime = DateTime.Now // current time for UI
+                    //  endTime = DateTime.UtcNow // current time for UI
                 });
             }
 

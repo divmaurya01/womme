@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { JobService } from '../../services/job.service';
 import Swal from 'sweetalert2';
 import { CommonModule } from '@angular/common';
@@ -28,16 +28,28 @@ export class RoleMasterComponent implements OnInit {
   rolePermissions: { [pageID: number]: boolean } = {};
   showPermissionDialog = false;
 
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
 
   constructor(private jobService: JobService,private loader:LoaderService) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.getRoles();
     this.getPages();
     this.getPermissions();
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   toggleSidebar() {
     this.isSidebarHidden = !this.isSidebarHidden;
   }

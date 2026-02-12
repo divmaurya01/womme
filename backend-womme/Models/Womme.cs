@@ -300,7 +300,7 @@ public string? TransType { get; set; }
         [Required]
         public string? Logger { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
     public class UpdateJobStatusDto

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SidenavComponent } from "../sidenav/sidenav";
 import { HeaderComponent } from "../header/header";
@@ -26,7 +26,7 @@ interface Job {
   imports: [SidenavComponent, HeaderComponent, CommonModule]
 })
 export class QcDashboardComponent {
-  isSidebarHidden = false;
+  isSidebarHidden = window.innerWidth <= 1024;
 
  metrics = {
   runningQC: 0,
@@ -47,8 +47,22 @@ export class QcDashboardComponent {
   constructor(private jobService: JobService) {}
 
   ngOnInit() {
+    this.checkScreenSize();
     this.loadQcOverview();
     this.loadQcJobs();
+  }
+
+     @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
   }
 
   toggleSidebar() {

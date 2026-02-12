@@ -583,7 +583,7 @@ simply need to multiply the result by 1000:
 ```ruby
 Time.now.to_i * 1000     # => 1383582043000
 # ActiveSupport examples:
-DateTime.now.to_i * 1000 # => 1383582043000
+DateTime.UtcNow.to_i * 1000 # => 1383582043000
 ActiveSupport::TimeZone.new('Asia/Shanghai').now.to_i * 1000
 # => 1383582043000
 ```

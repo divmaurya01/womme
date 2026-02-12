@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { JobService } from '../../services/job.service';
 import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
@@ -31,7 +31,7 @@ import * as XLSX from 'xlsx';
   ]
 })
 export class workcenter implements OnInit {
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
 
   workCenters: any[] = [];
   employees: any[] = [];
@@ -62,11 +62,23 @@ export class workcenter implements OnInit {
   constructor(private jobService: JobService, private loader: LoaderService) { }
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadWorkCenters();
     this.loadEmployees();
     this.loadWorkCenterDropdown();
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
   }

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobService } from '../../services/job.service';
@@ -20,7 +20,7 @@ import { finalize } from 'rxjs/operators';
   imports: [CommonModule, FormsModule, HeaderComponent, SidenavComponent, TableModule, DialogModule]
 })
 export class JobSyncDetailComponent implements OnInit {
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   jobStatusByEmployee: any[] = [];
   rawJobData: any[] = [];
   jobNumber: string = '';
@@ -30,6 +30,7 @@ statusNames: any;
   constructor(private jobService: JobService, private route: ActivatedRoute,private loader:LoaderService) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loader.show();
     this.route.queryParamMap
     .pipe(finalize(() => this.loader.hide()))
@@ -46,6 +47,18 @@ statusNames: any;
     });
   }
 
+   @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   fetchJobDetails(job: string) {
     this.loader.show();
     this.jobService.getJobTrans(job)

@@ -1,4 +1,4 @@
-import { Component, OnInit ,ViewChild} from '@angular/core';
+import { Component, HostListener, OnInit ,ViewChild} from '@angular/core';
 import { Router ,ActivatedRoute} from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -22,7 +22,7 @@ export class JobListComponent implements OnInit {
 
   jobs: any[] = [];
   loading = true;
-  isSidebarHidden=false
+ isSidebarHidden = window.innerWidth <= 1024;
   isLoading = false;
   syncMessage: string | null = null;
   isError = false;
@@ -39,8 +39,21 @@ export class JobListComponent implements OnInit {
   constructor(private router: Router, private route: ActivatedRoute,private jobService: JobService,private loader:LoaderService) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadJobsLazy();
 
+  }
+   @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
   }
     // Load transactions
   loadJobsLazy(event?: any) {

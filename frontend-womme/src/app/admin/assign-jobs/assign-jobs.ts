@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { JobService, AssignedJob } from '../../services/job.service';
 import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
@@ -33,11 +33,13 @@ formError: string = '';
 jobOptions: any[] = [];
 employees: any[] = [];
 selectedEntryNo: number | null = null;
+isSidebarHidden = window.innerWidth <= 1024;
 @ViewChild('assignedJobForm') assignedJobForm: any;
 
   constructor(private jobService: JobService,private loader:LoaderService) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadJobs();
       this.loadUsers(); 
         //this.loadJobOptions();  
@@ -55,7 +57,18 @@ closeForm(): void {
 }
 
 
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
 submitForm(): void {
   if (this.assignedJobForm.invalid) {
     this.assignedJobForm.control.markAllAsTouched(); 
@@ -192,7 +205,8 @@ resetForm(): void {
   }
 
  
-    isSidebarHidden = false;
+   
+
     toggleSidebar() {
       this.isSidebarHidden = !this.isSidebarHidden;
     }

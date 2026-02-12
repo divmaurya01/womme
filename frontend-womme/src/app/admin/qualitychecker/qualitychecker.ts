@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, NgZone, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
 import { Table } from 'primeng/table';
@@ -8,7 +8,7 @@ import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { TabViewModule } from 'primeng/tabview';
+import { TabView, TabViewModule } from 'primeng/tabview';
 import Swal from 'sweetalert2';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LoaderService } from '../../services/loader.service';
@@ -32,6 +32,8 @@ import html2pdf from 'html2pdf.js';
 })
 export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('dt') dt!: Table;
+    @ViewChild('tabView') tabView!: TabView;  // <-- new ViewChild
+  activeTabIndex: number = 0;
   dtTrigger: Subject<any> = new Subject();
 
   transactions: any[] = [];
@@ -40,7 +42,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   size: number = 5000;
   searchTerm: string = '';
   isLoading: boolean = false;
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   selectedJobs: any[] = [];
   activeJobTrans: any;
   ongoingJobs: any[] = [];
@@ -59,6 +61,31 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
+      this.route.queryParams.subscribe(params => {
+      const status = params['status'];
+      if (status === 'running') {
+        this.activeTabIndex = 1; // On Going Jobs tab
+        
+      } 
+       else if (status === 'paused') {
+        this.activeTabIndex = 1;
+       }
+
+        else if (status === 'critical') {
+        this.activeTabIndex = 1;
+       }
+     else if (status === 'extended') {
+        this.activeTabIndex = 2;
+       }
+      else if (status === 'completed') {
+        this.activeTabIndex = 2; // Completed Jobs tab
+      } else if (status === 'scrapped') {
+        this.activeTabIndex = 3; // Scrapped Jobs tab
+      } else {
+        this.activeTabIndex = 0; // New Jobs
+      }
+    });
     this.loadJobs();
     this.loadOngoingJobs();
     this.loadCompletedJobs();
@@ -73,7 +100,18 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
     Object.values(this.jobTimers).forEach(timer => clearInterval(timer));
     this.dtTrigger.unsubscribe();
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
   }

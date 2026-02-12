@@ -25,7 +25,7 @@ public class DataSyncScheduler
         }
 
         _isRunning = true;
-        _logger.LogInformation("Scheduler started at {time}", DateTime.Now);
+        _logger.LogInformation("Scheduler started at {time}", DateTime.UtcNow);
 
         Task.Run(async () =>
         {
@@ -35,7 +35,7 @@ public class DataSyncScheduler
 
                 while (await timer.WaitForNextTickAsync(cancellationToken))
                 {
-                    _logger.LogInformation("Starting sync cycle at {time}", DateTime.Now);
+                    _logger.LogInformation("Starting sync cycle at {time}", DateTime.UtcNow);
 
                     try
                     {
@@ -71,27 +71,27 @@ public class DataSyncScheduler
                         await syncService.SyncWomWcEmployeeAsync();
                         _logger.LogInformation("SyncWomWcEmployeeAsync completed successfully.");
 
-                        _logger.LogInformation("Sync cycle finished at {time}", DateTime.Now);
+                        _logger.LogInformation("Sync cycle finished at {time}", DateTime.UtcNow);
                     }
                     catch (OperationCanceledException)
                     {
-                        _logger.LogInformation("Sync cycle cancelled at {time}", DateTime.Now);
+                        _logger.LogInformation("Sync cycle cancelled at {time}", DateTime.UtcNow);
                         break; // exit loop gracefully
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error occurred during sync cycle at {time}", DateTime.Now);
+                        _logger.LogError(ex, "Error occurred during sync cycle at {time}", DateTime.UtcNow);
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Critical error in scheduler at {time}", DateTime.Now);
+                _logger.LogError(ex, "Critical error in scheduler at {time}", DateTime.UtcNow);
             }
             finally
             {
                 _isRunning = false; // mark as stopped
-                _logger.LogInformation("Scheduler stopped at {time}", DateTime.Now);
+                _logger.LogInformation("Scheduler stopped at {time}", DateTime.UtcNow);
             }
         }, cancellationToken);
     }

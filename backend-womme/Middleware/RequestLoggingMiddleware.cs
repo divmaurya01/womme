@@ -21,7 +21,7 @@ namespace WommeAPI.Middleware
  
         public async Task InvokeAsync(HttpContext context)
         {
-            var requestTime = DateTime.Now;
+            var requestTime = DateTime.UtcNow;
             int statusCode = 200;
  
             try
@@ -41,7 +41,7 @@ namespace WommeAPI.Middleware
  
         private async Task LogAsync(string message)
         {
-            string logFilePath = Path.Combine(LogFolder, $"api_log_{DateTime.Now:yyyy-MM-dd}.txt");
+            string logFilePath = Path.Combine(LogFolder, $"api_log_{DateTime.UtcNow:yyyy-MM-dd}.txt");
  
             await _semaphore.WaitAsync();
             try
@@ -63,7 +63,7 @@ namespace WommeAPI.Middleware
             var files = Directory.GetFiles(LogFolder, "api_log_*.txt");
             foreach (var file in files)
             {
-                if (File.GetCreationTime(file) < DateTime.Now.AddMonths(-1))
+                if (File.GetCreationTime(file) < DateTime.UtcNow.AddMonths(-1))
                 {
                     try
                     {

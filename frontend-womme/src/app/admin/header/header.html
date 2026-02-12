@@ -13,80 +13,53 @@
 
     <!-- Location -->
 
-    
+
     <!-- TOGGLE BUTTON (Replacing UPGRADE) -->
-    <button
-      class="btn btn-outline-secondary btn-sm px-3"
-      (click)="onToggleSidebar()"
-    >
+    <button class="btn btn-outline-secondary btn-sm px-3" (click)="onToggleSidebar()">
       <i class="bi bi-list" style="font-size: 1.5rem;"></i>
     </button>
   </div>
 
- <!-- RIGHT SECTION -->
+  <!-- RIGHT SECTION -->
   <div class="d-flex align-items-center">
 
-    <!-- User toggle icon (mobile only) -->
-    <button class="btn d-md-none user-toggle-btn ms-auto" (click)="toggleUserGroup()">
-      <i
-        class="fa-solid fa-chevron-down user-toggle-icon"
-        [class.rotated]="showUserGroup"
-      ></i>
-    </button>
+  <!-- User group (desktop + mobile/tablet) -->
+  <div class="navbar-user-group d-flex align-items-center ms-3">
+    <!-- Divider -->
+    <div class="vr mx-3"></div>
 
+    <!-- Icons -->
+    <i class="fa-solid fa-puzzle-piece mx-2 text-primary fs-4"></i>
+    <div class="vr mx-3"></div>
 
-    <!-- Desktop + toggled mobile user group -->
-    <div class="d-none d-md-flex align-items-center ms-3 navbar-user-group" [class.d-flex]="showUserGroup">
-      <!-- Divider -->
-      <div class="vr mx-3"></div>
+    <i class="fa-solid fa-bell mx-2 text-info fs-4"></i>
+    <div class="vr mx-3"></div>
 
-      <!-- Icons -->
-      <i class="fa-solid fa-puzzle-piece mx-2 text-primary fs-4"></i>
-      <div class="vr mx-3"></div>
+    <i class="fa-regular fa-circle-question mx-2 text-warning fs-4"></i>
 
-      <i class="fa-solid fa-bell mx-2 text-info fs-4"></i>
-      <div class="vr mx-3"></div>
+    <!-- Divider -->
+    <div class="vr mx-3"></div>
 
-      <i class="fa-regular fa-circle-question mx-2 text-warning fs-4"></i>
-
-      <!-- Divider -->
-      <div class="vr mx-3"></div>
-
-       <!-- User Dropdown -->
-      <div class="dropdown flex-grow-1">
-        <div
-          class="d-flex align-items-center dropdown-toggle px-3"
-          data-bs-toggle="dropdown"
-          style="cursor: pointer;"
-        >
-        <img [src]="profileImage" alt="User" width="32" height="32" class="rounded-circle me-2" />
- 
-          <span>{{ userName }}</span>
-        </div>
-        <ul class="dropdown-menu dropdown-menu-end" style="background-color: #f3e0c8;">
-          <li>
-             <a 
-  class="dropdown-item" 
-  [routerLink]="['/admin/edit-profile']" 
-  [queryParams]="{ ss_id: randomToken }" 
-  routerLinkActive="active">
-  <i class="fa-solid fa-user me-2" style="color: #428588;"></i> Profile
-</a>
-          </li>
-         <li>
-            <a class="dropdown-item" type="button" (click)="logout()">
-              <i class="fa-solid fa-gear me-2" style="color: #D37A06;"></i> Logout
-            </a>
-          </li>
- 
- 
-         
-        </ul>
+    <!-- User Dropdown -->
+    <div class="dropdown flex-grow-1">
+      <div class="d-flex align-items-center px-3" style="cursor:pointer" (click)="toggleUserGroup()">
+        <img [src]="profileImage" alt="User" class="profile-pic rounded-circle me-2" />
+        <span>{{ userName }}</span>
       </div>
- 
-
-
+      <ul class="dropdown-menu dropdown-menu-end" [class.show]="showUserGroup" style="background-color: #f3e0c8;">
+        <li>
+          <a class="dropdown-item" [routerLink]="['/admin/edit-profile']" [queryParams]="{ ss_id: randomToken }" routerLinkActive="active">
+            <i class="fa-solid fa-user me-2" style="color: #428588;"></i> Profile
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" type="button" (click)="logout()">
+            <i class="fa-solid fa-gear me-2" style="color: #D37A06;"></i> Logout
+          </a>
+        </li>
+      </ul>
     </div>
   </div>
+</div>
 
 </nav>

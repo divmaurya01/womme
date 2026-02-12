@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
@@ -25,7 +25,7 @@ export class JobReportComponent implements OnInit {
 
   @ViewChild('dt') dt!: Table;
 
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   isLoading = true;
   searchTerm = '';
 
@@ -36,7 +36,20 @@ export class JobReportComponent implements OnInit {
   constructor(private jobService: JobService) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadJobProgress();
+  }
+   @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
   }
 
   onGlobalSearch(event: Event): void {

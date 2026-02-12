@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -11,6 +11,7 @@ import { DialogModule } from 'primeng/dialog';
 import html2pdf from 'html2pdf.js';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
+import { Theme } from 'fullcalendar';
 
 interface JobItem {
   seq: number;
@@ -50,7 +51,7 @@ interface JobOperationFrontend {
   imports: [CommonModule, FormsModule, HeaderComponent, SidenavComponent, TableModule, DialogModule]
 })
 export class ReportsViewComponent implements OnInit {
-  isSidebarHidden = false;
+  isSidebarHidden = window.innerWidth <= 1024;
   @Input()jobId: string | null = null;
   jobNumber: string = '';
   qrCodeUrl: string | null = null;
@@ -74,6 +75,7 @@ export class ReportsViewComponent implements OnInit {
   }
 
   ngOnInit(): void {
+      this.checkScreenSize();
     this.loader.show();
     this.route.queryParams
     .pipe(finalize(() => this.loader.hide()))
@@ -84,6 +86,18 @@ export class ReportsViewComponent implements OnInit {
         this.loadJobReport(jobId);
       }
     });
+  }
+   @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
   }
 
   toggleSidebar(): void {

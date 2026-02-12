@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SidenavComponent } from "../sidenav/sidenav";
 import { HeaderComponent } from "../header/header";
@@ -24,7 +24,7 @@ interface Job {
 })
 export class DashboardVerify {
 
-  isSidebarHidden = false;
+   isSidebarHidden = window.innerWidth <= 1024;
 
   /** VERIFY METRICS */
   metrics = {
@@ -45,10 +45,23 @@ export class DashboardVerify {
   constructor(private jobService: JobService) {}
 
   ngOnInit() {
+     this.checkScreenSize();
     this.loadVerifyOverview();
     this.loadVerifyJobs();
   }
 
+  @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   toggleSidebar() {
     this.isSidebarHidden = !this.isSidebarHidden;
   }

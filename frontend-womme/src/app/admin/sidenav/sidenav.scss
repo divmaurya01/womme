@@ -170,18 +170,54 @@ html, body {
 }
 
 /* Responsive */
-@media (max-width: 767px) {
+/* Base sidebar styles */
+.sidebar {
+  width: 210px;
+  min-width: 210px;
+  position: fixed;
+  top: 56px;
+  left: 0;
+  height: calc(100vh - 56px);
+  background-color: #FEFEFE;
+  overflow-y: auto;
+  border-right: 1px solid #ccc;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  z-index: 1020;
+}
+
+/* Desktop: sidebar visible */
+@media (min-width: 1025px) {
   .sidebar {
-    width: 40%;
-    min-width: unset;
-    background-color: #ffffff;
-    overflow-y: auto;
+    transform: translateX(0);
+  }
+}
+
+/* Mobile/Tablet: sidebar hidden by default */
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
   }
 
+  /* Show when `open` class is applied */
+  .sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+/* Adjust main content margin for mobile/tablet when sidebar is hidden */
+.main-content {
+  margin-left: 210px;
+  transition: margin-left 0.3s ease;
+}
+
+@media (max-width: 1024px) {
   .main-content {
     margin-left: 0;
   }
 }
+
+
 
 /* Scrollbar styling */
 main::-webkit-scrollbar {

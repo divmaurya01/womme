@@ -6,7 +6,7 @@
   <main class="main-content p-3">
     <section class="table-wrapper">
 
-      <p-tabView>
+      <p-tabView #tabView [activeIndex]="activeTabIndex">
 
         <!-- Tab 1: New Jobs -->
         <p-tabPanel header="New Jobs" style="background-color: #ECC391;">

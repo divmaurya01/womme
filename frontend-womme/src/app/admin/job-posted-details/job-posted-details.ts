@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -30,7 +30,7 @@ import Swal from 'sweetalert2';
 })
 export class JobPostedDetailComponent implements OnInit {
   // layout
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   jobDetails: any[] = [];
   loading = false;
 
@@ -73,13 +73,25 @@ export class JobPostedDetailComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     const jobId = this.route.snapshot.queryParamMap.get('jb_id') || '';
     const operNum = this.route.snapshot.queryParamMap.get('oper_num') || '0';
     const trans_num = this.route.snapshot.queryParamMap.get('trans_num') || '0';
     if (jobId && operNum && trans_num) this.getJobDetails(jobId, operNum, trans_num);
   }
 
- 
+  @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
 
    getJobDetails(jobId: string, operNum: string, trans_num: string) {
     this.loading = true;

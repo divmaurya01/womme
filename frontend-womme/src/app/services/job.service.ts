@@ -236,7 +236,6 @@ export class JobService {
 
 
 
-
  //  NEW: Get all roles
   getAllRole(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/Get/GetRoleMasters`, {

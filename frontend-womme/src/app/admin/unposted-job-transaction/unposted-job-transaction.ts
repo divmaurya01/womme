@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, NgZone } from '@angular/core';
+import { Component, OnInit, ViewChild, NgZone, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobService } from '../../services/job.service';
@@ -43,7 +43,7 @@ export class UnpostedJobTransaction implements OnInit {
   size: number = 5000;
   searchTerm: string = '';
   isLoading: boolean = false;
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
 
   allTransactions: any[] = [];
   filteredTransactions: any[] = [];
@@ -83,6 +83,7 @@ export class UnpostedJobTransaction implements OnInit {
               private zone: NgZone) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadJobs();
     
   }
@@ -91,7 +92,18 @@ export class UnpostedJobTransaction implements OnInit {
     Object.values(this.activeTimers).forEach(timer => clearInterval(timer));
   }
 
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   loadJobs(pageEvent?: any) {
     this.isLoading = true;
     this.loader.show();

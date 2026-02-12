@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
 import { Table } from 'primeng/table';
@@ -27,7 +27,7 @@ import * as XLSX from 'xlsx';
   ]
 })
 export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   isLoading = false;
   syncMessage: string | null = null;
   isError = false;
@@ -55,12 +55,24 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadJobs();
     const saved = localStorage.getItem('autoSync');
     this.autoSyncEnabled = saved === 'true';
     if (this.autoSyncEnabled) this.startAutoSync();
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   loadJobs(): void {
   this.loader.show();
 

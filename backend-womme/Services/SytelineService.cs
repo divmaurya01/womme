@@ -64,7 +64,7 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@oper_num", jobTran.oper_num);
                         cmd.Parameters.AddWithValue("@next_oper", jobTran.next_oper ?? (object)DBNull.Value);
                         cmd.Parameters.AddWithValue("@trans_type", jobTran.trans_type ?? "D");
-                        cmd.Parameters.AddWithValue("@trans_date", jobTran.trans_date ?? DateTime.Now);
+                        cmd.Parameters.AddWithValue("@trans_date", jobTran.trans_date ?? DateTime.UtcNow);
 
                         cmd.Parameters.AddWithValue("@start_time", startTimeInt);
                         cmd.Parameters.AddWithValue("@end_time", endTimeInt);
@@ -122,7 +122,7 @@ namespace WommeAPI.Services
                         fetchCmd.Parameters.AddWithValue("@oper_num", jobTran.oper_num);
                         fetchCmd.Parameters.AddWithValue("@wc", jobTran.wc);
                         fetchCmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
-                        fetchCmd.Parameters.AddWithValue("@trans_date", jobTran.trans_date ?? DateTime.Now);
+                        fetchCmd.Parameters.AddWithValue("@trans_date", jobTran.trans_date ?? DateTime.UtcNow);
 
                         object result = await fetchCmd.ExecuteScalarAsync();
                         if (result != null && result != DBNull.Value)
@@ -256,7 +256,7 @@ namespace WommeAPI.Services
                         ins.Parameters.AddWithValue("@oper_num", jt.oper_num);
                         ins.Parameters.AddWithValue("@next_oper", jt.next_oper ?? (object)DBNull.Value);
                         ins.Parameters.AddWithValue("@trans_type", jt.trans_type ?? "D");
-                        ins.Parameters.AddWithValue("@trans_date", jt.trans_date ?? DateTime.Now);
+                        ins.Parameters.AddWithValue("@trans_date", jt.trans_date ?? DateTime.UtcNow);
 
                         ins.Parameters.AddWithValue("@start_time", startTimeInt);
                         ins.Parameters.AddWithValue("@end_time", endTimeInt);

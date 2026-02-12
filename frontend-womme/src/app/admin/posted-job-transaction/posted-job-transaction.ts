@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
 import { Table } from 'primeng/table';
@@ -54,7 +54,7 @@ export interface PostedTransaction {
   ]
 })
 export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
-  isSidebarHidden = false;
+  isSidebarHidden = window.innerWidth <= 1024;
   transactions: PostedTransaction[] = [];
   searchTerm = '';
   totalRecords = 0;
@@ -83,6 +83,7 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     this.roleId = userDetails.roleID || null;
     this.loadJobsLazy();
@@ -97,7 +98,18 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.dtTrigger.unsubscribe();
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   // Lazy loading and filtering
   loadJobsLazy(event?: any) {
     this.isLoading = true;

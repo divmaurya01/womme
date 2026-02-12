@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
 import { CommonModule } from '@angular/common';
@@ -21,7 +21,7 @@ import * as XLSX from 'xlsx';
   imports: [CommonModule, FormsModule, HeaderComponent, SidenavComponent, ButtonModule, TableModule, DialogModule]
 })
 export class MachineComponent implements OnInit {
-  isSidebarHidden = false;
+  isSidebarHidden = window.innerWidth <= 1024;
   showForm = false;
   machines: any[] = [];
   searchText = '';
@@ -50,11 +50,23 @@ editingMachineEntryNo: number | null = null;
   constructor(private jobService: JobService,private loader:LoaderService) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     this.role_id = userDetails?.roleID;
     this.loadMachines();
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
   }

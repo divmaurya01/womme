@@ -14,7 +14,7 @@ namespace WommeAPI.Services
                     foreach (var file in logFiles)
                     {
                         var creationTime = File.GetCreationTime(file);
-                        if (creationTime < DateTime.Now.AddMonths(-1))
+                        if (creationTime < DateTime.UtcNow.AddMonths(-1))
                         {
                             File.Delete(file);
                         }

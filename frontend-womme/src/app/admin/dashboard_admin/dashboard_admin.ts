@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { SidenavComponent } from "../sidenav/sidenav";
 import { HeaderComponent } from "../header/header";
@@ -21,7 +21,7 @@ import { Router, RouterModule } from '@angular/router';
   ]
 })
 export class DashboardOverviewComponent {
-  isSidebarHidden = false;
+ 
 
   transaction = {
     runningJobs: 0,
@@ -65,17 +65,33 @@ export class DashboardOverviewComponent {
   totalPages = 0;
   hoveredRow: number = -1;
   roleId: number = 0;
+   isSidebarHidden = window.innerWidth <= 1024;
 
   constructor(private jobService: JobService, private router: Router) {}
 
   ngOnInit() {
+    this.checkScreenSize();
     
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');    
     this.roleId = userDetails.roleID;    
     this.applyRoleRules();    
     this.loadUtilizationData(); 
+      
     
 
+  }
+
+    @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
   }
 
   toggleSidebar() {
@@ -221,19 +237,28 @@ goToTransaction(type: string) {
     return;
   }
 
-  const route =
-    type === 'completed'
-      ? '/postedjobtransaction'
-      : '/unpostedjobtransaction';
+  let route = '/unpostedjobtransaction'; // default
 
-  const fullUrl = `${route}?ss_id=${encodeURIComponent(ss_id)}`;
+  if (type === 'completed') {
+    route = '/postedjobtransaction';
+  } else if (type === 'extended') {
+    // Check actual running or paused jobs
+    if ((this.transaction.runningJobs ?? 0) > 0 || (this.transaction.pausedJobs ?? 0) > 0) {
+      route = '/unpostedjobtransaction';
+    } else if ((this.transaction.normalCompletedJobs ?? 0) > 0) {
+      route = '/postedjobtransaction';
+    } else {
+      route = '/unpostedjobtransaction';
+    }
+  }
 
-  console.log('➡️ Navigating to:', fullUrl);
+  console.log('Transaction Overview:', this.transaction);
+  console.log('➡️ Navigating to route:', route);
 
-  this.router.navigate([route], {
-    queryParams: { ss_id }
-  });
+  this.router.navigate([route], { queryParams: { ss_id } });
 }
+
+
 
 goToQC(type: string) {
   const ss_id =
@@ -241,22 +266,35 @@ goToQC(type: string) {
     || localStorage.getItem('ss_id');
 
   if (!ss_id) {
-    console.warn('❌ ss_id missing');
+    console.warn(' ss_id missing');
     return;
   }
 
-  const route =
-    type === 'completed'
-      ? '/postedjobtransaction'
-      : '/qualitychecker';
+  let route = '/qualitychecker'; // default
 
-  const fullUrl = `${route}?status=${type}&ss_id=${encodeURIComponent(ss_id)}`;
-  console.log('➡️ QC URL:', fullUrl);
+  if (type === 'completed') {
+    route = '/qualitychecker';
+  } 
+  else if (type === 'extended') {
+    if ((this.qc.runningQCJobs ?? 0) > 0 || (this.qc.pausedQCJobs ?? 0) > 0) {
+      route = '/qualitychecker';
+    } 
+    else if ((this.qc.normalCompletedQCJobs ?? 0) > 0) {
+      route = '/qualitychecker';
+    } 
+    else {
+      route = '/qualitychecker';
+    }
+  }
+
+  console.log('QC Overview:', this.qc);
+  console.log(' Navigating to QC route:', route);
 
   this.router.navigate([route], {
     queryParams: { status: type, ss_id }
   });
 }
+
 
 goToVerify(type: string) {
   const ss_id =
@@ -264,22 +302,35 @@ goToVerify(type: string) {
     || localStorage.getItem('ss_id');
 
   if (!ss_id) {
-    console.warn('❌ ss_id missing');
+    console.warn(' ss_id missing');
     return;
   }
 
-  const route =
-    type === 'completed'
-      ? '/postedjobtransaction'
-      : '/verify-transaction';
+  let route = '/verify-transaction'; // default
 
-  const fullUrl = `${route}?status=${type}&ss_id=${encodeURIComponent(ss_id)}`;
-  console.log('➡️ Verify URL:', fullUrl);
+  if (type === 'completed') {
+    route = '/verify-transaction';
+  } 
+  else if (type === 'extended') {
+    if ((this.verify.runningVerifyJobs ?? 0) > 0 || (this.verify.pausedVerifyJobs ?? 0) > 0) {
+      route = '/verify-transaction';
+    } 
+    else if ((this.verify.normalCompletedVerifyJobs ?? 0) > 0) {
+      route = '/verify-transaction';
+    } 
+    else {
+      route = '/verify-transaction';
+    }
+  }
+
+  console.log('Verify Overview:', this.verify);
+  console.log(' Navigating to Verify route:', route);
 
   this.router.navigate([route], {
     queryParams: { status: type, ss_id }
   });
 }
+
 
 
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobService } from '../../services/job.service';
@@ -39,7 +39,9 @@ export class Issuetransaction implements OnInit {
   size: number = 200;
   searchTerm: string = '';
   isLoading: boolean = false;
-  isSidebarHidden = false;
+ 
+   isSidebarHidden = window.innerWidth <= 1024;
+
   
   filteredTransactions: any[] = [];
   globalSearch: string = '';
@@ -52,6 +54,7 @@ export class Issuetransaction implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     this.employeeCode = userDetails?.employeeCode;
     this.role_id = userDetails?.roleID;
@@ -282,7 +285,18 @@ private buildStartPayload(job: any) {
     }
   }
 
+  @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
 
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;

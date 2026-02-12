@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -39,7 +39,9 @@ interface ItemForm {
 export class ItemComponent implements OnInit {
   items: any[] = [];
   searchTerm: string = '';
-  isSidebarHidden = false;
+ 
+   isSidebarHidden = window.innerWidth <= 1024;
+
   showForm = false;
   showAddItemDialog = false;
   editingItemId: number | null = null;
@@ -62,9 +64,21 @@ export class ItemComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadJobsLazy();
   }
+ @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
 
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
+  }
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
   }

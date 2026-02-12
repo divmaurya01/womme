@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -28,7 +28,7 @@ import { LoaderService } from '../../services/loader.service';
   ]
 })
 export class NotificationComponent implements OnInit {
-  isSidebarHidden = false;
+ isSidebarHidden = window.innerWidth <= 1024;
   notifications: any[] = [];
   filteredNotifications: any[] = [];
   globalSearch = '';
@@ -47,6 +47,7 @@ export class NotificationComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadNotifications();
   }
 
@@ -64,6 +65,18 @@ export class NotificationComponent implements OnInit {
           Swal.fire('Error', 'Failed to load notifications', 'error');
         }
       });
+  }
+   @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+  }
+
+    checkScreenSize() {
+    if (window.innerWidth <= 1024) {
+      this.isSidebarHidden = true;   // Mobile → hidden
+    } else {
+      this.isSidebarHidden = false;  // Desktop → visible
+    }
   }
 
   toggleSidebar(): void {

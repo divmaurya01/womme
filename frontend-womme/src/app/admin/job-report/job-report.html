@@ -138,16 +138,16 @@
                                     <td>{{ op.start }}</td>
                                     <td>{{ op.end || '-' }}</td>
                                     <td class="status-cell">
-                                        <span
-                                          class="status-badge"
-                                          [ngClass]="{
-                                            'status-running': op.status === 'Running' || op.status === '1',
-                                            'status-paused':  op.status === 'Paused'  || op.status === '2',
-                                            'status-done':    op.status === 'Completed' || op.status === '3'
-                                          }">
-                                          {{ op.status }}
-                                        </span>
-                                      </td>
+                                      <span
+                                        class="status-badge"
+                                        [ngClass]="{
+                                          'status-running': op.status === 'Running' || op.status === '1',
+                                          'status-paused':  op.status === 'Paused'  || op.status === '2',
+                                          'status-done':    op.status === 'Completed' || op.status === '3'
+                                        }">
+                                        {{ op.status }}
+                                      </span>
+                                    </td>
 
                                     <td>{{ op.runningHrs }}</td>
                                 </tr>
