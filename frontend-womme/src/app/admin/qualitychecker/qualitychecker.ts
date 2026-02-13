@@ -228,42 +228,58 @@ private handleError(err: any) {
 
 
   /** Start Single Job */
-  startQCJob(job: any) {
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-    const employeeCode = userDetails.employeeCode || '';
+startQCJob(job: any) {
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const employeeCode = userDetails.employeeCode || '';
 
-    const payload = {
-      JobNumber: job.jobNumber,
-      SerialNo: job.serialNo,
-      OperationNumber: job.operationNumber,
-      Wc: job.wcCode,
-      item: job.item,
-      QtyReleased: job.qtyReleased,
-      EmpNum: employeeCode,
-      loginuser: employeeCode
-    };
+  const now = new Date();
 
-    Swal.fire({
-      title: 'Start Job?',
-      text: `Do you want to start Job ${job.jobNumber} (Serial ${job.serialNo}) at WC ${job.wcCode}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Start',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.loader.show();
-        this.jobService.startQCJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
+  // ✅ Build LOCAL datetime string (no UTC conversion)
+  const localDateTime =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
+
+  const payload = {
+    JobNumber: job.jobNumber,
+    SerialNo: job.serialNo,
+    OperationNumber: job.operationNumber,
+    Wc: job.wcCode,
+    item: job.item,
+    QtyReleased: job.qtyReleased,
+    EmpNum: employeeCode,
+    loginuser: employeeCode,
+    startTime: localDateTime   // ✅ Local time, not UTC
+  };
+
+  Swal.fire({
+    title: 'Start Job?',
+    text: `Do you want to start Job ${job.jobNumber} (Serial ${job.serialNo}) at WC ${job.wcCode}?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Start',
+    cancelButtonText: 'Cancel'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      this.loader.show();
+      this.jobService.startQCJob(payload)
+        .pipe(finalize(() => { this.loader.hide(); }))
+        .subscribe({
           next: () => {
             Swal.fire('Started!', `Job ${job.jobNumber} started successfully.`, 'success');
             this.loadJobs();
             this.loadOngoingJobs();
           },
-          error: (err) => Swal.fire('Error', err.error?.message || 'Failed to start job', 'error')
+          error: (err) =>
+            Swal.fire('Error', err.error?.message || 'Failed to start job', 'error')
         });
-      }
-    });
-  }
+    }
+  });
+}
+
 
   /** Start Group Jobs */
   StartGroupQCJobs() {
@@ -342,7 +358,7 @@ private handleError(err: any) {
         const jobKey = `${x.job}-${x.serialNo}-${x.oper_num}-${x.wc}-${index}`;
 
         // Parse backend time AS-IS (local/server time)
-        const startTime = x.start_time ? new Date(x.start_time) : null;
+        const startTime = new Date(x.start_time);
         const now = new Date();
 
         let elapsedSeconds = 0;
@@ -444,18 +460,34 @@ private handleError(err: any) {
 
 
   /** Toggle Pause / Resume */
+
   togglePauseResume(job: any) {
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+
+    const now = new Date();
+        const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     const employeeCode = userDetails.employeeCode || '';
-    const payload = {
-      JobNumber: job.jobNumber,
-      SerialNo: job.serialNo,
-      OperationNumber: job.operationNumber,
-      Wc: job.wcCode,
-      Item: job.item,
-      EmpNum: employeeCode,
-      loginuser: employeeCode
-    };
+
+const localDateTime =
+  now.getFullYear() + '-' +
+  String(now.getMonth() + 1).padStart(2, '0') + '-' +
+  String(now.getDate()).padStart(2, '0') + 'T' +
+  String(now.getHours()).padStart(2, '0') + ':' +
+  String(now.getMinutes()).padStart(2, '0') + ':' +
+  String(now.getSeconds()).padStart(2, '0');
+
+const payload = {
+  JobNumber: job.jobNumber,
+  SerialNo: job.serialNo,
+  OperationNumber: job.operationNumber,
+  Wc: job.wcCode,
+  Item: job.item,
+  EmpNum: employeeCode,
+  loginuser: employeeCode,
+  startTime: localDateTime   // ✅ ADD THIS
+};
+
+
+
     this.loader.show();
     if (job.isPaused) {
       // Resume
@@ -498,6 +530,17 @@ private handleError(err: any) {
 completeQCJob(job: any) {
   const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
   const employeeCode = userDetails.employeeCode || '';
+  const now = new Date();
+
+  // ✅ Local datetime string (NO UTC)
+  const localDateTime =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
+
   const payload = {
     JobNumber: job.jobNumber,
     SerialNo: job.serialNo,
@@ -505,7 +548,8 @@ completeQCJob(job: any) {
     Wc: job.wcCode,
     Item: job.item,
     EmpNum: employeeCode,
-    loginuser: employeeCode
+    loginuser: employeeCode,
+     startTime: localDateTime  
   };
 
   Swal.fire({

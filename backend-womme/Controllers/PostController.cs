@@ -165,7 +165,7 @@ public class PostController : ControllerBase
 
 
 
-   [HttpPost("StartJob")]
+    [HttpPost("StartJob")]
     public async Task<IActionResult> StartJob([FromBody] StartJobRequestDto dto)
     {
         if (dto == null)
@@ -207,7 +207,7 @@ public class PostController : ControllerBase
                 lastPaused.UpdatedBy = dto.loginuser;
                 _context.JobTranMst.Update(lastPaused);
                 await _context.SaveChangesAsync();
-            }             
+            }
 
 
             var jobRoutes = await _context.JobRouteMst
@@ -234,7 +234,7 @@ public class PostController : ControllerBase
             if (employee == 0)
                 return NotFound(new { message = "Employee not found or mfg_reg_rate is 0." });
 
-           
+
             decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
 
             var jobTran = new JobTranMst
@@ -273,9 +273,9 @@ public class PostController : ControllerBase
                 RowPointer = Guid.NewGuid()
             };
 
-            
+
             _context.JobTranMst.Add(jobTran);
-            await _context.SaveChangesAsync();           
+            await _context.SaveChangesAsync();
 
             return Ok(new { success = true, message = "Job started successfully.", nextOperation });
         }
@@ -394,10 +394,10 @@ public class PostController : ControllerBase
             // Check your condition
             if (latestRow?.status == "2" && secondLastRow?.status == "1")
             {
-                _context.Entry(secondLastRow).State = EntityState.Detached;                    
-                    secondLastRow.qcgroup = "";
+                _context.Entry(secondLastRow).State = EntityState.Detached;
+                secondLastRow.qcgroup = "";
 
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow,0);
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 0);
 
                 if (sytelineTransNum != null)
                 {
@@ -431,9 +431,9 @@ public class PostController : ControllerBase
 
 
 
-  //CompleteJob
-  [HttpPost("CompleteJob")]
-  public async Task<IActionResult> CompleteJob([FromBody] StartJobRequestDto dto)
+    //CompleteJob
+    [HttpPost("CompleteJob")]
+    public async Task<IActionResult> CompleteJob([FromBody] StartJobRequestDto dto)
     {
         if (dto == null)
             return BadRequest("Invalid request");
@@ -443,216 +443,216 @@ public class PostController : ControllerBase
             var now = DateTime.UtcNow;
 
             // Get last job row
-                    var lastJob = await _context.JobTranMst
-                        .Where(j => j.job == dto.JobNumber
-                                    && j.oper_num == dto.OperationNumber
-                                    && j.wc == dto.Wc
-                                    && j.SerialNo == dto.SerialNo)
-                        .OrderByDescending(j => j.trans_date)
-                        .FirstOrDefaultAsync();
+            var lastJob = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                            && j.oper_num == dto.OperationNumber
+                            && j.wc == dto.Wc
+                            && j.SerialNo == dto.SerialNo)
+                .OrderByDescending(j => j.trans_date)
+                .FirstOrDefaultAsync();
 
-                    if (lastJob == null)
-                        return NotFound(new { message = "No job found to complete." });
+            if (lastJob == null)
+                return NotFound(new { message = "No job found to complete." });
 
-                    Console.WriteLine($"LastJob => {lastJob.trans_num}, Status: {lastJob.status}, Start: {lastJob.start_time}, End: {lastJob.end_time}");
+            Console.WriteLine($"LastJob => {lastJob.trans_num}, Status: {lastJob.status}, Start: {lastJob.start_time}, End: {lastJob.end_time}");
 
-                    if (lastJob.status == "3")
-                        return BadRequest(new { message = "Job is already completed." });
+            if (lastJob.status == "3")
+                return BadRequest(new { message = "Job is already completed." });
 
-                    var empRates = await _context.EmployeeMst
-                        .Where(e => e.emp_num == dto.EmpNum)
-                        .Select(e => new { RegRate = e.mfg_reg_rate, OtRate = e.mfg_ot_rate })
-                        .FirstOrDefaultAsync();
+            var empRates = await _context.EmployeeMst
+                .Where(e => e.emp_num == dto.EmpNum)
+                .Select(e => new { RegRate = e.mfg_reg_rate, OtRate = e.mfg_ot_rate })
+                .FirstOrDefaultAsync();
 
-                    decimal regRate = empRates?.RegRate ?? 0m;
-                    decimal otRate = empRates?.OtRate ?? 0m;
+            decimal regRate = empRates?.RegRate ?? 0m;
+            decimal otRate = empRates?.OtRate ?? 0m;
 
-                    // If last job was paused (status=2)
-                    if (lastJob.status == "2")
-                    {
-                        if (lastJob.end_time == null)
-                            lastJob.end_time = DateTime.UtcNow;
+            // If last job was paused (status=2)
+            if (lastJob.status == "2")
+            {
+                if (lastJob.end_time == null)
+                    lastJob.end_time = DateTime.UtcNow;
 
-                        lastJob.a_hrs = (decimal)(lastJob.end_time.Value - lastJob.start_time.Value).TotalHours;
-                        lastJob.UpdatedBy = dto.loginuser;
+                lastJob.a_hrs = (decimal)(lastJob.end_time.Value - lastJob.start_time.Value).TotalHours;
+                lastJob.UpdatedBy = dto.loginuser;
 
-                        _context.JobTranMst.Update(lastJob);
-                        await _context.SaveChangesAsync();
-                    }
-                    else if (lastJob.status == "1") // Running job
-                    {
-                        lastJob.end_time = now;
-                        lastJob.a_hrs = (decimal)(lastJob.end_time.Value - lastJob.start_time.Value).TotalHours;
-                        lastJob.a_dollar = lastJob.a_hrs * regRate;
+                _context.JobTranMst.Update(lastJob);
+                await _context.SaveChangesAsync();
+            }
+            else if (lastJob.status == "1") // Running job
+            {
+                lastJob.end_time = now;
+                lastJob.a_hrs = (decimal)(lastJob.end_time.Value - lastJob.start_time.Value).TotalHours;
+                lastJob.a_dollar = lastJob.a_hrs * regRate;
 
-                        _context.JobTranMst.Update(lastJob);
-                        await _context.SaveChangesAsync();
-                    }
+                _context.JobTranMst.Update(lastJob);
+                await _context.SaveChangesAsync();
+            }
 
-                    // First job row (start of entire cycle)
-                    var firstJobRow = await _context.JobTranMst
-                        .Where(j => j.job == dto.JobNumber
-                                    && j.oper_num == dto.OperationNumber
-                                    && j.wc == dto.Wc
-                                    && j.SerialNo == dto.SerialNo)
-                        .OrderBy(j => j.trans_date)
-                        .FirstOrDefaultAsync();
+            // First job row (start of entire cycle)
+            var firstJobRow = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                            && j.oper_num == dto.OperationNumber
+                            && j.wc == dto.Wc
+                            && j.SerialNo == dto.SerialNo)
+                .OrderBy(j => j.trans_date)
+                .FirstOrDefaultAsync();
 
-                    DateTime startFrom = firstJobRow?.trans_date ?? now;
+            DateTime startFrom = firstJobRow?.trans_date ?? now;
 
-                    // Get total hours from all running rows
-                    var runningRows = await _context.JobTranMst
-                        .Where(j => j.job == dto.JobNumber
-                                && j.oper_num == dto.OperationNumber
-                                && j.wc == dto.Wc
-                                && j.SerialNo == dto.SerialNo
-                                && j.status == "1"
-                                && j.a_hrs > 0)
-                        .ToListAsync();
+            // Get total hours from all running rows
+            var runningRows = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                        && j.oper_num == dto.OperationNumber
+                        && j.wc == dto.Wc
+                        && j.SerialNo == dto.SerialNo
+                        && j.status == "1"
+                        && j.a_hrs > 0)
+                .ToListAsync();
 
-                    decimal totalHours = runningRows.Sum(r => r.a_hrs ?? 0m);
+            decimal totalHours = runningRows.Sum(r => r.a_hrs ?? 0m);
 
-                    // Split into regular + OT
-                    decimal regularHours = totalHours > 8 ? 8m : totalHours;
-                    decimal otHours = totalHours > 8 ? totalHours - 8m : 0m;
+            // Split into regular + OT
+            decimal regularHours = totalHours > 8 ? 8m : totalHours;
+            decimal otHours = totalHours > 8 ? totalHours - 8m : 0m;
 
-                    // Create completed regular job row
-                    decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
+            // Create completed regular job row
+            decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
 
-                    // Complete job flag if all opr done
-                    var routeOperations = await _context.JobRouteMst
-                    .Where(r => r.Job == dto.JobNumber)
-                    .Select(r => r.OperNum)
-                    .Distinct()
-                    .ToListAsync();
+            // Complete job flag if all opr done
+            var routeOperations = await _context.JobRouteMst
+            .Where(r => r.Job == dto.JobNumber)
+            .Select(r => r.OperNum)
+            .Distinct()
+            .ToListAsync();
 
-                    var completedOperations = await _context.JobTranMst
-                    .Where(t => t.job == dto.JobNumber
-                            && t.status == "3")
-                    .Select(t => t.oper_num)
-                    .Distinct()
-                    .ToListAsync();
+            var completedOperations = await _context.JobTranMst
+            .Where(t => t.job == dto.JobNumber
+                    && t.status == "3")
+            .Select(t => t.oper_num)
+            .Distinct()
+            .ToListAsync();
 
-                    bool allOperationsCompleted = routeOperations
-                        .All(op => completedOperations.Contains(op));
+            bool allOperationsCompleted = routeOperations
+                .All(op => completedOperations.Contains(op));
 
-                    byte closeJobFlag = (byte)(allOperationsCompleted ? 1 : 0);
+            byte closeJobFlag = (byte)(allOperationsCompleted ? 1 : 0);
 
-                    var completedJob = new JobTranMst
-                    {
-                        site_ref = lastJob.site_ref,
-                        trans_num = nextTransNum,
-                        job = lastJob.job,
-                        SerialNo = lastJob.SerialNo,
-                        wc = lastJob.wc,
-                        machine_id = lastJob.machine_id,
-                        emp_num = lastJob.emp_num,
-                        qty_complete = 1,
-                        oper_num = lastJob.oper_num,
-                        next_oper = lastJob.next_oper,
-                        trans_date = now,
-                        RecordDate = now,
-                        CreateDate = now,
-                        CreatedBy = dto.loginuser,
-                        UpdatedBy = dto.loginuser,
-                        completed_flag = true,
-                        suffix = lastJob.suffix,
-                        trans_type = "D",
-                        qty_scrapped = lastJob.qty_scrapped,
-                        qty_moved = 1,
-                        pay_rate = lastJob.pay_rate,
-                        whse = lastJob.whse,
-                        close_job = closeJobFlag,
-                        issue_parent = lastJob.issue_parent,
-                        complete_op = 1,
-                        shift = "1",
-                        posted = 1,
-                        job_rate = regRate,
-                        Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
-                        a_hrs = regularHours,
-                        a_dollar = regularHours * regRate,
-                        start_time = startFrom,
-                        end_time = now,
-                        status = "3",
-                        RowPointer = Guid.NewGuid(),
-                        trans_class = lastJob.trans_class,
-                        item = lastJob.item,
-                        qcgroup = ""
-                    };
+            var completedJob = new JobTranMst
+            {
+                site_ref = lastJob.site_ref,
+                trans_num = nextTransNum,
+                job = lastJob.job,
+                SerialNo = lastJob.SerialNo,
+                wc = lastJob.wc,
+                machine_id = lastJob.machine_id,
+                emp_num = lastJob.emp_num,
+                qty_complete = 1,
+                oper_num = lastJob.oper_num,
+                next_oper = lastJob.next_oper,
+                trans_date = now,
+                RecordDate = now,
+                CreateDate = now,
+                CreatedBy = dto.loginuser,
+                UpdatedBy = dto.loginuser,
+                completed_flag = true,
+                suffix = lastJob.suffix,
+                trans_type = "D",
+                qty_scrapped = lastJob.qty_scrapped,
+                qty_moved = 1,
+                pay_rate = lastJob.pay_rate,
+                whse = lastJob.whse,
+                close_job = closeJobFlag,
+                issue_parent = lastJob.issue_parent,
+                complete_op = 1,
+                shift = "1",
+                posted = 1,
+                job_rate = regRate,
+                Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
+                a_hrs = regularHours,
+                a_dollar = regularHours * regRate,
+                start_time = startFrom,
+                end_time = now,
+                status = "3",
+                RowPointer = Guid.NewGuid(),
+                trans_class = lastJob.trans_class,
+                item = lastJob.item,
+                qcgroup = ""
+            };
 
-                    _context.JobTranMst.Add(completedJob);
+            _context.JobTranMst.Add(completedJob);
+            await _context.SaveChangesAsync();
+
+            // Get last 2 rows
+            var lastTwoRows = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                        && j.oper_num == dto.OperationNumber
+                        && j.wc == dto.Wc
+                        && j.SerialNo == dto.SerialNo)
+                .OrderByDescending(j => j.trans_num)
+                .Take(2)
+                .ToListAsync();
+
+            var latestRow = lastTwoRows.FirstOrDefault();               // status 3
+            var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault();   // status 1
+
+            // Check your condition
+            if (latestRow?.status == "3" && secondLastRow?.status == "1")
+            {
+                _context.Entry(secondLastRow).State = EntityState.Detached;
+                // Explicitly override only required values
+                secondLastRow.qty_complete = 1;
+                secondLastRow.qty_moved = 1;
+                secondLastRow.qcgroup = "";
+                secondLastRow.close_job = (latestRow?.close_job == 1) ? (byte)1 : (byte)0;
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 1);
+
+                if (sytelineTransNum != null)
+                {
+                    latestRow.import_doc_id = sytelineTransNum.Value.ToString();
+                    _context.JobTranMst.Update(secondLastRow);
                     await _context.SaveChangesAsync();
+                }
+            }
 
-                    // Get last 2 rows
-                    var lastTwoRows = await _context.JobTranMst
-                        .Where(j => j.job == dto.JobNumber
-                                && j.oper_num == dto.OperationNumber
-                                && j.wc == dto.Wc
-                                && j.SerialNo == dto.SerialNo)
-                        .OrderByDescending(j => j.trans_num)
-                        .Take(2)
-                        .ToListAsync();
-
-                    var latestRow = lastTwoRows.FirstOrDefault();               // status 3
-                    var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault();   // status 1
-
-                    // Check your condition
-                    if (latestRow?.status == "3" && secondLastRow?.status == "1")
-                    {
-                        _context.Entry(secondLastRow).State = EntityState.Detached;
-                            // Explicitly override only required values
-                            secondLastRow.qty_complete = 1;
-                            secondLastRow.qty_moved = 1;
-                            secondLastRow.qcgroup = "";
-                            secondLastRow.close_job = (latestRow?.close_job == 1) ? (byte)1 : (byte)0;
-                        var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 1);
-
-                        if (sytelineTransNum != null)
-                        {
-                            latestRow.import_doc_id = sytelineTransNum.Value.ToString();
-                            _context.JobTranMst.Update(secondLastRow);
-                            await _context.SaveChangesAsync();
-                        }
-                    }
-
-                    // CASE 2: latestRow = 3, secondLastRow = 2
-                    if (latestRow?.status == "3" && secondLastRow?.status == "2")
-                    {
-                        var lastImportDocId = await _context.JobTranMst
-                        .Where(j => j.job == dto.JobNumber
-                                    && j.oper_num == dto.OperationNumber
-                                    && j.wc == dto.Wc
-                                    && j.SerialNo == dto.SerialNo
-                                    && !string.IsNullOrEmpty(j.import_doc_id))
-                        .OrderByDescending(j => j.trans_num)
-                        .Select(j => j.import_doc_id)
-                        .FirstOrDefaultAsync();
-
-                    if (string.IsNullOrEmpty(lastImportDocId))
-                        return BadRequest(new { message = "No Syteline transaction number found to update." });
-                        
-                        bool sytelineResult = await _sytelineService.UpdateJobTranCompletionAsync(
-                            Convert.ToInt32(lastImportDocId),               // trans_num in Syteline
-                            (byte)latestRow.complete_op,                          // byte
-                            latestRow.close_job ?? 0,                       // byte
-                            latestRow.qty_complete ?? 0,
-                            latestRow.qty_moved ?? 0
-                        );
-                        
-                    }
-
-            
-            // OT logic starts
-            Console.WriteLine($"Starting OT logic here ..");
-
-              var runningJobs = await _context.JobTranMst
+            // CASE 2: latestRow = 3, secondLastRow = 2
+            if (latestRow?.status == "3" && secondLastRow?.status == "2")
+            {
+                var lastImportDocId = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
                             && j.oper_num == dto.OperationNumber
                             && j.wc == dto.Wc
                             && j.SerialNo == dto.SerialNo
-                            && j.status == "1")
-                .OrderBy(j => j.trans_date)
-                .ToListAsync();
+                            && !string.IsNullOrEmpty(j.import_doc_id))
+                .OrderByDescending(j => j.trans_num)
+                .Select(j => j.import_doc_id)
+                .FirstOrDefaultAsync();
+
+                if (string.IsNullOrEmpty(lastImportDocId))
+                    return BadRequest(new { message = "No Syteline transaction number found to update." });
+
+                bool sytelineResult = await _sytelineService.UpdateJobTranCompletionAsync(
+                    Convert.ToInt32(lastImportDocId),               // trans_num in Syteline
+                    (byte)latestRow.complete_op,                          // byte
+                    latestRow.close_job ?? 0,                       // byte
+                    latestRow.qty_complete ?? 0,
+                    latestRow.qty_moved ?? 0
+                );
+
+            }
+
+
+            // OT logic starts
+            Console.WriteLine($"Starting OT logic here ..");
+
+            var runningJobs = await _context.JobTranMst
+              .Where(j => j.job == dto.JobNumber
+                          && j.oper_num == dto.OperationNumber
+                          && j.wc == dto.Wc
+                          && j.SerialNo == dto.SerialNo
+                          && j.status == "1")
+              .OrderBy(j => j.trans_date)
+              .ToListAsync();
 
             decimal totalAhrs = runningJobs.Sum(j => j.a_hrs ?? 0m);
 
@@ -803,7 +803,7 @@ public class PostController : ControllerBase
                         a_hrs = totalHours,
                         a_dollar = jobTranRows.Sum(x => x.a_dollar),
                         start_time = firstRow.start_time,
-                        end_time = firstRow.start_time.Value.AddHours((double)totalHours), 
+                        end_time = firstRow.start_time.Value.AddHours((double)totalHours),
 
                         status = "3",
                         trans_date = DateTime.UtcNow,
@@ -814,81 +814,81 @@ public class PostController : ControllerBase
                         RowPointer = Guid.NewGuid()
                     });
 
-                     _context.JobTranMst.AddRange(jobTranRows);
+                    _context.JobTranMst.AddRange(jobTranRows);
                     await _context.SaveChangesAsync();
 
-                    var deletesytelineTrans = await _sytelineService.DeleteFromSyteLineAsync(dto.JobNumber,dto.SerialNo,dto.Wc,dto.OperationNumber);
+                    var deletesytelineTrans = await _sytelineService.DeleteFromSyteLineAsync(dto.JobNumber, dto.SerialNo, dto.Wc, dto.OperationNumber);
 
-                        if (deletesytelineTrans)
+                    if (deletesytelineTrans)
+                    {
+                        var status1Rows = await _context.JobTranMst
+                        .Where(j =>
+                            j.job == dto.JobNumber &&
+                            j.SerialNo == dto.SerialNo &&
+                            j.wc == dto.Wc &&
+                            j.oper_num == dto.OperationNumber &&
+                            j.status == "1")
+                        .OrderBy(j => j.trans_num)
+                        .ToListAsync();
+
+                        int totalRows = status1Rows.Count;
+
+                        for (int i = 0; i < totalRows; i++)
                         {
-                            var status1Rows = await _context.JobTranMst
-                            .Where(j =>
-                                j.job == dto.JobNumber &&
-                                j.SerialNo == dto.SerialNo &&
-                                j.wc == dto.Wc &&
-                                j.oper_num == dto.OperationNumber &&
-                                j.status == "1")
-                            .OrderBy(j => j.trans_num)
-                            .ToListAsync();
+                            var row = status1Rows[i];
 
-                            int totalRows = status1Rows.Count;
-
-                            for (int i = 0; i < totalRows; i++)
+                            if (row.start_time.HasValue)
                             {
-                                var row = status1Rows[i];
-
-                                if (row.start_time.HasValue)
-                                {
-                                    row.start_time = DateTime.Today
-                                        .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
-                                }
-
-                                if (row.end_time.HasValue)
-                                {
-                                    row.end_time = DateTime.Today
-                                        .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
-                                }
-
-                                row.qty_moved = 0;
-                                row.complete_op = 0;
-                                row.qty_complete = 0;
-
-                                
-                                if (i == totalRows - 1)
-                                {
-                                    row.qty_moved = 1;
-                                    row.complete_op = 1;
-                                    row.qty_complete = 1;
-                                    if (totalRows > 1)
-                                    {
-                                        row.shift = "2";
-                                    }
-                                }
-                                
-                                
-                                int? sytelineTransNum =
-                                    await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
-                            
-                                if (sytelineTransNum == null)
-                                {
-                                    return StatusCode(500,
-                                        $"SyteLine insert failed for Job={row.job}, Oper={row.oper_num}");
-                                }
-                            
-                                row.import_doc_id = sytelineTransNum.ToString();
-                            
+                                row.start_time = DateTime.Today
+                                    .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
                             }
-                            await _context.SaveChangesAsync();
+
+                            if (row.end_time.HasValue)
+                            {
+                                row.end_time = DateTime.Today
+                                    .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
+                            }
+
+                            row.qty_moved = 0;
+                            row.complete_op = 0;
+                            row.qty_complete = 0;
+
+
+                            if (i == totalRows - 1)
+                            {
+                                row.qty_moved = 1;
+                                row.complete_op = 1;
+                                row.qty_complete = 1;
+                                if (totalRows > 1)
+                                {
+                                    row.shift = "2";
+                                }
+                            }
+
+
+                            int? sytelineTransNum =
+                                await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
+
+                            if (sytelineTransNum == null)
+                            {
+                                return StatusCode(500,
+                                    $"SyteLine insert failed for Job={row.job}, Oper={row.oper_num}");
+                            }
+
+                            row.import_doc_id = sytelineTransNum.ToString();
 
                         }
+                        await _context.SaveChangesAsync();
 
-                   
+                    }
+
+
                 }
             }
 
-            
 
-           
+
+
 
             return Ok(new { success = true, message = "Job completed successfully." });
         }
@@ -905,10 +905,10 @@ public class PostController : ControllerBase
     }
 
 
-    
 
 
-   [HttpPost("UpdateJobLog")]
+
+    [HttpPost("UpdateJobLog")]
     public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
     {
         if (dto == null)
@@ -928,13 +928,13 @@ public class PostController : ControllerBase
                             .OrderByDescending(j => j.trans_num)
                             .ToListAsync();
 
-                        if (!oldRows.Any())
-                            return NotFound("No matching job transactions found.");
+            if (!oldRows.Any())
+                return NotFound("No matching job transactions found.");
 
 
-            int? nextOper = oldRows .Where(r => r.next_oper != null) .Select(r => r.next_oper) .FirstOrDefault();
-            string? lastqcgroup = oldRows .Where(r => r.qcgroup != null) .Select(r => r.qcgroup) .FirstOrDefault();
-            string? lastTransType = oldRows .Where(r => !string.IsNullOrWhiteSpace(r.trans_type)) .Select(r => r.trans_type) .FirstOrDefault();
+            int? nextOper = oldRows.Where(r => r.next_oper != null).Select(r => r.next_oper).FirstOrDefault();
+            string? lastqcgroup = oldRows.Where(r => r.qcgroup != null).Select(r => r.qcgroup).FirstOrDefault();
+            string? lastTransType = oldRows.Where(r => !string.IsNullOrWhiteSpace(r.trans_type)).Select(r => r.trans_type).FirstOrDefault();
 
 
             _context.JobTranMst.RemoveRange(oldRows);
@@ -958,24 +958,24 @@ public class PostController : ControllerBase
 
             decimal regRate = empRates?.RegRate ?? 0m;
 
-             // Complete job flag if all opr done
-                var routeOperations = await _context.JobRouteMst
-                .Where(r => r.Job == dto.Job)
-                .Select(r => r.OperNum)
-                .Distinct()
-                .ToListAsync();
+            // Complete job flag if all opr done
+            var routeOperations = await _context.JobRouteMst
+            .Where(r => r.Job == dto.Job)
+            .Select(r => r.OperNum)
+            .Distinct()
+            .ToListAsync();
 
-                var completedOperations = await _context.JobTranMst
-                .Where(t => t.job == dto.Job
-                        && t.status == "3")
-                .Select(t => t.oper_num)
-                .Distinct()
-                .ToListAsync();
+            var completedOperations = await _context.JobTranMst
+            .Where(t => t.job == dto.Job
+                    && t.status == "3")
+            .Select(t => t.oper_num)
+            .Distinct()
+            .ToListAsync();
 
-                bool allOperationsCompleted = routeOperations
-                    .All(op => completedOperations.Contains(op));
+            bool allOperationsCompleted = routeOperations
+                .All(op => completedOperations.Contains(op));
 
-                byte closeJobFlag = (byte)(allOperationsCompleted ? 1 : 0);
+            byte closeJobFlag = (byte)(allOperationsCompleted ? 1 : 0);
 
             // ================== ≤ 8 HOURS ==================
             if (totalHours <= 8)
@@ -1028,7 +1028,7 @@ public class PostController : ControllerBase
                     RowPointer = Guid.NewGuid()
                 };
 
-                                
+
                 // -------- STATUS = 3 (COMPLETED) --------
                 var rowStatus3 = new JobTranMst
                 {
@@ -1042,7 +1042,7 @@ public class PostController : ControllerBase
                     emp_num = rowStatus1.emp_num,
                     oper_num = rowStatus1.oper_num,
                     next_oper = rowStatus1.next_oper,
-                    
+
                     pay_rate = rowStatus1.pay_rate,
                     whse = rowStatus1.whse,
                     issue_parent = rowStatus1.issue_parent,
@@ -1053,7 +1053,7 @@ public class PostController : ControllerBase
                     a_hrs = rowStatus1.a_hrs,
                     a_dollar = rowStatus1.a_dollar,
                     start_time = rowStatus1.start_time,
-                    end_time = rowStatus1.end_time,                    
+                    end_time = rowStatus1.end_time,
 
                     trans_date = rowStatus1.trans_date,
                     RecordDate = rowStatus1.RecordDate,
@@ -1061,7 +1061,7 @@ public class PostController : ControllerBase
                     CreatedBy = rowStatus1.CreatedBy,
                     UpdatedBy = rowStatus1.UpdatedBy,
 
-                    trans_type = lastTransType,                  
+                    trans_type = lastTransType,
                     qty_complete = 1,
                     qty_scrapped = 0,
                     qty_moved = 1,
@@ -1071,7 +1071,7 @@ public class PostController : ControllerBase
                     trans_num = rowStatus1.trans_num + 1,
                     status = "3",
                     qcgroup = lastqcgroup,
-                    
+
 
                     RowPointer = Guid.NewGuid()
                 };
@@ -1079,7 +1079,7 @@ public class PostController : ControllerBase
                 _context.JobTranMst.AddRange(rowStatus1, rowStatus3);
                 await _context.SaveChangesAsync();
 
-                var deletesytelineTrans8 = await _sytelineService.DeleteFromSyteLineAsync(dto.Job,dto.SerialNumber,dto.WorkCenter,dto.OperationNumber);
+                var deletesytelineTrans8 = await _sytelineService.DeleteFromSyteLineAsync(dto.Job, dto.SerialNumber, dto.WorkCenter, dto.OperationNumber);
 
                 if (deletesytelineTrans8)
                 {
@@ -1115,30 +1115,30 @@ public class PostController : ControllerBase
                         row.complete_op = 0;
                         row.qty_complete = 0;
 
-                        
+
                         if (i == totalRows - 1)
                         {
                             row.qty_moved = 1;
                             row.complete_op = 1;
                             row.qty_complete = 1;
                             if (totalRows > 1)
-                                    {
-                                        row.shift = "2";
-                                    }
-                        }                        
-                       
-                         // 🔹 Insert into SyteLine
+                            {
+                                row.shift = "2";
+                            }
+                        }
+
+                        // 🔹 Insert into SyteLine
                         int? sytelineTransNum =
                             await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
-                       
+
                         if (sytelineTransNum == null)
                         {
                             return StatusCode(500,
                                 $"SyteLine insert failed for Job={row.job}, Oper={row.oper_num}");
                         }
-                       
+
                         row.import_doc_id = sytelineTransNum.ToString();
-                       
+
                     }
                     await _context.SaveChangesAsync();
 
@@ -1152,7 +1152,7 @@ public class PostController : ControllerBase
             }
 
             // ================== > 8 HOURS ==================
-           
+
             decimal remainingHours = totalHours;
             decimal currentTransNum = trans_num;
 
@@ -1261,7 +1261,7 @@ public class PostController : ControllerBase
 
                 status = "3",
                 qcgroup = lastqcgroup,
-                
+
 
                 trans_date = DateTime.UtcNow,
                 RecordDate = DateTime.UtcNow,
@@ -1276,70 +1276,70 @@ public class PostController : ControllerBase
             _context.JobTranMst.AddRange(jobTranRows);
             await _context.SaveChangesAsync();
 
-            var deletesytelineTrans = await _sytelineService.DeleteFromSyteLineAsync(dto.Job,dto.SerialNumber,dto.WorkCenter,dto.OperationNumber);
+            var deletesytelineTrans = await _sytelineService.DeleteFromSyteLineAsync(dto.Job, dto.SerialNumber, dto.WorkCenter, dto.OperationNumber);
 
-                if (deletesytelineTrans)
+            if (deletesytelineTrans)
+            {
+                var status1Rows = await _context.JobTranMst
+                .Where(j =>
+                    j.job == dto.Job &&
+                    j.SerialNo == dto.SerialNumber &&
+                    j.wc == dto.WorkCenter &&
+                    j.oper_num == dto.OperationNumber &&
+                    j.status == "1")
+                .OrderBy(j => j.trans_num)
+                .ToListAsync();
+
+                int totalRows = status1Rows.Count;
+
+                for (int i = 0; i < totalRows; i++)
                 {
-                    var status1Rows = await _context.JobTranMst
-                    .Where(j =>
-                        j.job == dto.Job &&
-                        j.SerialNo == dto.SerialNumber &&
-                        j.wc == dto.WorkCenter &&
-                        j.oper_num == dto.OperationNumber &&
-                        j.status == "1")
-                    .OrderBy(j => j.trans_num)
-                    .ToListAsync();
+                    var row = status1Rows[i];
 
-                    int totalRows = status1Rows.Count;
-
-                    for (int i = 0; i < totalRows; i++)
+                    if (row.start_time.HasValue)
                     {
-                        var row = status1Rows[i];
-
-                        if (row.start_time.HasValue)
-                        {
-                            row.start_time = DateTime.Today
-                                .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
-                        }
-
-                        if (row.end_time.HasValue)
-                        {
-                            row.end_time = DateTime.Today
-                                .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
-                        }
-
-                        row.qty_moved = 0;
-                        row.complete_op = 0;
-                        row.qty_complete = 0;
-
-                        
-                        if (i == totalRows - 1)
-                        {
-                            row.qty_moved = 1;
-                            row.complete_op = 1;
-                            row.qty_complete = 1;
-                            if (totalRows > 1)
-                                    {
-                                        row.shift = "2";
-                                    }
-                        }
-                        
-                        
-                        int? sytelineTransNum =
-                            await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
-                       
-                        if (sytelineTransNum == null)
-                        {
-                            return StatusCode(500,
-                                $"SyteLine insert failed for Job={row.job}, Oper={row.oper_num}");
-                        }
-                       
-                        row.import_doc_id = sytelineTransNum.ToString();
-                       
+                        row.start_time = DateTime.Today
+                            .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
                     }
-                    await _context.SaveChangesAsync();
+
+                    if (row.end_time.HasValue)
+                    {
+                        row.end_time = DateTime.Today
+                            .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
+                    }
+
+                    row.qty_moved = 0;
+                    row.complete_op = 0;
+                    row.qty_complete = 0;
+
+
+                    if (i == totalRows - 1)
+                    {
+                        row.qty_moved = 1;
+                        row.complete_op = 1;
+                        row.qty_complete = 1;
+                        if (totalRows > 1)
+                        {
+                            row.shift = "2";
+                        }
+                    }
+
+
+                    int? sytelineTransNum =
+                        await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
+
+                    if (sytelineTransNum == null)
+                    {
+                        return StatusCode(500,
+                            $"SyteLine insert failed for Job={row.job}, Oper={row.oper_num}");
+                    }
+
+                    row.import_doc_id = sytelineTransNum.ToString();
 
                 }
+                await _context.SaveChangesAsync();
+
+            }
 
             return Ok(new
             {
@@ -1610,7 +1610,7 @@ public class PostController : ControllerBase
         }
     }
 
-    
+
 
 
     [HttpPost("JobPoolDetails")]
@@ -1931,12 +1931,12 @@ public class PostController : ControllerBase
         _context.WomWcMachines.Add(entity);
         await _context.SaveChangesAsync();
 
-       
+
         return Ok(new { message = "Machine-WC mapping added successfully to local and Syteline." });
     }
 
-    
-    
+
+
     [HttpPost("startIssueJob")]
     public async Task<IActionResult> StartIssueJob([FromBody] StartJobRequestDto jobDto)
     {
@@ -1944,14 +1944,14 @@ public class PostController : ControllerBase
             return BadRequest("Invalid request");
 
         try
-        {        
+        {
 
             int? nextOper = await _context.JobRouteMst
                 .Where(r => r.Job == jobDto.JobNumber
                         && r.OperNum > jobDto.OperationNumber)
                 .OrderBy(r => r.OperNum)
                 .Select(r => (int?)r.OperNum)
-                .FirstOrDefaultAsync();        
+                .FirstOrDefaultAsync();
 
             decimal startTransNum =
                 (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
@@ -1963,39 +1963,39 @@ public class PostController : ControllerBase
             // --------------------------------------------------
             var startTran = new JobTranMst
             {
-                    site_ref = "DEFAULT",
-                    trans_num = startTransNum,
-                    job = jobDto.JobNumber,
-                    SerialNo = jobDto.SerialNo,                
-                    wc = jobDto.Wc,
-                    emp_num = jobDto.EmpNum,
-                    qty_complete = 0,
-                    oper_num = jobDto.OperationNumber,
-                    next_oper = nextOper,
-                    trans_date = DateTime.UtcNow,
-                    RecordDate = DateTime.UtcNow,
-                    CreateDate = DateTime.UtcNow,
-                    CreatedBy = jobDto.loginuser,
-                    UpdatedBy = jobDto.loginuser,
-                    completed_flag = false,
-                    suffix = 0,
-                    trans_type = "D",
-                    qty_scrapped = 0,
-                    qty_moved = 0,
-                    pay_rate = "R",
-                    whse = "MAIN",
-                    close_job = 0,
-                    issue_parent = 0,
-                    complete_op = 0,
-                    shift = "1",
-                    posted = 1,
-                    job_rate = 0,
-                    Uf_MovedOKToStock = 0,
-                    start_time = DateTime.UtcNow,
-                    end_time = DateTime.UtcNow,
-                    status = "1",
-                    qcgroup = "",
-                    RowPointer = Guid.NewGuid()
+                site_ref = "DEFAULT",
+                trans_num = startTransNum,
+                job = jobDto.JobNumber,
+                SerialNo = jobDto.SerialNo,
+                wc = jobDto.Wc,
+                emp_num = jobDto.EmpNum,
+                qty_complete = 0,
+                oper_num = jobDto.OperationNumber,
+                next_oper = nextOper,
+                trans_date = DateTime.UtcNow,
+                RecordDate = DateTime.UtcNow,
+                CreateDate = DateTime.UtcNow,
+                CreatedBy = jobDto.loginuser,
+                UpdatedBy = jobDto.loginuser,
+                completed_flag = false,
+                suffix = 0,
+                trans_type = "D",
+                qty_scrapped = 0,
+                qty_moved = 0,
+                pay_rate = "R",
+                whse = "MAIN",
+                close_job = 0,
+                issue_parent = 0,
+                complete_op = 0,
+                shift = "1",
+                posted = 1,
+                job_rate = 0,
+                Uf_MovedOKToStock = 0,
+                start_time = DateTime.UtcNow,
+                end_time = DateTime.UtcNow,
+                status = "1",
+                qcgroup = "",
+                RowPointer = Guid.NewGuid()
             };
 
             _context.JobTranMst.Add(startTran);
@@ -2006,53 +2006,53 @@ public class PostController : ControllerBase
             // --------------------------------------------------
             var completeTran = new JobTranMst
             {
-                    site_ref = "DEFAULT",
-                    trans_num = completeTransNum,
-                    job = jobDto.JobNumber,
-                    SerialNo = jobDto.SerialNo,                
-                    wc = jobDto.Wc,
-                    emp_num = jobDto.EmpNum,
-                    qty_complete = 1,
-                    oper_num = jobDto.OperationNumber,
-                    next_oper = nextOper,
-                    trans_date = DateTime.UtcNow,
-                    RecordDate = DateTime.UtcNow,
-                    CreateDate = DateTime.UtcNow,
-                    CreatedBy = jobDto.loginuser,
-                    UpdatedBy = jobDto.loginuser,
-                    completed_flag = true,
-                    suffix = 0,
-                    trans_type = "D",
-                    qty_scrapped = 0,
-                    qty_moved = 1,
-                    pay_rate = "R",
-                    whse = "MAIN",
-                    close_job = 0,
-                    issue_parent = 0,
-                    complete_op = 1,                
-                    shift = "1",
-                    posted = 1,
-                    job_rate = 0,
-                    Uf_MovedOKToStock = 0,
-                    start_time = DateTime.UtcNow,
-                    end_time = DateTime.UtcNow,
-                    status = "3",
-                    qcgroup = "",
-                    RowPointer = Guid.NewGuid()
+                site_ref = "DEFAULT",
+                trans_num = completeTransNum,
+                job = jobDto.JobNumber,
+                SerialNo = jobDto.SerialNo,
+                wc = jobDto.Wc,
+                emp_num = jobDto.EmpNum,
+                qty_complete = 1,
+                oper_num = jobDto.OperationNumber,
+                next_oper = nextOper,
+                trans_date = DateTime.UtcNow,
+                RecordDate = DateTime.UtcNow,
+                CreateDate = DateTime.UtcNow,
+                CreatedBy = jobDto.loginuser,
+                UpdatedBy = jobDto.loginuser,
+                completed_flag = true,
+                suffix = 0,
+                trans_type = "D",
+                qty_scrapped = 0,
+                qty_moved = 1,
+                pay_rate = "R",
+                whse = "MAIN",
+                close_job = 0,
+                issue_parent = 0,
+                complete_op = 1,
+                shift = "1",
+                posted = 1,
+                job_rate = 0,
+                Uf_MovedOKToStock = 0,
+                start_time = DateTime.UtcNow,
+                end_time = DateTime.UtcNow,
+                status = "3",
+                qcgroup = "",
+                RowPointer = Guid.NewGuid()
             };
 
             _context.JobTranMst.Add(completeTran);
             await _context.SaveChangesAsync();
-           
 
-           var lastTwoRows = await _context.JobTranMst
-                .Where(j => j.job == jobDto.JobNumber
-                        && j.oper_num == jobDto.OperationNumber
-                        && j.wc == jobDto.Wc
-                        && j.SerialNo == jobDto.SerialNo)
-                .OrderByDescending(j => j.trans_num)
-                .Take(2)
-                .ToListAsync();
+
+            var lastTwoRows = await _context.JobTranMst
+                 .Where(j => j.job == jobDto.JobNumber
+                         && j.oper_num == jobDto.OperationNumber
+                         && j.wc == jobDto.Wc
+                         && j.SerialNo == jobDto.SerialNo)
+                 .OrderByDescending(j => j.trans_num)
+                 .Take(2)
+                 .ToListAsync();
 
             var latestRow = lastTwoRows.FirstOrDefault();        // status = 3
             var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault(); // status = 1
@@ -2121,11 +2121,11 @@ public class PostController : ControllerBase
 
             // ✅ Find previous operation
             // 🔥 Find current operation index in the job route list
-            var prevIndex  = jobRoutes.FindIndex(r => r.OperNum == jobDto.OperationNumber);
- 
+            var prevIndex = jobRoutes.FindIndex(r => r.OperNum == jobDto.OperationNumber);
+
             // 🔥 Determine previous operation dynamically
-            var prevOper = prevIndex  > 0 ? jobRoutes[prevIndex  - 1] : null;
- 
+            var prevOper = prevIndex > 0 ? jobRoutes[prevIndex - 1] : null;
+
             if (prevOper != null)
             {
                 // Bypass rule: if previous dept == "OPR" and WC contains "issue"
@@ -2137,7 +2137,7 @@ public class PostController : ControllerBase
                         .OrderByDescending(t => t.trans_date)
                         .Select(t => t.status)
                         .FirstOrDefaultAsync();
- 
+
                     if (prevStatus != "3")
                     {
                         return BadRequest(new
@@ -2170,11 +2170,19 @@ public class PostController : ControllerBase
 
                 if (lastJob.status == "2" && lastJob.start_time.HasValue)
                 {
-                    TimeSpan duration = DateTime.UtcNow - lastJob.start_time.Value;
+                    // Use client time — NOT server time
+                    var now = jobDto.StartTime != null
+                        ? DateTime.Parse(jobDto.StartTime)
+                        : DateTime.Now;
+
+                    TimeSpan duration = now - lastJob.start_time.Value;
+
                     lastJob.a_hrs = (decimal)duration.TotalHours;
-                    lastJob.end_time = DateTime.UtcNow;
+                    lastJob.end_time = now;
+
                     _context.JobTranMst.Update(lastJob);
                 }
+
             }
 
             // ✅ Get next operation
@@ -2213,9 +2221,15 @@ public class PostController : ControllerBase
                 qty_complete = 0,
                 oper_num = jobDto.OperationNumber,
                 next_oper = int.TryParse(nextOperation, out var val) ? val : (int?)null,
-                trans_date = DateTime.UtcNow,
-                RecordDate = DateTime.UtcNow,
-                CreateDate = DateTime.UtcNow,
+                trans_date = jobDto.StartTime != null
+                             ? DateTime.Parse(jobDto.StartTime)
+                             : DateTime.Now,
+                RecordDate = jobDto.StartTime != null
+                             ? DateTime.Parse(jobDto.StartTime)
+                             : DateTime.Now,
+                CreateDate = jobDto.StartTime != null
+                             ? DateTime.Parse(jobDto.StartTime)
+                             : DateTime.Now,
                 CreatedBy = jobDto.loginuser,
                 UpdatedBy = jobDto.loginuser,
                 completed_flag = false,
@@ -2232,7 +2246,11 @@ public class PostController : ControllerBase
                 posted = 1,
                 job_rate = employeeRate,
                 Uf_MovedOKToStock = 0,
-                start_time = DateTime.UtcNow,
+                start_time = jobDto.StartTime != null
+                            ? DateTime.Parse(jobDto.StartTime)
+                            : DateTime.Now,  // NOT UtcNow
+
+
                 status = "1",
                 qcgroup = qcGroupNumber,
                 RowPointer = Guid.NewGuid()
@@ -2241,7 +2259,7 @@ public class PostController : ControllerBase
             _context.JobTranMst.Add(jobTran);
             await _context.SaveChangesAsync();
 
-           
+
 
             return Ok(new
             {
@@ -2414,7 +2432,7 @@ public class PostController : ControllerBase
                     _context.JobTranMst.Add(jobTran);
                     addedJobs.Add(nextTransNum);
 
-                    
+
 
                     nextTransNum++;
                 }
@@ -2456,6 +2474,8 @@ public class PostController : ControllerBase
 
         try
         {
+            //  Use payload time ONLY
+            var now = DateTime.Parse(dto.StartTime);
             // 🔹 Get last active job (status = 1)
             var lastJob = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
@@ -2469,12 +2489,11 @@ public class PostController : ControllerBase
             if (lastJob == null)
                 return BadRequest(new { message = "No active job found to pause." });
 
-            var now = DateTime.UtcNow;
-            var startTime = lastJob.start_time ?? lastJob.trans_date ?? now;
 
-            // 🔹 Calculate worked hours and amount
+            var startTime = lastJob.start_time ?? lastJob.trans_date ?? now;
             TimeSpan duration = now - startTime;
             decimal totalHoursDecimal = (decimal)duration.TotalHours;
+            // 🔹 Calculate worked hours and amount
 
             var jobRate = await _context.EmployeeMst
                 .Where(e => e.emp_num == dto.EmpNum)
@@ -2486,7 +2505,7 @@ public class PostController : ControllerBase
             // 🔹 Update last running row
             lastJob.a_hrs = totalHoursDecimal;
             lastJob.a_dollar = a_dollar;
-            lastJob.end_time = now;
+            lastJob.end_time = now;   // payload time
             lastJob.job_rate = jobRate;
             _context.JobTranMst.Update(lastJob);
 
@@ -2523,7 +2542,7 @@ public class PostController : ControllerBase
                 shift = lastJob.shift,
                 posted = lastJob.posted,
                 Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
-                start_time = now, // start time for next resume
+                start_time = now, //  start time for resume (payload)
                 end_time = null,
                 a_hrs = 0,
                 a_dollar = 0,
@@ -2553,7 +2572,7 @@ public class PostController : ControllerBase
             // Check your condition
             if (latestRow?.status == "2" && secondLastRow?.status == "1")
             {
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow,0);
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 0);
 
                 if (sytelineTransNum != null)
                 {
@@ -2562,7 +2581,7 @@ public class PostController : ControllerBase
                     await _context.SaveChangesAsync();
                 }
             }
-           
+
 
             return Ok(new
             {
@@ -2593,7 +2612,11 @@ public class PostController : ControllerBase
 
         try
         {
-            var now = DateTime.UtcNow;
+            if (string.IsNullOrEmpty(dto.StartTime))
+                return BadRequest("StartTime is required.");
+
+            var now = DateTime.Parse(dto.StartTime);
+
 
             // 🔹 Get last job (running or paused)
             var latestJob = await _context.JobTranMst
@@ -2740,7 +2763,7 @@ public class PostController : ControllerBase
             _context.JobTranMst.Add(completedJob);
             await _context.SaveChangesAsync();
 
-           // Get last 2 rows
+            // Get last 2 rows
             var lastTwoRows = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
                         && j.oper_num == dto.OperationNumber
@@ -2748,8 +2771,8 @@ public class PostController : ControllerBase
                         && j.SerialNo == dto.SerialNo)
                 .OrderByDescending(j => j.trans_num)
                 .Take(2)
-                .ToListAsync();           
-           
+                .ToListAsync();
+
 
             var latestRow = lastTwoRows.FirstOrDefault();               // status 3
             var secondLastRow = lastTwoRows.Skip(1).FirstOrDefault();   // status 1
@@ -2758,11 +2781,11 @@ public class PostController : ControllerBase
             if (latestRow?.status == "3" && secondLastRow?.status == "1")
             {
                 _context.Entry(secondLastRow).State = EntityState.Detached;
-                    // Explicitly override only required values
-                    secondLastRow.qty_complete = 1;
-                    secondLastRow.qty_moved = 1;
-                    secondLastRow.close_job = (latestRow?.close_job == 1) ? (byte)1 : (byte)0;
-                    var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 1);
+                // Explicitly override only required values
+                secondLastRow.qty_complete = 1;
+                secondLastRow.qty_moved = 1;
+                secondLastRow.close_job = (latestRow?.close_job == 1) ? (byte)1 : (byte)0;
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 1);
 
                 if (sytelineTransNum != null)
                 {
@@ -2771,10 +2794,10 @@ public class PostController : ControllerBase
                     await _context.SaveChangesAsync();
                 }
             }
-            
+
 
             // CASE 2: latestRow = 3, secondLastRow = 2
-           if (latestRow?.status == "3" && secondLastRow?.status == "2")
+            if (latestRow?.status == "3" && secondLastRow?.status == "2")
             {
                 var lastImportDocId = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
@@ -2786,18 +2809,18 @@ public class PostController : ControllerBase
                 .Select(j => j.import_doc_id)
                 .FirstOrDefaultAsync();
 
-            if (string.IsNullOrEmpty(lastImportDocId))
-                return BadRequest(new { message = "No Syteline transaction number found to update." });
-                
+                if (string.IsNullOrEmpty(lastImportDocId))
+                    return BadRequest(new { message = "No Syteline transaction number found to update." });
+
                 bool sytelineResult = await _sytelineService.UpdateJobTranCompletionAsync(
                     Convert.ToInt32(lastImportDocId),                // trans_num in Syteline
-                    
+
                     (byte)latestRow.complete_op,                          // byte
                     latestRow.close_job ?? 0,                       // byte
                     latestRow.qty_complete ?? 0,
                     latestRow.qty_moved ?? 0
                 );
-                
+
             }
 
 
@@ -2805,14 +2828,14 @@ public class PostController : ControllerBase
             // OT logic starts
             Console.WriteLine($"Starting OT logic here ..");
 
-              var runningJobs = await _context.JobTranMst
-                .Where(j => j.job == dto.JobNumber
-                            && j.oper_num == dto.OperationNumber
-                            && j.wc == dto.Wc
-                            && j.SerialNo == dto.SerialNo
-                            && j.status == "1")
-                .OrderBy(j => j.trans_date)
-                .ToListAsync();
+            var runningJobs = await _context.JobTranMst
+              .Where(j => j.job == dto.JobNumber
+                          && j.oper_num == dto.OperationNumber
+                          && j.wc == dto.Wc
+                          && j.SerialNo == dto.SerialNo
+                          && j.status == "1")
+              .OrderBy(j => j.trans_date)
+              .ToListAsync();
 
             decimal totalAhrs = runningJobs.Sum(j => j.a_hrs ?? 0m);
 
@@ -2915,9 +2938,9 @@ public class PostController : ControllerBase
                             end_time = currentEndTime,
 
                             status = "1",
-                            trans_date = DateTime.UtcNow,
-                            RecordDate = DateTime.UtcNow,
-                            CreateDate = DateTime.UtcNow,
+                            trans_date = now,
+                            RecordDate = now,
+                            CreateDate = now,
                             CreatedBy = firstRow.CreatedBy,
                             UpdatedBy = firstRow.UpdatedBy,
                             RowPointer = Guid.NewGuid()
@@ -2963,86 +2986,86 @@ public class PostController : ControllerBase
                         a_hrs = totalHours,
                         a_dollar = jobTranRows.Sum(x => x.a_dollar),
                         start_time = firstRow.start_time,
-                        end_time = firstRow.start_time.Value.AddHours((double)totalHours), 
+                        end_time = firstRow.start_time.Value.AddHours((double)totalHours),
 
                         status = "3",
-                        trans_date = DateTime.UtcNow,
-                        RecordDate = DateTime.UtcNow,
-                        CreateDate = DateTime.UtcNow,
+                        trans_date = now,
+                        RecordDate = now,
+                        CreateDate = now,
                         CreatedBy = firstRow.UpdatedBy,
                         UpdatedBy = firstRow.UpdatedBy,
                         RowPointer = Guid.NewGuid()
                     });
 
-                     _context.JobTranMst.AddRange(jobTranRows);
+                    _context.JobTranMst.AddRange(jobTranRows);
                     await _context.SaveChangesAsync();
 
-                    var deletesytelineTrans = await _sytelineService.DeleteFromSyteLineAsync(dto.JobNumber,dto.SerialNo,dto.Wc,dto.OperationNumber);
+                    var deletesytelineTrans = await _sytelineService.DeleteFromSyteLineAsync(dto.JobNumber, dto.SerialNo, dto.Wc, dto.OperationNumber);
 
-                        if (deletesytelineTrans)
+                    if (deletesytelineTrans)
+                    {
+                        var status1Rows = await _context.JobTranMst
+                        .Where(j =>
+                            j.job == dto.JobNumber &&
+                            j.SerialNo == dto.SerialNo &&
+                            j.wc == dto.Wc &&
+                            j.oper_num == dto.OperationNumber &&
+                            j.status == "1")
+                        .OrderBy(j => j.trans_num)
+                        .ToListAsync();
+
+                        int totalRows = status1Rows.Count;
+
+                        for (int i = 0; i < totalRows; i++)
                         {
-                            var status1Rows = await _context.JobTranMst
-                            .Where(j =>
-                                j.job == dto.JobNumber &&
-                                j.SerialNo == dto.SerialNo &&
-                                j.wc == dto.Wc &&
-                                j.oper_num == dto.OperationNumber &&
-                                j.status == "1")
-                            .OrderBy(j => j.trans_num)
-                            .ToListAsync();
+                            var row = status1Rows[i];
 
-                            int totalRows = status1Rows.Count;
-
-                            for (int i = 0; i < totalRows; i++)
+                            if (row.start_time.HasValue)
                             {
-                                var row = status1Rows[i];
-
-                                if (row.start_time.HasValue)
-                                {
-                                    row.start_time = DateTime.Today
-                                        .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
-                                }
-
-                                if (row.end_time.HasValue)
-                                {
-                                    row.end_time = DateTime.Today
-                                        .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
-                                }
-
-                                row.qty_moved = 0;
-                                row.complete_op = 0;
-                                row.qty_complete = 0;
-
-                                
-                                if (i == totalRows - 1)
-                                {
-                                    row.qty_moved = 1;
-                                    row.complete_op = 1;
-                                    row.qty_complete = 1;
-                                    if (totalRows > 1)
-                                    {
-                                        row.shift = "2";
-                                    }
-                                }
-                                
-                                
-                                int? sytelineTransNum =
-                                    await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
-                            
-                                if (sytelineTransNum == null)
-                                {
-                                    return StatusCode(500,
-                                        $"SyteLine insert failed for Job={row.job}, Oper={row.oper_num}");
-                                }
-                            
-                                row.import_doc_id = sytelineTransNum.ToString();
-                            
+                                row.start_time = DateTime.Today
+                                    .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
                             }
-                            await _context.SaveChangesAsync();
+
+                            if (row.end_time.HasValue)
+                            {
+                                row.end_time = DateTime.Today
+                                    .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
+                            }
+
+                            row.qty_moved = 0;
+                            row.complete_op = 0;
+                            row.qty_complete = 0;
+
+
+                            if (i == totalRows - 1)
+                            {
+                                row.qty_moved = 1;
+                                row.complete_op = 1;
+                                row.qty_complete = 1;
+                                if (totalRows > 1)
+                                {
+                                    row.shift = "2";
+                                }
+                            }
+
+
+                            int? sytelineTransNum =
+                                await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
+
+                            if (sytelineTransNum == null)
+                            {
+                                return StatusCode(500,
+                                    $"SyteLine insert failed for Job={row.job}, Oper={row.oper_num}");
+                            }
+
+                            row.import_doc_id = sytelineTransNum.ToString();
 
                         }
+                        await _context.SaveChangesAsync();
 
-                   
+                    }
+
+
                 }
             }
 
@@ -3306,7 +3329,7 @@ public class PostController : ControllerBase
 
             await _context.SaveChangesAsync();
 
-             var rowsToPush = new List<JobTranMst>();
+            var rowsToPush = new List<JobTranMst>();
 
             foreach (var j in dto.Jobs)
             {
@@ -3379,12 +3402,12 @@ public class PostController : ControllerBase
         _context.WomWcEmployee.Add(entity);
         await _context.SaveChangesAsync();
 
-        
+
 
         return Ok(new { message = "Employee-WC mapping added successfully to local and Syteline." });
     }
 
-    
+
 
     [HttpPost("UpdateQCRemark")]
     public async Task<IActionResult> UpdateQCRemark([FromBody] QCRemarkUpdateDto dto)
@@ -3421,7 +3444,7 @@ public class PostController : ControllerBase
     }
 
 
-    
+
     [HttpPost("GetTransactionOverview")]
     public async Task<IActionResult> GetTransactionOverview(
         [FromBody] TransactionOverviewRequest request)
@@ -3614,7 +3637,7 @@ public class PostController : ControllerBase
             {
                 var normalData = await allTransQuery
                     .Where(j => j.trans_type != "M" && j.wc != "VERIFY")
-                 
+
                     .ToListAsync();
 
                 latestNormal = normalData
@@ -3635,7 +3658,7 @@ public class PostController : ControllerBase
                     .ToList();
             }
 
-          
+
 
             if (includeVerify)
             {
@@ -3656,34 +3679,34 @@ public class PostController : ControllerBase
 
 
             // Merge both and format
-           var combined = latestNormal
-                .Concat(latestQC)
-                .Concat(latestVerify)
-                .Select(j => new
-                {
-                    Job = j.job,
-                    SerialNo = j.SerialNo,
-                    WC = j.wc,
-                    Operation = j.oper_num,
-                    Employee = j.emp_num,
-                    Machine = j.machine_id,
-                    Time = j.trans_date,
-                    Progress = j.status switch
-                    {
-                        "1" => "Running",
-                        "2" => "Paused",
-                        "3" => "Completed",
-                        _ => "Unknown"
-                    },
-                    Type = j.wc == "VERIFY"
-                        ? "Verify"
-                        : j.trans_type == "M"
-                            ? "QC"
-                            : "Transaction",
-                    QcGroup = j.qcgroup
-                })
-                .OrderByDescending(j => j.Time)
-                .ToList();
+            var combined = latestNormal
+                 .Concat(latestQC)
+                 .Concat(latestVerify)
+                 .Select(j => new
+                 {
+                     Job = j.job,
+                     SerialNo = j.SerialNo,
+                     WC = j.wc,
+                     Operation = j.oper_num,
+                     Employee = j.emp_num,
+                     Machine = j.machine_id,
+                     Time = j.trans_date,
+                     Progress = j.status switch
+                     {
+                         "1" => "Running",
+                         "2" => "Paused",
+                         "3" => "Completed",
+                         _ => "Unknown"
+                     },
+                     Type = j.wc == "VERIFY"
+                         ? "Verify"
+                         : j.trans_type == "M"
+                             ? "QC"
+                             : "Transaction",
+                     QcGroup = j.qcgroup
+                 })
+                 .OrderByDescending(j => j.Time)
+                 .ToList();
 
             var totalRecords = combined.Count;
 
@@ -3760,7 +3783,7 @@ public class PostController : ControllerBase
         }
     }
 
-   [HttpPost("importCalendar")]
+    [HttpPost("importCalendar")]
     public IActionResult ImportCalendar([FromBody] List<CalendarImportDto> list)
     {
         if (list == null || !list.Any())

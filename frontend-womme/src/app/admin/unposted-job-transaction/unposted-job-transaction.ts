@@ -555,7 +555,8 @@ export class UnpostedJobTransaction implements OnInit {
             const target = this.transactions.find(x => x.serialNo === key);
             if (target) target.elapsedSeconds += 1;
           }, 1000);
-        } else {
+        } 
+        else {
           // paused or completed
           if (this.activeTimers[key]) {
             clearInterval(this.activeTimers[key]);

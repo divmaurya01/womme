@@ -33,6 +33,8 @@ namespace WommeAPI.Models
         public string EmpNum { get; set; } = string.Empty;
         public string loginuser { get; set; } = string.Empty;
         public string? Item { get; set; }
+         public string? StartTime { get; set; }
+
     }
 
 
