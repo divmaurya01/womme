@@ -51,6 +51,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   totalScrappedRecords: number = 0;
   loggedInUser: string = '';
   jobTimers: { [key: string]: any } = {};
+isExtendedMode: boolean = false;
 
   constructor(
     private jobService: JobService,
@@ -77,6 +78,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
        }
      else if (status === 'extended') {
         this.activeTabIndex = 2;
+        this.isExtendedMode = true;
        }
       else if (status === 'completed') {
         this.activeTabIndex = 2; // Completed Jobs tab
@@ -226,6 +228,22 @@ private handleError(err: any) {
   });
 }
 
+isExtendedJob(job: any): boolean {
+
+  // 🔥 RULE — adjust as per your business logic
+
+  // Example 1: based on shift hours
+  if (job.total_a_hrs && job.total_a_hrs > 8) return true;
+
+  // Example 2: based on logs
+  if (job.allLogs && job.allLogs.length > 2) return true;
+
+  // Example 3: status flag (if backend provides)
+  if (job.status === 'EXTENDED') return true;
+
+  return false;
+}
+
 
   /** Start Single Job */
 startQCJob(job: any) {
@@ -290,6 +308,16 @@ startQCJob(job: any) {
       Swal.fire('No jobs selected', 'Please select at least one job.', 'warning');
       return;
     }
+    const now = new Date();
+
+  const localDateTime =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
+
 
     const payload = {
       jobs: this.selectedJobs.map(job => ({
@@ -300,7 +328,8 @@ startQCJob(job: any) {
         Item: job.item,
         QtyReleased: job.qtyReleased,
         EmpNum: employeeCode,
-        loginuser: employeeCode
+        loginuser: employeeCode,
+        StartTime: localDateTime 
       }))
     };
 

@@ -13,44 +13,25 @@
           <div class="mt-3 d-flex justify-content-between align-items-center">
             <!-- Search box -->
             <div class="input-group" style="max-width: 300px;">
-              <input
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Search job..."
-                [(ngModel)]="searchTerm"
-                (ngModelChange)="onSearchChange($event)"
-              />
+              <input type="text" class="form-control form-control-sm" placeholder="Search job..."
+                [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange($event)" />
             </div>
 
             <!-- Start Button -->
-            <button type="button" class="btn btn-success btn-sm" 
-                  (click)="StartGroupQCJobs()" 
-                  [disabled]="!selectedJobs || selectedJobs.length === 0">
-              <i class="pi pi-play" style = "color: white;"></i> Start
+            <button type="button" class="btn btn-success btn-sm" (click)="StartGroupQCJobs()"
+              [disabled]="!selectedJobs || selectedJobs.length === 0">
+              <i class="pi pi-play" style="color: white;"></i> Start
             </button>
           </div>
 
           <div class="card p-1 mt-3 shadow-sm">
             <div class="card-body p-1">
-              <p-table
-                [value]="transactions"
-                [lazy]="true"
-                [paginator]="true"
-                [rows]="5000"
-                [totalRecords]="totalRecords"
-                (onLazyLoad)="loadJobs($event)"
-                [loading]="isLoading"
-                [responsiveLayout]="'scroll'"
-                [scrollable]="true"
-                scrollHeight="400px"
-                [resizableColumns]="true"
-                [autoLayout]="true"
-                columnResizeMode="expand"
-                [showCurrentPageReport]="true"
-                currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
-                [(selection)]="selectedJobs"
-                dataKey="uniqueRowId" 
-              >
+              <p-table [value]="transactions" [lazy]="true" [paginator]="true" [rows]="5000"
+                [totalRecords]="totalRecords" (onLazyLoad)="loadJobs($event)" [loading]="isLoading"
+                [responsiveLayout]="'scroll'" [scrollable]="true" scrollHeight="400px" [resizableColumns]="true"
+                [autoLayout]="true" columnResizeMode="expand" [showCurrentPageReport]="true"
+                currentPageReportTemplate="Showing {first}-{last} of {totalRecords}" [(selection)]="selectedJobs"
+                dataKey="uniqueRowId">
                 <ng-template pTemplate="header">
                   <tr>
                     <th style="background-color:#ECC391; padding:10px;">
@@ -107,16 +88,13 @@
                     <td><p-tableCheckbox [value]="job"></p-tableCheckbox></td>
                     <td>{{ rowIndex + 1 }}</td>
                     <td>{{ job.jobNumber }}</td>
-                    <td>{{ job.serialNo }}</td> 
-                    <td>{{ job.operationNumber }}</td> 
-                    <td>{{ job.wcCode }} ({{ job.wcDescription }})</td> 
-                    <td>{{ job.item }}</td> 
-                    <td>{{ job.qtyReleased }}</td> 
+                    <td>{{ job.serialNo }}</td>
+                    <td>{{ job.operationNumber }}</td>
+                    <td>{{ job.wcCode }} ({{ job.wcDescription }})</td>
+                    <td>{{ job.item }}</td>
+                    <td>{{ job.qtyReleased }}</td>
                     <td>
-                      <i
-                      class="pi pi-play action-circle"
-                      title="Start"
-                      style="
+                      <i class="pi pi-play action-circle" title="Start" style="
                         cursor: pointer;
                         color: rgb(28, 83, 32);
                         border: 2px solid rgb(43, 107, 47);
@@ -127,9 +105,8 @@
                         width: 28px;
                         height: 28px;
                         font-size: 15px;
-                      "
-                      (click)="startQCJob(job)">
-                    </i>
+                      " (click)="startQCJob(job)">
+                      </i>
                     </td>
                     <td>
                       <i class="pi pi-file-pdf" style="cursor:pointer;" (click)="viewReport(job)" title="Report"></i>
@@ -147,21 +124,10 @@
 
           <div class="card p-1 mt-3 shadow-sm">
             <div class="card-body p-1">
-              <p-table
-                [value]="ongoingJobs"
-                [paginator]="true"
-                [rows]="5000"
-                [totalRecords]="ongoingJobs.length"
-                [responsiveLayout]="'scroll'"
-                [scrollable]="true"
-                scrollHeight="400px"
-                [resizableColumns]="true"
-                [autoLayout]="true"
-                columnResizeMode="expand"
-                [showCurrentPageReport]="true"
-                currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
-                dataKey="uniqueRowId"
-              >
+              <p-table [value]="ongoingJobs" [paginator]="true" [rows]="5000" [totalRecords]="ongoingJobs.length"
+                [responsiveLayout]="'scroll'" [scrollable]="true" scrollHeight="400px" [resizableColumns]="true"
+                [autoLayout]="true" columnResizeMode="expand" [showCurrentPageReport]="true"
+                currentPageReportTemplate="Showing {first}-{last} of {totalRecords}" dataKey="uniqueRowId">
                 <ng-template pTemplate="header">
                   <tr>
                     <th style="background-color: #ECC391; padding: 10px;">S.No</th>
@@ -194,33 +160,24 @@
 
                     <!-- Action column with Pause/Resume & Complete -->
                     <td>
-                    <i 
-                      [class.pi]="true"
-                      [class.action-circle]="true"
-                      [class.pi-play]="job.isPaused"
-                      [class.pi-pause]="!job.isPaused"
-                      title="{{ job.isPaused ? 'Resume' : 'Pause' }}"
-                      (click)="togglePauseResume(job)">
-                    </i>
+                      <i [class.pi]="true" [class.action-circle]="true" [class.pi-play]="job.isPaused"
+                        [class.pi-pause]="!job.isPaused" title="{{ job.isPaused ? 'Resume' : 'Pause' }}"
+                        (click)="togglePauseResume(job)">
+                      </i>
 
                       <i class="pi pi-stop action-circle stop" title="Complete" (click)="completeQCJob(job)"></i>
                     </td>
 
                     <!-- NCR column -->
-                    <td> 
-                      <input type="text" [value]="job.ncr || ''" disabled class="form-control form-control-sm" /> 
+                    <td>
+                      <input type="text" [value]="job.ncr || ''" disabled class="form-control form-control-sm" />
                     </td>
-                    
+
                     <!-- Remark column -->
                     <td>
-                      <input
-                        type="text"
-                        [(ngModel)]="job.remark"
-                        placeholder="Enter remark"
-                        (keyup.enter)="saveQCRemark(job)"
-                        class="form-control form-control-sm"
-                        title="Enter remark and click outside to save"
-                      />             
+                      <input type="text" [(ngModel)]="job.remark" placeholder="Enter remark"
+                        (keyup.enter)="saveQCRemark(job)" class="form-control form-control-sm"
+                        title="Enter remark and click outside to save" />
                     </td>
                     <!-- Report column -->
                     <td>
@@ -239,21 +196,10 @@
 
           <div class="card p-1 mt-3 shadow-sm">
             <div class="card-body p-1">
-              <p-table
-                [value]="completedJobs"
-                [paginator]="true"
-                [rows]="5000"
-                [totalRecords]="completedJobs.length"
-                [responsiveLayout]="'scroll'"
-                [scrollable]="true"
-                scrollHeight="400px"
-                [resizableColumns]="true"
-                [autoLayout]="true"
-                columnResizeMode="expand"
-                [showCurrentPageReport]="true"
-                currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
-                dataKey="compositeKey"
-              >
+              <p-table [value]="completedJobs" [paginator]="true" [rows]="5000" [totalRecords]="completedJobs.length"
+                [responsiveLayout]="'scroll'" [scrollable]="true" scrollHeight="400px" [resizableColumns]="true"
+                [autoLayout]="true" columnResizeMode="expand" [showCurrentPageReport]="true"
+                currentPageReportTemplate="Showing {first}-{last} of {totalRecords}" dataKey="compositeKey">
                 <ng-template pTemplate="header">
                   <tr>
                     <th style="background-color: #ECC391; padding: 10px;">S.No</th>
@@ -264,10 +210,73 @@
                     <th style="background-color: #ECC391; padding: 10px;">Item</th>
                     <th style="background-color: #ECC391; padding: 10px;">Employee</th>
                     <th style="background-color: #ECC391; padding: 10px;">Qty</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Total Hours</th> 
-                    <th style="background-color: #ECC391;padding: 10px;">Scrapped</th>  
+                    <th style="background-color: #ECC391; padding: 10px;">Total Hours</th>
+                    <th style="background-color: #ECC391;padding: 10px;">Scrapped</th>
                     <th style="background-color: #ECC391; padding: 10px;">Remark</th>
                     <th style="background-color: #ECC391; padding: 10px;">Report</th>
+                  </tr>
+                </ng-template>
+
+                <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+                  <tr [ngClass]="{
+      'highlight-row': isExtendedMode && isExtendedJob(job)
+    }">
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td>{{ job.jobNumber }}</td>
+                    <td>{{ job.serialNo }}</td>
+                    <td>{{ job.operationNumber }}</td>
+                    <td>{{ job.wcCode }}</td>
+                    <td>{{ job.item }}</td>
+                    <td>{{ job.empNum }}</td>
+                    <td>{{ job.qtyReleased }}</td>
+                    <td>{{ formatTime(job.total_a_hrs) }}</td>
+                    <td>
+                      <input type="checkbox" [(ngModel)]="job.isScrapped" (change)="markAsScrapped(job)"
+                        [disabled]="job.isScrapped" />
+                    </td>
+
+
+                    <td>
+                      <input type="text" [(ngModel)]="job.remark" placeholder="Enter remark"
+                        (keyup.enter)="saveQCRemark(job)" class="form-control form-control-sm"
+                        title="Enter remark and click outside to save" />
+                    </td>
+
+                    <td>
+                      <!-- Report Download Icon -->
+                      <i class="pi pi-file-pdf" style="cursor:pointer; color: #1976d2;" (click)="viewReport(job)"
+                        title="Download Report">
+                      </i>
+                    </td>
+
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+          </div>
+        </p-tabPanel>
+
+
+        <p-tabPanel header="Scrapped Jobs">
+          <h4 class="mb-3">Scrapped Batches</h4>
+
+          <div class="card p-1 mt-3 shadow-sm">
+            <div class="card-body p-1">
+              <p-table [value]="scrappedJobs" [paginator]="true" [rows]="5000" [totalRecords]="scrappedJobs.length"
+                [responsiveLayout]="'scroll'" [scrollable]="true" scrollHeight="400px" [resizableColumns]="true"
+                [autoLayout]="true" columnResizeMode="expand" [showCurrentPageReport]="true"
+                currentPageReportTemplate="Showing {first}-{last} of {totalRecords}" dataKey="uniqueRowId">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="background-color: #ECC391;">S.No</th>
+                    <th style="background-color: #ECC391;">Job</th>
+                    <th style="background-color: #ECC391;">SerialNo</th>
+                    <th style="background-color: #ECC391;">Opr No.</th>
+                    <th style="background-color: #ECC391;">WC</th>
+                    <th style="background-color: #ECC391;">Item</th>
+                    <th style="background-color: #ECC391;">Employee</th>
+                    <th style="background-color: #ECC391;">Qty Scrapped</th>
+                    <th style="background-color: #ECC391;">Remark</th>
                   </tr>
                 </ng-template>
 
@@ -280,39 +289,8 @@
                     <td>{{ job.wcCode }}</td>
                     <td>{{ job.item }}</td>
                     <td>{{ job.empNum }}</td>
-                    <td>{{ job.qtyReleased }}</td>
-                    <td>{{ formatTime(job.total_a_hrs) }}</td>
-                   <td>
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="job.isScrapped"
-                      (change)="markAsScrapped(job)"
-                      [disabled]="job.isScrapped"
-                    />
-                  </td>
-
-                    
-                    <td>                     
-                      <input
-                        type="text"
-                        [(ngModel)]="job.remark"
-                        placeholder="Enter remark"
-                        (keyup.enter)="saveQCRemark(job)"
-                        class="form-control form-control-sm"
-                        title="Enter remark and click outside to save"
-                      />
-                    </td> 
-                    
-                   <td>
-                    <!-- Report Download Icon -->
-                    <i
-                      class="pi pi-file-pdf"
-                      style="cursor:pointer; color: #1976d2;"
-                      (click)="viewReport(job)"
-                      title="Download Report">
-                    </i>
-                  </td>
-
+                    <td>{{ job.qtyScrapped }}</td>
+                    <td>{{ job.remark }}</td>
                   </tr>
                 </ng-template>
               </p-table>
@@ -321,62 +299,8 @@
         </p-tabPanel>
 
 
-<p-tabPanel header="Scrapped Jobs">
-  <h4 class="mb-3">Scrapped Batches</h4>
-
-  <div class="card p-1 mt-3 shadow-sm">
-    <div class="card-body p-1">
-      <p-table
-        [value]="scrappedJobs"
-        [paginator]="true"
-        [rows]="5000"
-        [totalRecords]="scrappedJobs.length"
-        [responsiveLayout]="'scroll'"
-        [scrollable]="true"
-        scrollHeight="400px"
-        [resizableColumns]="true"
-        [autoLayout]="true"
-        columnResizeMode="expand"
-        [showCurrentPageReport]="true"
-        currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
-        dataKey="uniqueRowId"
-      >
-        <ng-template pTemplate="header">
-          <tr>
-            <th style="background-color: #ECC391;">S.No</th>
-            <th style="background-color: #ECC391;">Job</th>
-            <th style="background-color: #ECC391;">SerialNo</th>
-            <th style="background-color: #ECC391;">Opr No.</th>
-            <th style="background-color: #ECC391;">WC</th>
-            <th style="background-color: #ECC391;">Item</th>
-            <th style="background-color: #ECC391;">Employee</th>
-           <th style="background-color: #ECC391;">Qty Scrapped</th>
-            <th style="background-color: #ECC391;">Remark</th>
-          </tr>
-        </ng-template>
-
-        <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
-          <tr>
-            <td>{{ rowIndex + 1 }}</td>
-            <td>{{ job.jobNumber }}</td>
-            <td>{{ job.serialNo }}</td>
-            <td>{{ job.operationNumber }}</td>
-            <td>{{ job.wcCode }}</td>
-            <td>{{ job.item }}</td>
-            <td>{{ job.empNum }}</td>
-            <td>{{ job.qtyScrapped }}</td>
-            <td>{{ job.remark }}</td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </div>
-  </div>
-</p-tabPanel>
-
-
       </p-tabView>
 
     </section>
   </main>
 </div>
-

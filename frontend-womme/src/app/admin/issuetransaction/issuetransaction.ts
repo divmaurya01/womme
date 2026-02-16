@@ -152,6 +152,15 @@ private buildStartPayload(job: any) {
   const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
   const employeeCode = userDetails.employeeCode || '';
 
+  const now = new Date();
+  const localDateTime =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
+
   return {
     JobNumber: job.jobNumber,
     SerialNo: job.serialNo,
@@ -160,13 +169,17 @@ private buildStartPayload(job: any) {
     Item: job.item ?? null,
     QtyReleased: job.qtyReleased,
     EmpNum: employeeCode,
-    loginuser: employeeCode
+    loginuser: employeeCode,
+    StartTime: localDateTime,      // ✅ add start time
+    EndTime: localDateTime         // ✅ optional, can be same as start
   };
 }
 
 
 
+
   startIssueJob(job: any) {
+    
     const payload = this.buildStartPayload(job);
 
     Swal.fire({

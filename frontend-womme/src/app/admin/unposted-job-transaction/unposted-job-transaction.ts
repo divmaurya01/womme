@@ -407,6 +407,18 @@ export class UnpostedJobTransaction implements OnInit {
   }
 
   finishWizard() {
+      const now = new Date();
+
+  const localDateTime =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
+
+  this.matchedData.startTime = localDateTime;   // 🔥 ADD THIS
+
     console.log('Matched Data:', this.matchedData);
 
       this.loader.show();
@@ -434,6 +446,15 @@ export class UnpostedJobTransaction implements OnInit {
 
   PauseJob(selectedRow: any) {
     console.log('Selected Row Data:', selectedRow);
+    const now = new Date();
+
+  const localDateTime =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
 
     // Build payload for API
     const payload = {
@@ -444,7 +465,8 @@ export class UnpostedJobTransaction implements OnInit {
       machineNumber: selectedRow.machine_id, // use actual machine_id
       empNum: selectedRow.emp_num,         // use actual emp_num
       qtyReleased: selectedRow.qtyReleased,
-      loginuser: this.employeeCode // logged-in user
+      loginuser: this.employeeCode, // logged-in user
+      startTime: localDateTime
     };
 
     console.log(payload);
@@ -480,6 +502,15 @@ export class UnpostedJobTransaction implements OnInit {
 
   CompleteJob(selectedRow: any) {
     console.log('Selected Row Data:', selectedRow);
+    const now = new Date();
+
+  const localDateTime =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
 
     // Build payload for API
     const payload = {
@@ -490,7 +521,8 @@ export class UnpostedJobTransaction implements OnInit {
       machineNumber: selectedRow.machine_id, // use actual machine_id
       empNum: selectedRow.emp_num,         // use actual emp_num
       qtyReleased: selectedRow.qtyReleased,
-      loginuser: this.employeeCode // or whichever user is logged in
+      loginuser: this.employeeCode, // or whichever user is logged in
+       startTime: localDateTime 
     };
     this.loader.show();
     this.jobService.CompleteJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({

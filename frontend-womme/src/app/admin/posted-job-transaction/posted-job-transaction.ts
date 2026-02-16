@@ -66,6 +66,8 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
   editingRows: { [transNum: string]: PostedTransaction } = {};
   sortField = '';
   sortOrder: 1 | -1 = 1;
+  highlightType: string | null = null;
+highlightedRowKey: string | null = null;
 
   allTransactions: PostedTransaction[] = [];
 
@@ -84,6 +86,9 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.checkScreenSize();
+     this.route.queryParams.subscribe(params => {
+    this.highlightType = params['highlight'] || null;
+  });
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     this.roleId = userDetails.roleID || null;
     this.loadJobsLazy();
@@ -165,6 +170,26 @@ export class PostedJobTransaction implements OnInit, AfterViewInit, OnDestroy {
           
           
           this.allTransactions = [...this.transactions];
+          // ✅ Highlight logic
+if (this.highlightType === 'extended') {
+
+  const extendedJob = this.transactions.find(job =>
+    job.allLogs?.some(log => log.shift === '2')
+  );
+
+  if (extendedJob) {
+
+    this.highlightedRowKey = this.getRowKey(extendedJob);
+
+    // Smooth scroll to row
+    setTimeout(() => {
+      const el = document.getElementById(this.highlightedRowKey!);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+}
+
+
           this.totalRecords = this.transactions.length;
           this.isLoading = false;
         },

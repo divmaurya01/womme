@@ -255,7 +255,12 @@ goToTransaction(type: string) {
   console.log('Transaction Overview:', this.transaction);
   console.log('➡️ Navigating to route:', route);
 
-  this.router.navigate([route], { queryParams: { ss_id } });
+    this.router.navigate([route], { 
+    queryParams: { 
+      ss_id,
+      highlight: 'extended'   // 👈 IMPORTANT
+    } 
+  });
 }
 
 
@@ -290,9 +295,13 @@ goToQC(type: string) {
   console.log('QC Overview:', this.qc);
   console.log(' Navigating to QC route:', route);
 
-  this.router.navigate([route], {
-    queryParams: { status: type, ss_id }
-  });
+this.router.navigate([route], {
+  queryParams: {
+    status: type,
+    ss_id
+  }
+});
+
 }
 
 
