@@ -3711,6 +3711,18 @@ public class PostController : ControllerBase
                     .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault()!)
                     .ToListAsync();
             }
+            // 🔹 Fetch Employee Name & WOMM ID
+            var empNumbers = latestNormal
+                .Concat(latestQC)
+                .Concat(latestVerify)
+                .Select(x => x.emp_num)
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Distinct()
+                .ToList();
+
+            var empLookup = await _context.EmployeeMst
+                .Where(e => empNumbers.Contains(e.emp_num))
+                .ToDictionaryAsync(e => e.emp_num);
 
 
             // Merge both and format
@@ -3723,7 +3735,15 @@ public class PostController : ControllerBase
                      SerialNo = j.SerialNo,
                      WC = j.wc,
                      Operation = j.oper_num,
-                     Employee = j.emp_num,
+                     EmployeeCode = j.emp_num,
+                     EmployeeName = empLookup.ContainsKey(j.emp_num ?? "")
+                     ? empLookup[j.emp_num!].name
+                    : null,
+
+                     WommId = empLookup.ContainsKey(j.emp_num ?? "")
+                    ? empLookup[j.emp_num!].womm_id
+                     : null,
+
                      Machine = j.machine_id,
                      Time = j.trans_date,
                      Progress = j.status switch

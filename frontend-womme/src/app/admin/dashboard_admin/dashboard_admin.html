@@ -206,7 +206,8 @@
               <th style="padding: 10px;">Serial No</th>
               <th style="padding: 10px;">Operation</th>
               <th style="padding: 10px;">Work Center</th>
-              <th style="padding: 10px;">Employee</th>
+              <th style="padding: 10px;">Login Id</th>
+              <th style="padding: 10px;">Employee Name</th>
               <th style="padding: 10px;">Machine</th>
               <th style="padding: 10px;">Status</th>
               <th style="padding: 10px;">Type</th>
@@ -229,7 +230,9 @@
               <td style="padding: 10px;">{{ item.serialNo || '-' }}</td>
               <td style="padding: 10px;">{{ item.operation }}</td>
               <td style="padding: 10px;">{{ item.wc }}</td>
-              <td style="padding: 10px;">{{ item.employee }}</td>
+              <td style="padding: 10px;">{{ 'WME00' + (item.wommId || '') }}</td>
+              <td style="padding: 10px;">{{ item.employeeName }}</td>
+
               <td style="padding: 10px;">{{ item.machine || '-' }}</td>
               <td style="padding: 10px;">
                 <span
@@ -244,7 +247,7 @@
             </tr>
 
             <tr *ngIf="jobData.length === 0">
-              <td colspan="10" style="text-align: center; padding: 15px; color: gray;">No records found.</td>
+              <td colspan="11" style="text-align: center; padding: 15px; color: gray;">No records found.</td>
             </tr>
           </tbody>
         </table>
