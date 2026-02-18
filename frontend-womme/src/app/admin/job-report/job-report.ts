@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { JobService } from '../../services/job.service';
 import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
+import { workcenter } from '../workcenter/workcenter';
 
 @Component({
   selector: 'app-job-report',
@@ -112,6 +113,7 @@ export class JobReportComponent implements OnInit {
     return s
       ? s.operations.map((o: any) => ({
           operNo: o.operation,
+          wc:o.wc,
           employees: o.employee ? [o.employee] : [],
           start: o.startTime,
           end: o.endTime,

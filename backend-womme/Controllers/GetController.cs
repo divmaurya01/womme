@@ -26,7 +26,8 @@ public class GetController : ControllerBase
         var query =
             from wc in _context.WomWcEmployee
             join emp in _context.EmployeeMst
-                on wc.EmpNum equals emp.emp_num            select new
+                on wc.EmpNum equals emp.emp_num
+            select new
             {
                 wc.Wc,
                 wc.EmpNum,
@@ -57,7 +58,7 @@ public class GetController : ControllerBase
     public IActionResult GetWorkCenterMaster()
     {
         var data = _context.WcMst
-            .Select(wc => new 
+            .Select(wc => new
             {
                 Wc = wc.wc,
                 Description = wc.description
@@ -68,7 +69,7 @@ public class GetController : ControllerBase
         return Ok(new { data });
     }
 
-    
+
 
 
 
@@ -84,13 +85,13 @@ public class GetController : ControllerBase
         // Step 2: Group by job/operation/serial/wc
         var grouped = jobTrans
             .GroupBy(j => new { j.job, j.oper_num, j.SerialNo, j.wc })
-            // .Where(g =>
-            // {
-            //     // Take latest record in the group
-            //     var latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault();
-            //     return latest != null && latest.status == "3"; // include group only if latest is 3
-            // });
-             .Where(g => g.Any(x => x.status == "3")); 
+             // .Where(g =>
+             // {
+             //     // Take latest record in the group
+             //     var latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault();
+             //     return latest != null && latest.status == "3"; // include group only if latest is 3
+             // });
+             .Where(g => g.Any(x => x.status == "3"));
 
         // Step 3: Flatten group into list of rows
         var result = grouped
@@ -157,7 +158,7 @@ public class GetController : ControllerBase
 
 
 
-    
+
 
     [HttpGet]
     public async Task<IActionResult> GetJobPoolAllData(int page = 0, int size = 50, string search = "")
@@ -306,7 +307,7 @@ public class GetController : ControllerBase
 
             var mappings = await query
             .OrderByDescending(x => x.PageID == 1) // PageID 1 comes first
-            .ThenBy(x => x.EntryNo)  
+            .ThenBy(x => x.EntryNo)
             .ToListAsync();
 
             return Ok(mappings);
@@ -753,7 +754,7 @@ public class GetController : ControllerBase
                     TransType = t.trans_type,
                     TransDate = t.trans_date,
                     Status = t.status,
-                     Remark = t.Remark
+                    Remark = t.Remark
                 })
                 .ToList();
         }
@@ -766,7 +767,7 @@ public class GetController : ControllerBase
 
 
 
-   
+
 
 
 
@@ -797,7 +798,7 @@ public class GetController : ControllerBase
     }
 
 
-   
+
 
 
     [HttpGet]
@@ -1108,60 +1109,60 @@ public class GetController : ControllerBase
 
 
 
-[HttpGet]
-public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string search = "")
-{
-    try
+    [HttpGet]
+    public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string search = "")
     {
-        var fromDate = new DateTime(2025, 11, 1);
-
-        // Step 1: Fetch only necessary fields
-        var query = from jr in _context.JobRouteMst
-                    join jm in _context.JobMst on jr.Job equals jm.job
-                    join wm in _context.WcMst on jr.Wc equals wm.wc
-                    where jm.CreateDate >= fromDate
-                    select new
-                    {
-                        Job = jr.Job,
-                        Quantity = jm.qty_released,
-                        Item = jm.item,
-                        OperNo = jr.OperNum,
-                        WCCode = jr.Wc
-                    };
-
-        // Step 2: Apply optional search before materializing
-        if (!string.IsNullOrWhiteSpace(search))
+        try
         {
-            var lowerSearch = search.ToLower();
-            query = query.Where(x =>
-                x.Job.ToLower().Contains(lowerSearch) ||
-                x.Item.ToLower().Contains(lowerSearch) ||
-                x.WCCode.ToLower().Contains(lowerSearch));
+            var fromDate = new DateTime(2025, 11, 1);
+
+            // Step 1: Fetch only necessary fields
+            var query = from jr in _context.JobRouteMst
+                        join jm in _context.JobMst on jr.Job equals jm.job
+                        join wm in _context.WcMst on jr.Wc equals wm.wc
+                        where jm.CreateDate >= fromDate
+                        select new
+                        {
+                            Job = jr.Job,
+                            Quantity = jm.qty_released,
+                            Item = jm.item,
+                            OperNo = jr.OperNum,
+                            WCCode = jr.Wc
+                        };
+
+            // Step 2: Apply optional search before materializing
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var lowerSearch = search.ToLower();
+                query = query.Where(x =>
+                    x.Job.ToLower().Contains(lowerSearch) ||
+                    x.Item.ToLower().Contains(lowerSearch) ||
+                    x.WCCode.ToLower().Contains(lowerSearch));
+            }
+
+            // Step 3: Pagination
+            var totalRecords = await query.CountAsync();
+            var data = await query
+                .OrderBy(x => x.Job)
+                .ThenBy(x => x.OperNo)
+                .Skip(page * size)
+                .Take(size)
+                .ToListAsync();
+
+            // Step 4: Return result
+            return Ok(new
+            {
+                totalRecords,
+                page,
+                size,
+                data
+            });
         }
-
-        // Step 3: Pagination
-        var totalRecords = await query.CountAsync();
-        var data = await query
-            .OrderBy(x => x.Job)
-            .ThenBy(x => x.OperNo)
-            .Skip(page * size)
-            .Take(size)
-            .ToListAsync();
-
-        // Step 4: Return result
-        return Ok(new
+        catch (Exception ex)
         {
-            totalRecords,
-            page,
-            size,
-            data
-        });
+            return StatusCode(500, new { error = ex.Message });
+        }
     }
-    catch (Exception ex)
-    {
-        return StatusCode(500, new { error = ex.Message });
-    }
-}
 
 
 
@@ -1198,7 +1199,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                     wm
                 })
                 .ToListAsync();
-                
+
 
             // Step 2: Fetch related employees for the WCs
             var wcList = baseData.Select(x => x.jr.Wc).Distinct().ToList();
@@ -1250,7 +1251,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                 .ThenBy(x => x.SerialNo)
                 .ToList();
 
-            
+
 
             // Step 5: Optional search
             if (!string.IsNullOrWhiteSpace(search))
@@ -1345,7 +1346,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
     }
 
 
-    
+
 
 
     [HttpGet]
@@ -1384,11 +1385,11 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                 })
                 .ToListAsync();
 
-                // ✔ Now remove duplicates purely by Job + Oper + Wc (safe)
-                baseData = baseData
-                    .GroupBy(x => new { x.Job, x.OperNum, x.Wc })
-                    .Select(g => g.First())
-                    .ToList();
+            // ✔ Now remove duplicates purely by Job + Oper + Wc (safe)
+            baseData = baseData
+                .GroupBy(x => new { x.Job, x.OperNum, x.Wc })
+                .Select(g => g.First())
+                .ToList();
 
 
             // 🔹 STEP 2 — Employee mapping for WCs
@@ -1559,11 +1560,11 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                 })
                 .ToListAsync();
 
-                // ✔ Now remove duplicates purely by Job + Oper + Wc (safe)
-                baseData = baseData
-                    .GroupBy(x => new { x.Job, x.OperNum, x.Wc })
-                    .Select(g => g.First())
-                    .ToList();
+            // ✔ Now remove duplicates purely by Job + Oper + Wc (safe)
+            baseData = baseData
+                .GroupBy(x => new { x.Job, x.OperNum, x.Wc })
+                .Select(g => g.First())
+                .ToList();
 
 
             // 🔹 STEP 2 — Employee mapping for WCs
@@ -1674,10 +1675,10 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
 
                 if (statusDict.TryGetValue(key, out var st))
                 {
-                    item.trans_number = (int)st.trans_num; 
+                    item.trans_number = (int)st.trans_num;
                     item.Status = st.status;
                     item.Remark = st.Remark;
-                    item.IsActive = st.status != "3";  
+                    item.IsActive = st.status != "3";
                 }
             }
 
@@ -1765,7 +1766,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                         .Where(e => empNums.Contains(e.emp_num))
                         .ToDictionaryAsync(
                             e => e.emp_num,
-                            e => e.name   
+                            e => e.name
                         );
 
 
@@ -1896,35 +1897,35 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
     [HttpGet]
     public IActionResult GetActiveJobTransactions()
     {
-        
-            var latestByJob = _context.JobTranMst
-            .Where(j => j.trans_type == "D")
-            .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
-            .Select(g => new
-            {
-                Latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault(),
-                TotalHours = g.Where(x => x.status == "1").Sum(x => x.a_hrs ?? 0)
-            })
-            .ToList();
+
+        var latestByJob = _context.JobTranMst
+        .Where(j => j.trans_type == "D")
+        .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
+        .Select(g => new
+        {
+            Latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault(),
+            TotalHours = g.Where(x => x.status == "1").Sum(x => x.a_hrs ?? 0)
+        })
+        .ToList();
 
         // STEP 2 — Keep only rows where latest status is 1 or 2
-            var activeJobs = latestByJob
-            .Where(x => x.Latest != null && 
-                    (x.Latest.status == "1" || x.Latest.status == "2" ))
-            .Select(x => new
-            {
-                x.Latest!.job,
-                x.Latest.SerialNo,
-                x.Latest.oper_num,
-                x.Latest.wc,
-                x.Latest.start_time,
-                x.Latest.end_time,
-                x.Latest.status,
-                x.Latest.emp_num,
-                x.Latest.machine_id,
-                total_a_hrs = x.TotalHours
-            })
-            .ToList();
+        var activeJobs = latestByJob
+        .Where(x => x.Latest != null &&
+                (x.Latest.status == "1" || x.Latest.status == "2"))
+        .Select(x => new
+        {
+            x.Latest!.job,
+            x.Latest.SerialNo,
+            x.Latest.oper_num,
+            x.Latest.wc,
+            x.Latest.start_time,
+            x.Latest.end_time,
+            x.Latest.status,
+            x.Latest.emp_num,
+            x.Latest.machine_id,
+            total_a_hrs = x.TotalHours
+        })
+        .ToList();
 
         return Ok(new { data = activeJobs, total = activeJobs.Count });
     }
@@ -2119,7 +2120,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
     //     }
     // }
 
-  
+
 
     [HttpGet]
     public async Task<IActionResult> GetQC(int page = 0, int size = 50, string search = "")
@@ -2166,59 +2167,59 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                 .ToListAsync();
 
             // ✅ Step 5: Fetch already completed QC serials
-             var completedQcSerials = await _context.JobTranMst
-    .Where(t => !string.IsNullOrEmpty(t.SerialNo) &&
-                t.status == "3" &&
-                jobList.Contains(t.job))
-    .Select(t => new
-    {
-        Serial = t.SerialNo.Trim(),
-        OperNum = t.oper_num
-    })
-    .Distinct()
-    .ToListAsync();
+            var completedQcSerials = await _context.JobTranMst
+   .Where(t => !string.IsNullOrEmpty(t.SerialNo) &&
+               t.status == "3" &&
+               jobList.Contains(t.job))
+   .Select(t => new
+   {
+       Serial = t.SerialNo.Trim(),
+       OperNum = t.oper_num
+   })
+   .Distinct()
+   .ToListAsync();
 
             // ✅ Step 6: Build final DTO excluding completed serials
-         var finalData = baseData
-    .SelectMany(bd =>
-    {
-        return Enumerable.Range(1, (int)bd.qty_released)
-            .Select(i => $"{bd.Job.Trim()}-{i}")
-            .Where(serial => !completedQcSerials
-                .Any(x => x.Serial == serial && x.OperNum == bd.OperNum))
-            .Select(serial =>
-            {
-                var empList = employees.Where(e => e.Wc == bd.Wc).ToList();
-                var empNums = string.Join(", ", empList.Select(e => e.EmpNum));
-                var empNames = string.Join(", ", empList.Select(e => e.Name));
+            var finalData = baseData
+       .SelectMany(bd =>
+       {
+           return Enumerable.Range(1, (int)bd.qty_released)
+               .Select(i => $"{bd.Job.Trim()}-{i}")
+               .Where(serial => !completedQcSerials
+                   .Any(x => x.Serial == serial && x.OperNum == bd.OperNum))
+               .Select(serial =>
+               {
+                   var empList = employees.Where(e => e.Wc == bd.Wc).ToList();
+                   var empNums = string.Join(", ", empList.Select(e => e.EmpNum));
+                   var empNames = string.Join(", ", empList.Select(e => e.Name));
 
-                return new UnpostedTransactionDto
-                {
-                    SerialNo = serial,
-                    Job = bd.Job.Trim(),
-                    QtyReleased = 1,
-                    Item = bd.item ?? "",
-                    JobYear = bd.CreateDate.Year,
-                    OperNum = bd.OperNum.ToString(),
-                    WcCode = bd.Wc,
-                    WcDescription = bd.description,
-                    EmpNum = empNums,
-                    EmpName = empNames,
-                    trans_number = 0,
-                    TransType = "",
-                    QcGroup = "",
-                    Status = "",
-                    MachineId = "",
-                    MachineDescription = "",
-                    IsActive = false,
-                };
-            });
-    })
-    .OrderBy(x => x.Job)
-    .ThenBy(x => x.OperNum)
-    .ThenBy(x => x.SerialNo)
-    .ToList();
-  // ✅ Step 7: Apply search filter
+                   return new UnpostedTransactionDto
+                   {
+                       SerialNo = serial,
+                       Job = bd.Job.Trim(),
+                       QtyReleased = 1,
+                       Item = bd.item ?? "",
+                       JobYear = bd.CreateDate.Year,
+                       OperNum = bd.OperNum.ToString(),
+                       WcCode = bd.Wc,
+                       WcDescription = bd.description,
+                       EmpNum = empNums,
+                       EmpName = empNames,
+                       trans_number = 0,
+                       TransType = "",
+                       QcGroup = "",
+                       Status = "",
+                       MachineId = "",
+                       MachineDescription = "",
+                       IsActive = false,
+                   };
+               });
+       })
+       .OrderBy(x => x.Job)
+       .ThenBy(x => x.OperNum)
+       .ThenBy(x => x.SerialNo)
+       .ToList();
+            // ✅ Step 7: Apply search filter
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var lower = search.ToLower();
@@ -2418,7 +2419,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
 
 
 
-   [HttpGet]
+    [HttpGet]
     public IActionResult GetActiveQCJobs()
     {
         // STEP 1 — Get last row (any status) per job
@@ -2506,7 +2507,7 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
 
                 result.Add(new
                 {
-                    trans_num = j.trans_num, 
+                    trans_num = j.trans_num,
                     jobNumber = j!.job,
                     serialNo = j.SerialNo,
                     operationNumber = j.oper_num,
@@ -2514,8 +2515,8 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
                     empNum = j.emp_num,
                     qtyReleased = jobMaster?.qty_released ?? 0,
                     item = jobMaster?.item ?? "",
-                    remark = j.Remark ?? "", 
-                    total_a_hrs = j.a_hrs,  
+                    remark = j.Remark ?? "",
+                    total_a_hrs = j.a_hrs,
                     //  endTime = DateTime.UtcNow // current time for UI
                 });
             }
@@ -2648,314 +2649,326 @@ public async Task<IActionResult> GetJobs(int page = 0, int size = 50, string sea
     }
 
     [HttpGet]
- 
+
     public async Task<IActionResult> getJobProgress()
-    
-    {    
+
+    {
         // ===================== DATE FILTER =====================
-    
+
         DateTime cutoffDate = new DateTime(2025, 12, 07);
-    
+
         // ===================== JOB MASTER =====================
-    
+
         var jobs = await _context.JobMst
-    
+
             .Where(j => j.RecordDate > cutoffDate)
-    
+
             .Select(j => new JobDtos
-    
+
             {
-    
+
                 JobNo = j.job,
-    
+
                 Item = j.item,
-    
+
                 Description = j.description,
-    
+
                 Qty = j.qty_released,
-                JobDate=j.job_date,
-    
+                JobDate = j.job_date,
+
                 Serials = new List<JobSerialDto>()
-    
+
             })
-    
+
             .AsNoTracking()
-    
+
             .ToListAsync();
-    
+
         if (!jobs.Any())
-    
+
             return Ok(jobs);
-    
+
         var jobNos = jobs.Select(j => j.JobNo).ToList();
-    
+
         // ===================== JOB ROUTES =====================
-    
+
         var jobRoutes = await _context.JobRouteMst
-    
+
             .Where(r => jobNos.Contains(r.Job))
-    
+
             .GroupBy(r => r.Job)
-    
+
             .Select(g => new
-    
+
             {
-    
+
                 JobNo = g.Key,
-    
+
                 TotalOperations = g.Count(),
-    
-                Operations = g.Select(x => x.OperNum).ToList()
-    
+
+                Operations = g.Select(x => new
+                {
+                    OperNum = x.OperNum,
+                    WC = x.Wc   // ⭐ ADD THIS (your WOMMID)
+                }).ToList()
+
+
             })
-    
+
             .AsNoTracking()
-    
+
             .ToListAsync();
-    
+
         var routeDict = jobRoutes.ToDictionary(r => r.JobNo);
-    
+
         // ===================== JOB TRANSACTIONS =====================
-    
+
         var jobTrans = await _context.JobTranMst
-    
+
             .Where(t => jobNos.Contains(t.job))
-    
+
             .Select(t => new
-    
+
             {
-    
+
                 t.job,
-    
+
                 t.SerialNo,
-    
+
                 t.oper_num,
-    
+
                 t.emp_num,
-    
+
                 t.start_time,
-    
+
                 t.end_time,
-    
+
                 t.a_hrs,
-    
+
                 t.status,
-    
-                t.RecordDate
-    
+
+                t.RecordDate,
+                t.trans_date
+
             })
-    
+
             .AsNoTracking()
-    
+
             .ToListAsync();
-    
+
         // ===================== EMPLOYEE MASTER =====================
-    
+
         var empNums = jobTrans
-    
+
             .Where(t => t.emp_num != null)
-    
+
             .Select(t => t.emp_num)
-    
+
             .Distinct()
-    
+
             .ToList();
-    
+
         var empDict = await _context.EmployeeMst
-    
+
             .Where(e => empNums.Contains(e.emp_num))
-    
+
             .Select(e => new
-    
+
             {
-    
+
                 e.emp_num,
-    
+
                 e.name
-    
+
             })
-    
+
             .AsNoTracking()
-    
+
             .ToDictionaryAsync(e => e.emp_num, e => e.name);
-    
+
         // ===================== LOOKUP =====================
-    
+
         var tranLookup = jobTrans.ToLookup(t => t.SerialNo);
-    
+
         // ===================== BUILD TREE =====================
-    
+
         foreach (var job in jobs)
-    
+
         {
-    
+
             routeDict.TryGetValue(job.JobNo, out var route);
-    
+
             for (int i = 1; i <= job.Qty; i++)
-    
+
             {
-    
+
                 string serialNo = $"{job.JobNo}-{i}";
-    
+
                 var serialTrans = tranLookup[serialNo];
-    
+
                 var serial = new JobSerialDto
-    
+
                 {
-    
+
                     SerialNo = serialNo,
-    
+
                     TotalOperations = route?.TotalOperations ?? 0,
-    
+
                     CompletedOperations = 0,
-    
+
                     RunningOperations = 0,
-    
+
                     HoldOperations = 0,
-    
+
                     // ✅ SERIAL TOTAL HOURS (STATUS = 3)
-    
+
                     TotalHours = serialTrans
-    
+
                         .Where(t => t.status == "3")
-    
+
                         .Sum(t => t.a_hrs),
-    
+
                     Operations = new List<JobOperationDtos>()
-    
+
                 };
-    
-                foreach (var op in route?.Operations ?? Enumerable.Empty<int>())
-    
+
+                foreach (var op in route?.Operations ?? Enumerable.Empty<dynamic>())
+
+
                 {
-    
-                    var opTrans = serialTrans.Where(t => t.oper_num == op).ToList();
-    
+
+                    var opTrans = serialTrans
+    .Where(t => t.oper_num == op.OperNum)
+    .ToList();
+
+
                     JobOperationDtos opDto = new JobOperationDtos
-    
+
                     {
-    
-                        Operation = op
-    
+
+                        Operation = op.OperNum,
+                        WC = op.WC
+
+
                     };
-    
+
                     if (opTrans.Any())
-    
+
                     {
-    
+
                         var latestTran = opTrans
-    
-                            .OrderByDescending(t => t.RecordDate)
-    
+
+                           .OrderByDescending(t => t.trans_date)
+
                             .First();
-    
+
                         opDto.Employee = latestTran.emp_num != null && empDict.ContainsKey(latestTran.emp_num)
-    
+
                             ? empDict[latestTran.emp_num]
-    
+
                             : null;
-    
+
                         opDto.StartTime = latestTran.start_time?.ToString("HH:mm") ?? "-";
-    
+
                         opDto.EndTime = latestTran.end_time?.ToString("HH:mm") ?? "-";
-    
+
                         opDto.HoursConsumed = latestTran.a_hrs;
-    
+
                         switch (latestTran.status)
-    
+
                         {
-    
+
                             case "1":
-    
+
                                 serial.RunningOperations++;
-    
+
                                 opDto.Status = "Running";
-    
+
                                 break;
-    
+
                             case "2":
                                 serial.RunningOperations++;
                                 serial.HoldOperations++;
-    
-                                opDto.Status = "Pause";
-    
-                                break;
-    
-                            case "3":
-    
-                                serial.CompletedOperations++;
-    
-                                opDto.Status = "Completed";
-    
-                                break;
-    
-                            default:
-    
-                                opDto.Status = "Unknown";
-    
-                                break;
-    
-                        }
-    
-                    }
-    
-                    else
-    
-                    {
-    
-                        opDto.Status = "No Transaction Yet";
-    
-                        opDto.HoursConsumed = 0;
-    
-                        opDto.StartTime = "-";
-    
-                        opDto.EndTime = "-";
-    
-                    }
-    
-                    serial.Operations.Add(opDto);
-    
-                }
-    
-                job.Serials.Add(serial);
-    
-            }
-    
-            // ===================== JOB TOTAL HOURS =====================
-    
-            job.TotalHours = job.Serials.Sum(s => s.TotalHours ?? 0);
-    
-        }
-    
-        return Ok(jobs);
-    
-    }
-    
-    
-        [HttpGet]
-        public IActionResult GetNotifications()
-        {
-            var notifications = _context.Notification
-                .OrderByDescending(n => n.CreatedDate)
-                .Select(n => new
-                {
-                    n.NotificationID,
-                    n.Name,
-                    n.Email,
-                    n.Subject,
-                    n.Details,
-                    n.Status,
-                    n.ResponseSubject,
-                    n.ResponseBody,
-                    n.ResponseStatus,
-                    n.CreatedDate,
-                    n.UpdatedDate
-                })
-                .ToList();
 
-            return Ok(notifications);
+                                opDto.Status = "Pause";
+
+                                break;
+
+                            case "3":
+
+                                serial.CompletedOperations++;
+
+                                opDto.Status = "Completed";
+
+                                break;
+
+                            default:
+
+                                opDto.Status = "Unknown";
+
+                                break;
+
+                        }
+
+                    }
+
+                    else
+
+                    {
+
+                        opDto.Status = "No Transaction Yet";
+
+                        opDto.HoursConsumed = 0;
+
+                        opDto.StartTime = "-";
+
+                        opDto.EndTime = "-";
+
+                    }
+
+                    serial.Operations.Add(opDto);
+
+                }
+
+                job.Serials.Add(serial);
+
+            }
+
+            // ===================== JOB TOTAL HOURS =====================
+
+            job.TotalHours = job.Serials.Sum(s => s.TotalHours ?? 0);
+
         }
-    
+
+        return Ok(jobs);
+
+    }
+
+
+    [HttpGet]
+    public IActionResult GetNotifications()
+    {
+        var notifications = _context.Notification
+            .OrderByDescending(n => n.CreatedDate)
+            .Select(n => new
+            {
+                n.NotificationID,
+                n.Name,
+                n.Email,
+                n.Subject,
+                n.Details,
+                n.Status,
+                n.ResponseSubject,
+                n.ResponseBody,
+                n.ResponseStatus,
+                n.CreatedDate,
+                n.UpdatedDate
+            })
+            .ToList();
+
+        return Ok(notifications);
+    }
+
 
 
 

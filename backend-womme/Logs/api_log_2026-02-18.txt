@@ -1,0 +1,31 @@
+﻿[2026-02-18 07:55:15] API: POST /api/Auth/login Status: 200
+[2026-02-18 07:55:20] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 07:55:21] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 07:55:21] API: GET /api/Get/GetEmployeeAndMachineStats Status: 200
+[2026-02-18 07:55:27] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 07:55:21] API: POST /api/Post/GetTransactionOverview Status: 200
+[2026-02-18 07:55:21] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-18 07:55:27] API: GET /api/Get/getJobProgress Status: 200
+[2026-02-18 07:56:41] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 07:58:20] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 07:58:20] API: GET /api/Get/getJobProgress Status: 200
+[2026-02-18 07:58:28] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 07:58:28] API: GET /api/Get/getJobProgress Status: 200
+[2026-02-18 07:58:38] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 07:58:38] API: GET /api/Get/getJobProgress Status: 200
+[2026-02-18 07:58:48] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 07:58:48] API: GET /api/Get/getJobProgress Status: 500 ERROR: An exception has been raised that is likely due to a transient failure. Consider enabling transient error resiliency by adding 'EnableRetryOnFailure' to the 'UseSqlServer' call.
+[2026-02-18 08:33:52] API: GET /api/Get/RolePageMappings?roleID=1 Status: 500
+[2026-02-18 08:33:52] API: GET /api/Get/getJobProgress Status: 500 ERROR: An exception has been raised that is likely due to a transient failure. Consider enabling transient error resiliency by adding 'EnableRetryOnFailure' to the 'UseSqlServer' call.
+[2026-02-18 08:34:49] API: POST /api/Auth/login Status: 200
+[2026-02-18 08:34:51] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 08:34:51] API: POST /api/Post/GetTransactionOverview Status: 200
+[2026-02-18 08:34:51] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 08:34:51] API: GET /api/Get/GetEmployeeAndMachineStats Status: 200
+[2026-02-18 08:34:51] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-18 08:34:59] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 08:34:59] API: GET /api/Get/getJobProgress Status: 200
+[2026-02-18 08:38:11] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 08:38:11] API: GET /api/Get/getJobProgress Status: 200
+[2026-02-18 08:38:59] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-18 08:38:59] API: GET /api/Get/GetJobs?page=0&size=100000&search= Status: 200

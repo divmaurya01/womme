@@ -2609,6 +2609,8 @@ public class JobOperationDtos
     public string? StartTime { get; set; }
     public string? EndTime { get; set; }
     public decimal? HoursConsumed { get; set; }
+    public string? WC { get; set; }   // WOMMID / Work Center
+
 }
 
 public class CalendarImportDto
