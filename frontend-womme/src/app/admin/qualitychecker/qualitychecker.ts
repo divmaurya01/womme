@@ -415,6 +415,7 @@ startQCJob(job: any) {
           wcCode: x.wc,
           item: x.item,
           empNum: x.emp_num,
+          emp_name: x.emp_name,
           trans_num: x.trans_num ?? x.trans_number ?? null,
 
           startTime,

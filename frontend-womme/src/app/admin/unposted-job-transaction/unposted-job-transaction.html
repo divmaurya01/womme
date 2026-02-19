@@ -71,9 +71,9 @@
                     <p-sortIcon field="wcCode"></p-sortIcon>
                   </th>
 
-                  <th pSortableColumn="emp_num" style="background-color:#ECC391;">
+                  <th pSortableColumn="emp_name" style="background-color:#ECC391;">
                     Employees
-                    <p-sortIcon field="emp_num"></p-sortIcon>
+                    <p-sortIcon field="emp_name"></p-sortIcon>
                   </th>
 
                   <th pSortableColumn="machine_id" style="background-color:#ECC391;">
@@ -98,7 +98,7 @@
                 <td>{{ job.qtyReleased }}</td>                
                 <td>{{ job.operationNumber }}</td>
                 <td>{{ job.wcCode }} ( {{ job.wcDescription }} )</td>               
-                <td>{{ job.emp_num }}</td>
+                <td>{{ job.emp_name }}</td>
                 <td>{{ job.machine_id }}</td>
                 <td><span class="job-timer-card">
                   {{ formatTime(job.elapsedSeconds) }}

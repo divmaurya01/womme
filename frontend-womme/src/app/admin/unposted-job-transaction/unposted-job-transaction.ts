@@ -599,6 +599,7 @@ export class UnpostedJobTransaction implements OnInit {
         return {
           ...job,
           emp_num: match.emp_num ?? '',
+          emp_name:match.emp_name ?? '',
           machine_id: match.machine_id ?? '',
           a_hrs: accumulated,
           status: match.status,
@@ -675,7 +676,7 @@ exportToExcel(): void {
     'Qty': x.qtyReleased,
     'Operation': x.operationNumber,
     'WC': x.wcCode,
-    'Employee': x.emp_num,
+    'Employee': x.emp_name,
     'Machine': x.machine_id
   }));
 

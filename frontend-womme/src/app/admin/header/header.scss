@@ -133,24 +133,60 @@
   }
 }
 
-@media (max-width: 576px) {
-  .navbar-user-group {
-    flex-direction: row !important;
-    align-items: center;
-    flex-wrap: nowrap;
 
+
+/* Optimized Mobile Header */
+@media (max-width: 576px) {
+  .navbar {
+    padding: 0 0.5rem !important; /* Reduce outer padding */
+  }
+
+  .brand-name {
+    font-size: 1.4rem; /* Slightly smaller logo */
+    letter-spacing: 1px;
+    margin-right: 0.5rem !important;
+  }
+
+  /* Hide the divider next to the logo on mobile */
+  .navbar .vr {
+    display: none !important;
+  }
+
+  .navbar-user-group {
+    margin-left: 0.25rem !important; /* Fixed: used margin-left instead of ms-1 */
+    
     i {
-      font-size: 1rem;
-      margin: 0 0.25rem;
+      font-size: 1.1rem !important; 
+      margin: 0 4px !important; 
     }
 
     .profile-pic {
-      width: 20px;
-      height: 20px;
+      width: 28px !important; 
+      height: 28px !important;
+      margin-right: 4px !important;
     }
 
+    /* Recommendation: Hide the text name on mobile to prevent overflow */
     span {
-      font-size: 0.8rem;
+      display: none !important; 
     }
+  }
+  
+  /* Make the toggle button smaller */
+  .btn-outline-secondary {
+    padding: 2px 8px !important;
+    height: auto !important;
+    
+    i { 
+      font-size: 1.2rem !important; 
+      margin: 0 !important; /* Reset any icon margins inside button */
+    }
+  }
+   .dropdown-menu {
+    right: 0 !important;       /* keep it aligned to the right */
+    left: auto !important;     /* override any left positioning */
+    min-width: auto !important; /* remove fixed width */
+    width: 200px;              /* optional: adjust to fit nicely */
+    max-width: calc(100vw - 10px); /* ensure it never overflows */
   }
 }

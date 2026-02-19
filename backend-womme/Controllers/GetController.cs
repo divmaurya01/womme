@@ -1922,6 +1922,10 @@ public class GetController : ControllerBase
             x.Latest.end_time,
             x.Latest.status,
             x.Latest.emp_num,
+             emp_name = _context.EmployeeMst
+                        .Where(e => e.emp_num == x.Latest.emp_num)
+                        .Select(e => e.name)
+                        .FirstOrDefault(),
             x.Latest.machine_id,
             total_a_hrs = x.TotalHours
         })
@@ -2448,6 +2452,10 @@ public class GetController : ControllerBase
                 x.Latest.end_time,
                 x.Latest.status,
                 x.Latest.emp_num,
+                emp_name = _context.EmployeeMst
+                        .Where(e => e.emp_num == x.Latest.emp_num)
+                        .Select(e => e.name)
+                        .FirstOrDefault(),
                 item = x.Latest.item,
                 qcgroup = x.Latest.qcgroup,
                 latest_a_hrs = x.Latest.a_hrs,
@@ -2513,6 +2521,10 @@ public class GetController : ControllerBase
                     operationNumber = j.oper_num,
                     wcCode = j.wc,
                     empNum = j.emp_num,
+                    emp_name = _context.EmployeeMst
+                        .Where(e => e.emp_num == j.emp_num)
+                        .Select(e => e.name)
+                        .FirstOrDefault(),
                     qtyReleased = jobMaster?.qty_released ?? 0,
                     item = jobMaster?.item ?? "",
                     remark = j.Remark ?? "",
@@ -2560,6 +2572,10 @@ public class GetController : ControllerBase
                     operationNumber = j.oper_num,
                     wcCode = j.wc,
                     empNum = j.emp_num,
+                    emp_name = _context.EmployeeMst
+                        .Where(e => e.emp_num == j.emp_num)
+                        .Select(e => e.name)
+                        .FirstOrDefault(),
                     qtyReleased = jobMaster?.qty_released ?? 0,
                     item = jobMaster?.item ?? "",
                     qtyScrapped = j.qty_scrapped ?? 0,

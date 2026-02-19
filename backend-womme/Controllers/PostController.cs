@@ -852,17 +852,17 @@ public class PostController : ControllerBase
                         {
                             var row = status1Rows[i];
 
-                            if (row.start_time.HasValue)
-                            {
-                                row.start_time = DateTime.Today
-                                    .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
-                            }
+                            // if (row.start_time.HasValue)
+                            // {
+                            //     row.start_time = DateTime.Today
+                            //         .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
+                            // }
 
-                            if (row.end_time.HasValue)
-                            {
-                                row.end_time = DateTime.Today
-                                    .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
-                            }
+                            // if (row.end_time.HasValue)
+                            // {
+                            //     row.end_time = DateTime.Today
+                            //         .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
+                            // }
 
                             row.qty_moved = 0;
                             row.complete_op = 0;
@@ -1116,17 +1116,17 @@ public class PostController : ControllerBase
                     {
                         var row = status1Rows[i];
 
-                        if (row.start_time.HasValue)
-                        {
-                            row.start_time = DateTime.Today
-                                .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
-                        }
+                        // if (row.start_time.HasValue)
+                        // {
+                        //     row.start_time = DateTime.Today
+                        //         .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
+                        // }
 
-                        if (row.end_time.HasValue)
-                        {
-                            row.end_time = DateTime.Today
-                                .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
-                        }
+                        // if (row.end_time.HasValue)
+                        // {
+                        //     row.end_time = DateTime.Today
+                        //         .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
+                        // }
 
                         row.qty_moved = 0;
                         row.complete_op = 0;
@@ -1313,17 +1313,17 @@ public class PostController : ControllerBase
                 {
                     var row = status1Rows[i];
 
-                    if (row.start_time.HasValue)
-                    {
-                        row.start_time = DateTime.Today
-                            .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
-                    }
+                    // if (row.start_time.HasValue)
+                    // {
+                    //     row.start_time = DateTime.Today
+                    //         .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
+                    // }
 
-                    if (row.end_time.HasValue)
-                    {
-                        row.end_time = DateTime.Today
-                            .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
-                    }
+                    // if (row.end_time.HasValue)
+                    // {
+                    //     row.end_time = DateTime.Today
+                    //         .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
+                    // }
 
                     row.qty_moved = 0;
                     row.complete_op = 0;
@@ -3055,17 +3055,17 @@ public class PostController : ControllerBase
                         {
                             var row = status1Rows[i];
 
-                            if (row.start_time.HasValue)
-                            {
-                                row.start_time = DateTime.Today
-                                    .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
-                            }
+                            // if (row.start_time.HasValue)
+                            // {
+                            //     row.start_time = DateTime.Today
+                            //         .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
+                            // }
 
-                            if (row.end_time.HasValue)
-                            {
-                                row.end_time = DateTime.Today
-                                    .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
-                            }
+                            // if (row.end_time.HasValue)
+                            // {
+                            //     row.end_time = DateTime.Today
+                            //         .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
+                            // }
 
                             row.qty_moved = 0;
                             row.complete_op = 0;
@@ -3676,8 +3676,10 @@ public class PostController : ControllerBase
                     .ToListAsync();
 
                 latestNormal = normalData
-                    .GroupBy(j => new { j.job, j.SerialNo, j.wc })
-                    .Select(g => g.OrderByDescending(x => x.trans_date).First())
+                    .GroupBy(j => new { j.job, j.SerialNo, j.wc,j.oper_num })
+                    .Select(g => g.OrderByDescending(x => x.status) // 3 > 2 > 1
+.ThenByDescending(x => x.trans_date)
+.First())
                     .ToList();
             }
 
@@ -3688,8 +3690,10 @@ public class PostController : ControllerBase
                     .ToListAsync();
 
                 latestQC = qcData
-                    .GroupBy(j => new { j.job, j.SerialNo, j.wc })
-                    .Select(g => g.OrderByDescending(x => x.trans_date).First())
+                    .GroupBy(j => new { j.job, j.SerialNo, j.wc,j.oper_num })
+                    .Select(g => g.OrderByDescending(x => x.status) // 3 > 2 > 1
+.ThenByDescending(x => x.trans_date)
+.First())
                     .ToList();
             }
 
