@@ -1781,6 +1781,7 @@ public class GetController : ControllerBase
                     wcCode = g.LatestCompleted.wc,
                     transDate = g.LatestCompleted.trans_date,
                     qcGroup = g.LatestCompleted.qcgroup,
+                    status = g.LatestCompleted.status,
 
                     employees = g.Remarks.Select(r => new
                     {

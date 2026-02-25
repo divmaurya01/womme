@@ -513,7 +513,7 @@ public class PostController : ControllerBase
                 .OrderBy(j => j.trans_date)
                 .FirstOrDefaultAsync();
 
-            DateTime startFrom = firstJobRow?.trans_date ?? now;
+            DateTime startFrom = firstJobRow?.start_time ?? now;
 
             // Get total hours from all running rows
             var runningRows = await _context.JobTranMst
@@ -552,52 +552,58 @@ public class PostController : ControllerBase
                 .All(op => completedOperations.Contains(op));
 
             byte closeJobFlag = (byte)(allOperationsCompleted ? 1 : 0);
-
-            var completedJob = new JobTranMst
+            // Create completed job ONLY if NO OT required
+            if (totalHours <= 8m)
             {
-                site_ref = lastJob.site_ref,
-                trans_num = nextTransNum,
-                job = lastJob.job,
-                SerialNo = lastJob.SerialNo,
-                wc = lastJob.wc,
-                machine_id = lastJob.machine_id,
-                emp_num = lastJob.emp_num,
-                qty_complete = 1,
-                oper_num = lastJob.oper_num,
-                next_oper = lastJob.next_oper,
-                trans_date = now,
-                RecordDate = now,
-                CreateDate = now,
-                CreatedBy = dto.loginuser,
-                UpdatedBy = dto.loginuser,
-                completed_flag = true,
-                suffix = lastJob.suffix,
-                trans_type = "D",
-                qty_scrapped = lastJob.qty_scrapped,
-                qty_moved = 1,
-                pay_rate = lastJob.pay_rate,
-                whse = lastJob.whse,
-                close_job = closeJobFlag,
-                issue_parent = lastJob.issue_parent,
-                complete_op = 1,
-                shift = "1",
-                posted = 1,
-                job_rate = regRate,
-                Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
-                a_hrs = regularHours,
-                a_dollar = regularHours * regRate,
-                start_time = startFrom,
-                end_time = now,
-                status = "3",
-                RowPointer = Guid.NewGuid(),
-                trans_class = lastJob.trans_class,
-                item = lastJob.item,
-                qcgroup = ""
-            };
 
-            _context.JobTranMst.Add(completedJob);
-            await _context.SaveChangesAsync();
 
+                var completedJob = new JobTranMst
+                {
+                    site_ref = lastJob.site_ref,
+                    trans_num = nextTransNum,
+                    job = lastJob.job,
+                    SerialNo = lastJob.SerialNo,
+                    wc = lastJob.wc,
+                    machine_id = lastJob.machine_id,
+                    emp_num = lastJob.emp_num,
+                    qty_complete = 1,
+                    oper_num = lastJob.oper_num,
+                    next_oper = lastJob.next_oper,
+                    trans_date = now,
+                    RecordDate = now,
+                    CreateDate = now,
+                    CreatedBy = dto.loginuser,
+                    UpdatedBy = dto.loginuser,
+                    completed_flag = true,
+                    suffix = lastJob.suffix,
+                    trans_type = "D",
+                    qty_scrapped = lastJob.qty_scrapped,
+                    qty_moved = 1,
+                    pay_rate = lastJob.pay_rate,
+                    whse = lastJob.whse,
+                    close_job = closeJobFlag,
+                    issue_parent = lastJob.issue_parent,
+                    complete_op = 1,
+                    shift = "1",
+                    posted = 1,
+                    job_rate = regRate,
+                    Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
+                    a_hrs = regularHours,
+                    a_dollar = regularHours * regRate,
+                    start_time = startFrom,
+                    end_time = now,
+                    status = "3",
+                    RowPointer = Guid.NewGuid(),
+                    trans_class = lastJob.trans_class,
+                    item = lastJob.item,
+                    qcgroup = ""
+                };
+
+                _context.JobTranMst.Add(completedJob);
+                await _context.SaveChangesAsync();
+            }
+            if (totalHours <= 8m)
+{
             // Get last 2 rows
             var lastTwoRows = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
@@ -656,7 +662,7 @@ public class PostController : ControllerBase
 
             }
 
-
+}
             // OT logic starts
             Console.WriteLine($"Starting OT logic here ..");
 
@@ -2753,7 +2759,9 @@ public class PostController : ControllerBase
             int closeJobFlag = allOperationsCompleted ? 1 : 0;
 
 
-
+// Create completed job ONLY if NO OT required
+if (totalHours <= 8m)
+{
 
             var completedJob = new JobTranMst
             {
@@ -2797,7 +2805,11 @@ public class PostController : ControllerBase
 
             _context.JobTranMst.Add(completedJob);
             await _context.SaveChangesAsync();
+}
 
+
+if (totalHours <= 8m)
+{
             // Get last 2 rows
             var lastTwoRows = await _context.JobTranMst
                 .Where(j => j.job == dto.JobNumber
@@ -2859,7 +2871,7 @@ public class PostController : ControllerBase
             }
 
 
-
+}
             // OT logic starts
             Console.WriteLine($"Starting OT logic here ..");
 
@@ -3676,7 +3688,7 @@ public class PostController : ControllerBase
                     .ToListAsync();
 
                 latestNormal = normalData
-                    .GroupBy(j => new { j.job, j.SerialNo, j.wc,j.oper_num })
+                    .GroupBy(j => new { j.job, j.SerialNo, j.wc, j.oper_num })
                     .Select(g => g.OrderByDescending(x => x.status) // 3 > 2 > 1
 .ThenByDescending(x => x.trans_date)
 .First())
@@ -3690,7 +3702,7 @@ public class PostController : ControllerBase
                     .ToListAsync();
 
                 latestQC = qcData
-                    .GroupBy(j => new { j.job, j.SerialNo, j.wc,j.oper_num })
+                    .GroupBy(j => new { j.job, j.SerialNo, j.wc, j.oper_num })
                     .Select(g => g.OrderByDescending(x => x.status) // 3 > 2 > 1
 .ThenByDescending(x => x.trans_date)
 .First())

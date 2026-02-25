@@ -171,15 +171,15 @@ export class VerifyTransaction implements OnInit {
             // --------------------------------------
             // APPLY BOTH FILTERS
             // --------------------------------------
-            data = data.filter((job: any) => {
-              const key = `${job.job}|${job.serialNo}`;
-              const nextOps = this.nextOpMap.get(key) ?? [];
+            // data = data.filter((job: any) => {
+            //   const key = `${job.job}|${job.serialNo}`;
+            //   const nextOps = this.nextOpMap.get(key) ?? [];
 
-              return (
-                nextOps.includes(Number(job.operNum)) &&          // ✅ next operation
-                this.empMatches(job.empNum, employeeCode)        // ✅ employee match
-              );
-            });
+            //   return (
+            //     nextOps.includes(Number(job.operNum)) &&          // ✅ next operation
+            //     this.empMatches(job.empNum, employeeCode)        // ✅ employee match
+            //   );
+            // });
 
             // UI flags
             data.forEach((x: any) => {
@@ -188,9 +188,12 @@ export class VerifyTransaction implements OnInit {
             });
 
             // Tabs
-            this.newJobs = data.filter((x: { status: string; isActive: boolean; }) =>
-              (!x.status || x.status === '') && x.isActive === false
-            );
+            // this.newJobs = data.filter((x: { status: string; isActive: boolean; }) =>
+            //   (!x.status || x.status === '') && x.isActive === false
+            // );
+            this.newJobs = data;
+
+
 
             this.ongoingJobs = data.filter((x: { status: string; isActive: boolean; }) =>
               x.status === '1' && x.isActive === true
@@ -366,8 +369,11 @@ loadCompletedJobs() {
   this.isLoading = true;
   this.loaderService.show();
 
-  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-  const employeeCode = userDetails.employeeCode || '';
+ const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+console.log('userDetails from localStorage:', userDetails);
+const employeeCode = (userDetails.employeeCode || '').toString().trim();
+console.log('employeeCode:', employeeCode);
+
 
   this.jobService
     .GetCompletedVerifyJob()
@@ -379,9 +385,13 @@ loadCompletedJobs() {
       next: (res) => {
         const data = res.data || [];
 
-        this.completedJobs = data.filter((job: any) =>
-          this.empMatches(job.empNum, employeeCode)
-        );
+       this.completedJobs = data.filter((job: any) => {
+  const match = job.employees?.some((emp: any) =>
+    emp.empNum?.toString() === employeeCode
+  );
+  return match ?? true; // if no match, include job anyway
+});
+
 
         this.allCompletedJobs = [...this.completedJobs];
         this.totalRecordsCompleted = this.completedJobs.length;
