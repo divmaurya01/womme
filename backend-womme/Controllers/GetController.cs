@@ -712,6 +712,8 @@ public class GetController : ControllerBase
             .Select(r => new JobOperationDto
             {
                 OperNum = r.OperNum,
+                WC=r.Wc,
+             
                 OperationDescription = r.UfTaskDescription,
 
                 Items = _context.JobMatlMst
@@ -719,6 +721,7 @@ public class GetController : ControllerBase
                     .Select(m => new JobOperationItemDto
                     {
                         Item = m.Item,
+                       
                         ItemDescription = _context.ItemMst
                             .Where(im => im.item == m.Item)
                             .Select(im => im.description)
@@ -754,6 +757,7 @@ public class GetController : ControllerBase
                     TransType = t.trans_type,
                     TransDate = t.trans_date,
                     Status = t.status,
+                    
                     Remark = t.Remark
                 })
                 .ToList();
@@ -1127,7 +1131,10 @@ public class GetController : ControllerBase
                             Quantity = jm.qty_released,
                             Item = jm.item,
                             OperNo = jr.OperNum,
-                            WCCode = jr.Wc
+                            WCCode = jr.Wc,
+                            Job_date=jm.job_date
+                            
+                            
                         };
 
             // Step 2: Apply optional search before materializing

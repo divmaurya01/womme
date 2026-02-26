@@ -24,6 +24,7 @@ interface JobItem {
 
 interface JobOperationFrontend {
   operationNo: string;
+  wc: string;
   description: string;
   items: JobItem[];
   qrCodeUrl?: string | null;
@@ -176,6 +177,7 @@ export class ReportsViewComponent implements OnInit {
               const mappedOp = {
                 operationNo: op.operNum?.toString() || op.operationNo || '---',
                 description: op.operationDescription || op.description || '---',
+                wc: op.wc || op.wc || '---',
                 items: (op.items || []).map((it: any, i: number) => ({
                   seq: it.sequence || it.seq || 0,
                   item: it.item || it.itemCode || '---',

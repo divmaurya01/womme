@@ -2196,6 +2196,7 @@ public string? TransType { get; set; }
     {
         public int OperNum { get; set; }
         public int Sequence { get; set; }
+        public string? WC { get; set; }
         public string? OperationDescription { get; set; } = string.Empty;
         public List<JobOperationItemDto> Items { get; set; } = new();
 

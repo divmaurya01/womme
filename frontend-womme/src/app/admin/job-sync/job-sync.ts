@@ -73,28 +73,40 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
       this.isSidebarHidden = false;  // Desktop → visible
     }
   }
-  loadJobs(): void {
+ loadJobs(): void {
   this.loader.show();
 
-  this.jobService.GetJobs(0, 100000, '') // large size
+  this.jobService.GetJobs(0, 100000, '')
     .pipe(finalize(() => this.loader.hide()))
     .subscribe({
       next: (res: any) => {
         if (res && res.data) {
-          this.jobs = res.data.map((x: any, index: number) => ({
-            srNo: index + 1,
-            jobNumber: x.job.trim(),
-            qtyReleased: x.quantity,
-            item: x.item.trim(),
-            operationNumber: x.operNo,
-            wcCode: x.wcCode.trim()
-          }));
+          this.jobs = res.data.map((x: any, index: number) => {
+
+            const date = new Date(x.job_date);
+
+            const formattedDate =
+              ('0' + date.getDate()).slice(-2) + '-' +
+              ('0' + (date.getMonth() + 1)).slice(-2) + '-' +
+              date.getFullYear();
+
+            return {
+              srNo: index + 1,
+              jobNumber: x.job.trim(),
+              qtyReleased: x.quantity,
+              item: x.item.trim(),
+              operationNumber: x.operNo,
+              wcCode: x.wcCode.trim(),
+              JobDate: formattedDate
+            };
+          });
 
           this.filteredJobs = [...this.jobs];
         }
       }
     });
 }
+
 
 
   onGlobalSearch(): void {
@@ -249,6 +261,7 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
       'Job': job.jobNumber,
       'Qty': job.qtyReleased,
       'Item': job.item,
+      'JobDate':job.JobDate,
       'Operation': job.operationNumber,
       'WC': job.wcCode
     }));

@@ -2,19 +2,19 @@
 
 <div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
   <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
-    
+
   <main class="main-content">
     <section class="table-wrapper">
       <div *ngIf="jobData; else loading" class="text-center mb-4">
         <button class="btn btn-primary me-2" (click)="downloadPDF()">
           <i class="bi bi-file-earmark-pdf"></i> Download PDF
         </button>
- 
+
       </div>
 
       <!-- Ensure jobData is loaded -->
       <div *ngIf="jobData; else loading">
-        
+
         <!-- Bootstrap Tab View -->
         <!-- <ul class="nav nav-tabs" id="jobTabs" role="tablist">
           <li class="nav-item" role="presentation">
@@ -44,9 +44,9 @@
             <table class="meta-info-table" style="width:100%">
               <tr>
                 <td><strong>Job Date:</strong> &nbsp;{{ jobData.jobDate }}</td>
-                
+
                 <td rowspan="4" style="text-align: right;">
-                  <img *ngIf="qrCodeUrl; else noQr" [src]="qrCodeUrl" height="120" alt="Job QR"/>
+                  <img *ngIf="qrCodeUrl; else noQr" [src]="qrCodeUrl" height="120" alt="Job QR" />
                   <ng-template #noQr>
                     <span>No QR available</span>
                   </ng-template>
@@ -71,14 +71,14 @@
                 <td><strong>Drawing No:</strong>&nbsp; {{ jobData.drawingNo }}</td>
               </tr>
               <tr>
-              <td colspan="3">{{ jobData.ufItemDescription2 || '---' }} </td>
+                <td colspan="3">{{ jobData.ufItemDescription2 || '---' }} </td>
 
               </tr>
               <tr>
                 <td><strong>Part # Rev.:</strong>&nbsp; {{ jobData.partRev }}</td>
                 <td></td>
                 <td></td>
-                <td><strong>Traceability Heat Code/Batch #:</strong><br/> {{ jobData.traceCode }}</td>
+                <td><strong>Traceability Heat Code/Batch #:</strong><br /> {{ jobData.traceCode }}</td>
               </tr>
               <tr>
                 <td><strong>Third Party Insp.:</strong>&nbsp; {{ jobData.thirdPartyInsp }}</td>
@@ -133,13 +133,17 @@
                   <ng-container *ngIf="operation.transactions && operation.transactions.length > 0; else noTransaction">
                     <tr *ngFor="let trans of operation.transactions; let i = index">
                       <!-- Only show operation no + QR + description for first transaction row -->
-                      <td *ngIf="i === 0" [attr.rowspan]="operation.transactions.length" style="vertical-align: middle; text-align:center;">
+                      <td *ngIf="i === 0" [attr.rowspan]="operation.transactions.length"
+                        style="vertical-align: middle; text-align:center;">
                         <h4>{{ operation.operationNo }}</h4>
                         <img *ngIf="operation.qrCodeUrl" [src]="operation.qrCodeUrl" alt="Operation QR" height="90" />
                       </td>
-                      <td *ngIf="i === 0" [attr.rowspan]="operation.transactions.length" style="vertical-align: middle;">
-                        {{ operation.description }}
+                      <td *ngIf="i === 0" [attr.rowspan]="operation?.transactions?.length || 1"
+                        style="vertical-align: middle;">
+                        <div>{{ operation?.description }}</div>
+                        <div>{{ operation?.wc }}</div>
                       </td>
+
 
                       <!-- Transaction details -->
                       <td>{{ trans.serialNo }}</td>

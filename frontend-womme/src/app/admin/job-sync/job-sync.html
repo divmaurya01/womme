@@ -124,6 +124,11 @@
                   <p-sortIcon field="operationNumber"></p-sortIcon>
                 </th>
 
+                 <th pSortableColumn="JobDate" style="background-color:#ECC391;">
+                  Job Date
+                  <p-sortIcon field="JobDate"></p-sortIcon>
+                </th>
+
                 <th pSortableColumn="wcCode" style="background-color:#ECC391;">
                   WCCode
                   <p-sortIcon field="wcCode"></p-sortIcon>
@@ -146,6 +151,7 @@
                 <td style="padding: 10px 10px;">{{ job.qtyReleased }}</td>
                 <td style="padding: 10px 10px;">{{ job.item }}</td>
                 <td style="padding: 10px 10px;">{{ job.operationNumber }}</td>
+                     <td style="padding: 10px 10px;">{{ job.JobDate }}</td>
                 <td>{{ job.wcCode }} </td>  
                 
                 <td class="text-nowrap">

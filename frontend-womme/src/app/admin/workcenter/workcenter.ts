@@ -295,10 +295,11 @@ formatWomMid(womm_id: number | null): string {
 
     const exportData = this.filteredWorkCenters.map((wc, index) => ({
       'Sr No': index + 1,
+      'Womme Id': wc.womm_id,
       'Work Center': wc.wc,
       'Employee No': wc.empNum,
       'Description': wc.description,
-      'Employee Name': wc.name,
+      'Employee Name': wc.name
       
     }));
 

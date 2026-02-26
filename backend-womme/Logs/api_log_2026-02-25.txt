@@ -215,3 +215,17 @@
 [2026-02-25 10:20:46] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
 [2026-02-25 10:20:46] API: GET /api/Get/getAllMachines Status: 200
 [2026-02-25 10:20:46] API: GET /api/Get/GetPostedTransactions?page=0&size=5000&search= Status: 200
+[2026-02-25 10:35:31] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-02-25 10:35:31] API: POST /api/Post/GetTransactionOverview Status: 200
+[2026-02-25 10:35:31] API: GET /api/Get/GetEmployeeAndMachineStats Status: 200
+[2026-02-25 10:35:31] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:12] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:14] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:16] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:17] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:15] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:16] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:28] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:31] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:33] API: POST /api/Post/GetTransactionData Status: 200
+[2026-02-25 10:37:34] API: POST /api/Post/GetTransactionData Status: 200
