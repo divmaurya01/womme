@@ -31,13 +31,15 @@ export class DashboardOverviewComponent {
     ongoingCriticalJobs: 0
   };
 
-  qc = {
-    runningQCJobs: 0,
-    pausedQCJobs: 0,
-    normalCompletedQCJobs: 0,
-    extendedQCJobs: 0,
-    ongoingCriticalQCJobs: 0
-  };
+ qc = {
+  runningQCJobs: 0,
+  pausedQCJobs: 0,
+  normalCompletedQCJobs: 0,
+  extendedQCJobs: 0,
+  ongoingCriticalQCJobs: 0,
+  holdQCJobs: 0,
+  rejectedQCJobs: 0
+};
 
   verify = {
     runningVerifyJobs: 0,
@@ -222,6 +224,10 @@ getStatusBadgeClass(status: string): string {
       return 'badge badge-dark';
     case 'Running':
       return 'badge badge-primary';
+    case 'Hold':
+      return 'badge badge-info';
+    case 'Rejected':
+      return 'badge badge-danger';
     default:
       return 'badge badge-secondary';
   }
@@ -266,44 +272,46 @@ goToTransaction(type: string) {
 
 
 goToQC(type: string) {
+
   const ss_id =
     this.router.routerState.snapshot.root.queryParams['ss_id']
     || localStorage.getItem('ss_id');
 
   if (!ss_id) {
-    console.warn(' ss_id missing');
+    console.warn('ss_id missing');
     return;
   }
 
-  let route = '/qualitychecker'; // default
+  let route = '/qualitychecker'; // QC page
 
-  if (type === 'completed') {
-    route = '/qualitychecker';
-  } 
-  else if (type === 'extended') {
-    if ((this.qc.runningQCJobs ?? 0) > 0 || (this.qc.pausedQCJobs ?? 0) > 0) {
+  switch (type) {
+
+    case 'running':
+    case 'paused':
+    case 'critical':
+    case 'extended':
+    case 'completed':
+    case 'hold':
+    case 'reject':
       route = '/qualitychecker';
-    } 
-    else if ((this.qc.normalCompletedQCJobs ?? 0) > 0) {
+      break;
+
+    default:
       route = '/qualitychecker';
-    } 
-    else {
-      route = '/qualitychecker';
-    }
   }
 
   console.log('QC Overview:', this.qc);
-  console.log(' Navigating to QC route:', route);
+  console.log('Navigating to QC route:', route);
+  console.log('Status:', type);
 
-this.router.navigate([route], {
-  queryParams: {
-    status: type,
-    ss_id
-  }
-});
+  this.router.navigate([route], {
+    queryParams: {
+      status: type,
+      ss_id
+    }
+  });
 
 }
-
 
 goToVerify(type: string) {
   const ss_id =

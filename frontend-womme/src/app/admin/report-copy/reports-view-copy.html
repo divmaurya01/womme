@@ -6,7 +6,16 @@
   <main class="main-content">
     <section class="table-wrapper">
       <div *ngIf="jobData; else loading" class="text-center mb-4">
-        <button class="btn btn-primary me-2" (click)="downloadPDF()">
+
+        <button class="btn btn-warning me-2" *ngIf="!isEditMode" (click)="enableEdit()">
+          <i class="bi bi-pencil"></i> Edit
+        </button>
+
+        <button class="btn btn-success me-2" *ngIf="isEditMode" (click)="saveAudit()">
+          <i class="bi bi-check"></i> Save
+        </button>
+        &nbsp;&nbsp;
+        <button class="btn btn-primary me-2" [disabled]="isEditMode" (click)="downloadPDF()">
           <i class="bi bi-file-earmark-pdf"></i> Download PDF
         </button>
 
@@ -43,7 +52,16 @@
             <!-- === JOB META DATA TABLE === -->
             <table class="meta-info-table" style="width:100%">
               <tr>
-                <td><strong>Job Date:</strong> &nbsp;{{ jobData.jobDate }}</td>
+                <td>
+                  <strong>Job Date:</strong>
+
+                  <span *ngIf="!isEditMode">{{ jobData.jobDate }}</span>
+
+                  <input *ngIf="isEditMode"
+                        type="date"
+                        class="form-control"
+                        [(ngModel)]="auditData.jobDate">
+                </td>
 
                 <td rowspan="4" style="text-align: right;">
                   <img *ngIf="qrCodeUrl; else noQr" [src]="qrCodeUrl" height="120" alt="Job QR" />
@@ -55,7 +73,14 @@
                 <td><strong>Status:</strong>&nbsp; {{ jobData.status }}</td>
               </tr>
               <tr>
-                <td><strong>Job Due Date:</strong> &nbsp;{{ jobData.jobDueDate }}</td>
+                <td><strong>Job Due Date:</strong>
+
+                <span *ngIf="!isEditMode">{{ jobData.jobDueDate }}</span>
+
+                <input *ngIf="isEditMode"
+                      type="date"
+                      class="form-control"
+                      [(ngModel)]="auditData.jobDueDate"></td>
                 <td></td>
                 <td><strong>Released:</strong> &nbsp;{{ jobData.released }}</td>
               </tr>
@@ -92,7 +117,14 @@
               </tr>
               <tr>
                 <td><strong>Revision No:</strong> &nbsp;{{ jobData.revisionNo }}</td>
-                <td><strong>Revision Date :</strong>&nbsp;{{ jobData.date }}</td>
+                <td><strong>Revision Date :</strong>
+
+                    <span *ngIf="!isEditMode">{{ jobData.RevisionDate }}</span>
+
+                    <input *ngIf="isEditMode"
+                          type="date"
+                          class="form-control"
+                          [(ngModel)]="auditData.RevisionDate"></td>
                 <td></td>
                 <td><strong>Drawing # Rev.:</strong> &nbsp;{{ jobData.drawingRev }}</td>
               </tr>
@@ -110,7 +142,12 @@
               </tr>
               <tr>
                 <td><strong>Prepared By:</strong>&nbsp; {{ jobData.preparedBy }}</td>
-                <td><strong>Date:</strong>&nbsp; {{ jobData.date }}</td>
+                <td><strong>Date:</strong>&nbsp; <span *ngIf="!isEditMode">{{ jobData.date }}</span>
+
+                    <input *ngIf="isEditMode"
+                          type="date"
+                          class="form-control"
+                          [(ngModel)]="auditData.date"></td>
                 <td><strong>Approved By:</strong> ___________________</td>
               </tr>
             </table>
@@ -147,8 +184,8 @@
                         <div *ngIf="trans.machineId">
                           <strong>Machine:</strong> {{ trans.machineId }}
                         </div>
-                        <div *ngIf="trans.employeeId">
-                          <strong>Employee:</strong> {{ trans.employeeId }}
+                        <div *ngIf="trans.employeeName">
+                          <strong>Employee:</strong> {{ trans.employeeName }}
                         </div>
 
                       </td>
@@ -156,7 +193,18 @@
                       <!-- Transaction details -->
                       <td>{{ trans.serialNo }}</td>
                       <td>{{ trans.qty }}</td>
-                      <td>{{ trans.date }}</td>
+                      <td>
+
+                        <span *ngIf="!isEditMode">
+                          {{ trans.date }}
+                        </span>
+
+                        <input *ngIf="isEditMode"
+                              type="date"
+                              class="form-control"
+                              [(ngModel)]="trans.date">
+
+                      </td>
                       <td>{{ trans.notes || '' }}</td>
                     </tr>
                   </ng-container>

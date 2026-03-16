@@ -67,7 +67,7 @@
                   <p-sortIcon field="workCenter"></p-sortIcon>
                 </th>
 
-                <th style="background-color:#ECC391;"></th>
+                <th style="background-color:#ECC391;">Action</th>
               </tr>
             </ng-template>
 
@@ -87,7 +87,16 @@
                 <td>{{ job.machine_name }}</td>
                 <td>{{ job.workCenter }}</td>
                 <td class="text-center">
-                  <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-sm"
+                  <!-- Reopen Button -->
+                  <button pButton icon="pi pi-refresh"
+                    class="p-button-rounded p-button-warning p-button-sm me-2"
+                    [disabled]="roleId === 4"
+                    (click)="reopenJobTransaction(job)"
+                    title="Reopen Job"
+                    style="width: 2rem;height: 2rem;">
+                  </button>&nbsp;
+                  <!-- Delete Button -->
+                  <button pButton icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-sm" style="width: 2rem;height: 2rem;"
                     [disabled]="roleId === 4" (click)="deleteJobTransaction(job)" title="Delete Transaction">
                   </button>
                 </td>
@@ -115,11 +124,15 @@
               <tr>
                 <td>{{ formatDateFromString(log.trans_date) }}</td>
                 <td>
-                  {{ log.status?.toString() === '3' ? 'Complete'
-                  : log.status?.toString() === '2' ? 'Idle'
-                  : log.status?.toString() === '1' ? 'Started'
-                  : log.status }}
-                </td>
+                {{
+                  log.status?.toString() === '3' ? 'Complete' :
+                  log.status?.toString() === '4' ? 'Hold' :
+                  log.status?.toString() === '5' ? 'Rejected' :
+                  log.status?.toString() === '2' ? 'Idle' :
+                  log.status?.toString() === '1' ? 'Started' :
+                  log.status
+                }}
+              </td>
 
                 <!-- Start Time -->
                 <td>

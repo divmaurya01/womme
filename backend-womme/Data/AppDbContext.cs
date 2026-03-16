@@ -9,6 +9,7 @@ namespace WommeAPI.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<AssignedJob> AssignedJob { get; set; }
+        public DbSet<OperationMaster> OperationMaster { get; set; }
         public DbSet<EmployeeLog> EmployeeLog { get; set; }
         //  public DbSet<ItemMaster> ItemMaster { get; set; }
         public DbSet<MachineMaster> MachineMaster { get; set; }
@@ -37,15 +38,8 @@ namespace WommeAPI.Data
         public DbSet<WomWcMachine> WomWcMachines { get; set; }
         public DbSet<Notification> Notification { get; set; }
         public DbSet<SyncLog> SyncLog { get; set; }
-
-
-       
-
-
-       
-        
-        
-
+        public DbSet<JobReportAudit> JobReportAudit { get; set; }
+        public DbSet<ReopenJobs> ReopenJobs { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AssignedJob>()

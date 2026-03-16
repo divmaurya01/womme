@@ -91,7 +91,7 @@ public class GetController : ControllerBase
              //     var latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault();
              //     return latest != null && latest.status == "3"; // include group only if latest is 3
              // });
-             .Where(g => g.Any(x => x.status == "3"));
+             .Where(g => g.Any(x => x.status == "3" || x.status == "4" || x.status == "5"));
 
         // Step 3: Flatten group into list of rows
         var result = grouped
@@ -706,40 +706,51 @@ public class GetController : ControllerBase
             return NotFound(new { Message = "Job not found" });
 
         // Step 2: Fetch operations
-        var operations = await _context.JobRouteMst
-            .Where(r => r.Job == jobId)
-            .OrderBy(r => r.OperNum)
-            .Select(r => new JobOperationDto
+        var operations = await (
+            from r in _context.JobRouteMst
+
+            join wc in _context.WcMst
+                on r.Wc equals wc.wc into wcJoin
+            from wc in wcJoin.DefaultIfEmpty()
+
+            join om in _context.OperationMaster
+                on r.OperNum equals om.OperationNumber into opJoin
+            from om in opJoin.DefaultIfEmpty()
+
+            where r.Job == jobId
+            orderby r.OperNum
+
+            select new JobOperationDto
             {
                 OperNum = r.OperNum,
-                WC=r.Wc,
-             
-                OperationDescription = r.UfTaskDescription,
+                WC = r.Wc,
+
+                // Operation description from OperationMaster
+                OperationDescription = om != null
+                    ? om.OperationDescription
+                    : (wc != null ? wc.description : r.UfTaskDescription),
 
                 Items = _context.JobMatlMst
                     .Where(m => m.Job == jobId && m.OperNum == r.OperNum)
                     .Select(m => new JobOperationItemDto
                     {
                         Item = m.Item,
-                       
-                        ItemDescription = _context.ItemMst
-                            .Where(im => im.item == m.Item)
-                            .Select(im => im.description)
-                            .FirstOrDefault() ?? string.Empty,
+                        ItemDescription = "",
                         RequiredQty = m.QtyIssued,
                         Sequence = m.Sequence,
-                        UfLastVendName = m.UfLastVendName ?? string.Empty,
-                        UfItemDescription2 = _context.ItemMst
-                            .Where(im => im.item == m.Item)
-                            .Select(im => im.Uf_ItemDescription2)
-                            .FirstOrDefault() ?? string.Empty
+                        UfLastVendName = m.UfLastVendName ?? "",
+                        UfItemDescription2 = ""
                     }).ToList()
-            })
-            .ToListAsync();
+            }
+        ).ToListAsync();
 
         // Step 3: Load all transactions separately (avoid EF crash)
         var allTransactions = await _context.JobTranMst
             .Where(t => t.job == jobId)
+            .ToListAsync();
+
+        var employees = await _context.EmployeeMst
+            .Select(e => new { e.emp_num, e.name })
             .ToListAsync();
 
         // Step 4: Group and filter in memory
@@ -747,20 +758,71 @@ public class GetController : ControllerBase
         {
             op.Transactions = allTransactions
                 .Where(t => t.oper_num == op.OperNum)
-                .GroupBy(t => t.SerialNo)
-                .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault())
-                .Where(t => t != null && t.status == "3") // only completed
+                .OrderBy(t => t.trans_date)
                 .Select(t => new JobTransactionDto
                 {
-                    SerialNo = t!.SerialNo,
+                    SerialNo = t.SerialNo,
                     CreateDate = t.CreateDate,
-                    TransType = t.trans_type,
                     TransDate = t.trans_date,
+                    TransType = t.trans_type,
                     Status = t.status,
-                    
-                    Remark = t.Remark
+                    Remark = t.Remark,
+
+                    MachineId = t.machine_id,
+                    EmployeeId = t.CreatedBy,
+
+                    EmployeeName = employees
+                        .FirstOrDefault(e => e.emp_num == t.CreatedBy)?.name
                 })
                 .ToList();
+        }
+
+        var auditValues = await _context.JobReportAudit
+            .Where(x => x.Job == jobId)
+            .ToListAsync();
+
+        foreach (var audit in auditValues)
+        {
+            var col = audit.ColumnName?.ToLower();
+
+            if (col == "jobdate")
+                jobInfo.JobDate = DateTime.Parse(audit.ColumnValue);
+
+            if (col == "jobduedate")
+                jobInfo.JobDueDate = DateTime.Parse(audit.ColumnValue);
+
+            if (col == "revisiondate")
+                jobInfo.RevisionDate = DateTime.Parse(audit.ColumnValue);
+
+            if (col == "date")
+                jobInfo.Date = DateTime.Parse(audit.ColumnValue);
+        }
+
+        // Apply audit overrides to transactions
+        foreach (var op in operations)
+        {
+            foreach (var tran in op.Transactions)
+            {
+                var auditDate = auditValues.FirstOrDefault(a =>
+                    a.OperationNo == op.OperNum.ToString() &&
+                    a.SerialNo == tran.SerialNo &&
+                    a.ColumnName == "date");
+
+                if (auditDate != null && DateTime.TryParse(auditDate.ColumnValue, out var newDate))
+                {
+                    tran.TransDate = newDate;
+                }
+
+                var auditQty = auditValues.FirstOrDefault(a =>
+                    a.OperationNo == op.OperNum.ToString() &&
+                    a.SerialNo == tran.SerialNo &&
+                    a.ColumnName == "qty");
+
+                if (auditQty != null && decimal.TryParse(auditQty.ColumnValue, out var newQty))
+                {
+                    tran.QtyComplete = newQty;
+                }
+            }
         }
 
         jobInfo.Operations = operations;
@@ -2434,25 +2496,23 @@ public class GetController : ControllerBase
     [HttpGet]
     public IActionResult GetActiveQCJobs()
     {
-        // STEP 1 — Get last row (any status) per job
         var latestByJob = _context.JobTranMst
             .Where(j => j.trans_type == "M")
             .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
             .Select(g => new
             {
-                Latest = g.OrderByDescending(x => x.trans_date).FirstOrDefault(),
+                Latest = g.OrderByDescending(x => x.trans_num).FirstOrDefault(),
                 TotalHours = g.Where(x => x.status == "1").Sum(x => x.a_hrs ?? 0)
             })
             .ToList();
 
-        // STEP 2 — Keep only groups where the REAL latest status is 1 or 2
         var active = latestByJob
             .Where(x => x.Latest != null && (x.Latest.status == "1" || x.Latest.status == "2"))
             .Select(x => new
             {
                 x.Latest!.job,
                 x.Latest.trans_num,
-                x.Latest.Remark,
+                x.Latest.ongoing_comment,
                 x.Latest.SerialNo,
                 x.Latest.oper_num,
                 x.Latest.wc,
@@ -2535,7 +2595,7 @@ public class GetController : ControllerBase
                         .FirstOrDefault(),
                     qtyReleased = jobMaster?.qty_released ?? 0,
                     item = jobMaster?.item ?? "",
-                    remark = j.Remark ?? "",
+                    remark = j.completed_comment ?? "",
                     total_a_hrs = j.a_hrs,
                     //  endTime = DateTime.UtcNow // current time for UI
                 });
@@ -2548,6 +2608,109 @@ public class GetController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+
+
+
+    [HttpGet]
+    public async Task<IActionResult> GetHoldQCJobs()
+    {
+        try
+        {
+            var holdJobs = await _context.JobTranMst
+                .Where(j => j.status == "4")
+                .ToListAsync();
+
+            var grouped = holdJobs
+                .GroupBy(j => new { j.job, j.oper_num, j.SerialNo, j.qcgroup })
+                .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault())
+                .OrderByDescending(j => j!.trans_date)
+                .ToList();
+
+            var result = new List<object>();
+
+            foreach (var j in grouped)
+            {
+                var jobMaster = await _context.JobMst
+                    .FirstOrDefaultAsync(jm => jm.job == j!.job);
+
+                result.Add(new
+                {
+                    trans_num = j!.trans_num,
+                    jobNumber = j.job,
+                    serialNo = j.SerialNo,
+                    operationNumber = j.oper_num,
+                    wcCode = j.wc,
+                    empNum = j.emp_num,
+                    emp_name = _context.EmployeeMst
+                        .Where(e => e.emp_num == j.emp_num)
+                        .Select(e => e.name)
+                        .FirstOrDefault(),
+                    qtyReleased = jobMaster?.qty_released ?? 0,
+                    item = jobMaster?.item ?? "",
+                    remark = j.hold_comment  ?? "",
+                    total_a_hrs = j.a_hrs
+                });
+            }
+
+            return Ok(new { data = result, totalRecords = result.Count });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+
+
+    [HttpGet]
+    public async Task<IActionResult> GetRejectedQCJobs()
+    {
+        try
+        {
+            var rejectedJobs = await _context.JobTranMst
+                .Where(j => j.status == "5")
+                .ToListAsync();
+
+            var grouped = rejectedJobs
+                .GroupBy(j => new { j.job, j.oper_num, j.SerialNo, j.qcgroup })
+                .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault())
+                .OrderByDescending(j => j!.trans_date)
+                .ToList();
+
+            var result = new List<object>();
+
+            foreach (var j in grouped)
+            {
+                var jobMaster = await _context.JobMst
+                    .FirstOrDefaultAsync(jm => jm.job == j!.job);
+
+                result.Add(new
+                {
+                    trans_num = j!.trans_num,
+                    jobNumber = j.job,
+                    serialNo = j.SerialNo,
+                    operationNumber = j.oper_num,
+                    wcCode = j.wc,
+                    empNum = j.emp_num,
+                    emp_name = _context.EmployeeMst
+                        .Where(e => e.emp_num == j.emp_num)
+                        .Select(e => e.name)
+                        .FirstOrDefault(),
+                    qtyReleased = jobMaster?.qty_released ?? 0,
+                    item = jobMaster?.item ?? "",
+                    remark = j.reject_comment  ?? "",
+                    total_a_hrs = j.a_hrs
+                });
+            }
+
+            return Ok(new { data = result, totalRecords = result.Count });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
 
     [HttpGet]
     public async Task<IActionResult> GetScrappedQCJobs()

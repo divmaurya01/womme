@@ -34,6 +34,7 @@ namespace WommeAPI.Models
         public string loginuser { get; set; } = string.Empty;
         public string? Item { get; set; }
          public string? StartTime { get; set; }
+         public string? remark { get; set; }
 
     }
 
@@ -62,6 +63,20 @@ namespace WommeAPI.Models
 // }
 
 
+    public class Operation
+    {
+        public int EntryNo { get; set; }
+
+        public int OperationNumber { get; set; }
+
+        public string? OperationName { get; set; }
+
+        public string? OperationDescription { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+    }
 
     public class EmpMechCheckRequestDto
     {
@@ -1744,6 +1759,10 @@ public string? TransType { get; set; }
         public string? qcgroup { get; set; }
         public string? item { get; set; }
         public string? Remark { get; set; }
+        public string? ongoing_comment { get; set; }
+        public string? completed_comment { get; set; }
+        public string? hold_comment { get; set; }
+        public string? reject_comment { get; set; }
     }
 
     public class JobPoolRequest
@@ -2176,6 +2195,8 @@ public string? TransType { get; set; }
         public string? MaterialClass { get; set; }
         public string? DrawingNo { get; set; }
         public string? RevisionNo { get; set; }
+        public DateTime? RevisionDate { get; set; }
+         public DateTime? Date { get; set; }
         public string? TempClass { get; set; }
         public int? DrawingRev { get; set; }
         public string? SoNo { get; set; }
@@ -2216,9 +2237,14 @@ public string? TransType { get; set; }
     public decimal? QtyScrapped { get; set; }      // Scrapped qty
     public string? Remark { get; set; }            // Remarks/comments
     public string? Item { get; set; }              // Item code
+    public string? MachineId { get; set; }
+    public string? EmployeeId { get; set; }    
+    public string? EmployeeName { get; set; }    
     public string? UfItemDescription2 { get; set; } // Item description
 }
 
+
+    
 
     public class JobOperationItemDto
     {
@@ -2544,7 +2570,8 @@ public class DeleteJobTransactionDto
     public class QCRemarkUpdateDto
     {
         public int trans_num { get; set; }
-        public string? Remark { get; set; }
+        public string? column { get; set; }
+        public string? remark { get; set; }
     }
 
     public class TransactionOverviewRequest
@@ -2673,7 +2700,72 @@ public class StartMultipleJobsDto
 }
 
 
+public class JobReportAudit
+    {
+        public int Id { get; set; }
 
+        public string? Job { get; set; }
+
+        public string? ColumnName { get; set; }
+
+        public string? ColumnValue { get; set; }
+
+        public string? OperationNo { get; set; }
+
+        public string? SerialNo { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime UpdatedDate { get; set; }
+    }
+
+        public class JobReportAuditDto
+    {
+        public string? Job { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public Dictionary<string, string>? Fields { get; set; }
+
+        public List<JobTransactionAuditDto>? Transactions { get; set; }
+    }
+
+    public class JobTransactionAuditDto
+    {
+        public string? OperationNo { get; set; }
+
+        public string? SerialNo { get; set; }
+
+        public string? ColumnName { get; set; }
+
+        public string? ColumnValue { get; set; }
+    }
+
+    public class ReopenJobTransactionDto
+    {
+        public string? Job { get; set; }
+        public string? SerialNumber { get; set; }
+        public int? OperationNumber { get; set; }
+        public string? WorkCenter { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+
+    public class ReopenJobs
+    {
+        public int Id { get; set; }
+
+        public string? Job { get; set; }
+
+        public string? SerialNumber { get; set; }
+
+        public int OperationNumber { get; set; }
+
+        public string? WorkCenter { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+    }
  
 
 }

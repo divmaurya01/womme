@@ -102,6 +102,20 @@
               </div>
               <h1>{{ qc.normalCompletedQCJobs }}</h1>
             </div>
+            <div class="card purple" (click)="goToQC('hold')">
+              <div class="card-header">
+                <span>HOLD</span>
+                <i class="bi bi-pause-fill"></i>
+              </div>
+              <h1>{{ qc.holdQCJobs }}</h1>
+            </div>
+            <div class="card darkred" (click)="goToQC('reject')">
+              <div class="card-header">
+                <span>REJECTED</span>
+                <i class="bi bi-x-circle"></i>
+              </div>
+              <h1>{{ qc.rejectedQCJobs }}</h1>
+            </div>
           </div>
         </section>
 

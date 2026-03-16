@@ -927,7 +927,165 @@ public class PostController : ControllerBase
 
 
 
+    [HttpPost("holdQCJob")]
+    public async Task<IActionResult> HoldQCJob([FromBody] StartJobRequestDto dto)
+    {
+        if (dto == null)
+            return BadRequest("Invalid request");
 
+        try
+        {
+            var now = dto.StartTime != null
+                ? DateTime.Parse(dto.StartTime)
+                : DateTime.Now;
+
+            var lastJob = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                            && j.oper_num == dto.OperationNumber
+                            && j.wc == dto.Wc
+                            && j.SerialNo == dto.SerialNo)
+                .OrderByDescending(j => j.trans_date)
+                .FirstOrDefaultAsync();
+
+            if (lastJob == null)
+                return NotFound(new { message = "No job found." });
+
+            decimal nextTransNum =
+                (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
+
+            var holdJob = new JobTranMst
+            {
+                site_ref = lastJob.site_ref,
+                trans_num = nextTransNum,
+                job = dto.JobNumber,
+                SerialNo = dto.SerialNo,
+                wc = dto.Wc,
+                machine_id = lastJob.machine_id,
+                emp_num = dto.loginuser,
+                qty_complete = 1,
+                oper_num = dto.OperationNumber,
+                next_oper = lastJob.next_oper,
+                trans_date = now,
+                RecordDate = now,
+                CreateDate = now,
+                CreatedBy = dto.loginuser,
+                UpdatedBy = dto.loginuser,
+                completed_flag = false,
+                suffix = lastJob.suffix,
+                trans_type = "M",
+                qty_scrapped = lastJob.qty_scrapped,
+                qty_moved = 0,
+                pay_rate = lastJob.pay_rate,
+                whse = lastJob.whse,
+                close_job = 0,
+                issue_parent = lastJob.issue_parent,
+                complete_op = 0,
+                shift = "1",
+                posted = 1,
+                job_rate = lastJob.job_rate,
+                Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
+                a_hrs = lastJob.a_hrs,
+                a_dollar = lastJob.a_dollar,
+                start_time = now,
+                end_time = now,
+                status = "4",   // HOLD
+                RowPointer = Guid.NewGuid(),
+                trans_class = lastJob.trans_class,
+                item = lastJob.item,
+                qcgroup = lastJob.qcgroup,
+                hold_comment = dto.remark,
+            };
+
+            _context.JobTranMst.Add(holdJob);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Job moved to Hold." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("rejectQCJob")]
+    public async Task<IActionResult> RejectQCJob([FromBody] StartJobRequestDto dto)
+    {
+        if (dto == null)
+            return BadRequest("Invalid request");
+
+        try
+        {
+            var now = dto.StartTime != null
+                ? DateTime.Parse(dto.StartTime)
+                : DateTime.Now;
+
+            var lastJob = await _context.JobTranMst
+                .Where(j => j.job == dto.JobNumber
+                            && j.oper_num == dto.OperationNumber
+                            && j.wc == dto.Wc
+                            && j.SerialNo == dto.SerialNo)
+                .OrderByDescending(j => j.trans_date)
+                .FirstOrDefaultAsync();
+
+            if (lastJob == null)
+                return NotFound(new { message = "No job found." });
+
+            decimal nextTransNum =
+                (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
+
+            var rejectJob = new JobTranMst
+            {
+                site_ref = lastJob.site_ref,
+                trans_num = nextTransNum,
+                job = dto.JobNumber,
+                SerialNo = dto.SerialNo,
+                wc = dto.Wc,
+                machine_id = lastJob.machine_id,
+                emp_num = dto.loginuser,
+                qty_complete = 1,
+                oper_num = dto.OperationNumber,
+                next_oper = lastJob.next_oper,
+                trans_date = now,
+                RecordDate = now,
+                CreateDate = now,
+                CreatedBy = dto.loginuser,
+                UpdatedBy = dto.loginuser,
+                completed_flag = false,
+                suffix = lastJob.suffix,
+                trans_type = "M",
+                qty_scrapped = lastJob.qty_scrapped,
+                qty_moved = 0,
+                pay_rate = lastJob.pay_rate,
+                whse = lastJob.whse,
+                close_job = 0,
+                issue_parent = lastJob.issue_parent,
+                complete_op = 0,
+                shift = "1",
+                posted = 1,
+                job_rate = lastJob.job_rate,
+                Uf_MovedOKToStock = lastJob.Uf_MovedOKToStock,
+                a_hrs = lastJob.a_hrs,
+                a_dollar = lastJob.a_dollar,
+                start_time = now,
+                end_time = now,
+                status = "5",   // REJECT
+                RowPointer = Guid.NewGuid(),
+                trans_class = lastJob.trans_class,
+                item = lastJob.item,
+                qcgroup = lastJob.qcgroup,
+                reject_comment = dto.remark,
+            };
+
+            _context.JobTranMst.Add(rejectJob);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Job Rejected." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 
     [HttpPost("UpdateJobLog")]
     public async Task<IActionResult> UpdateJobLog([FromBody] UpdateJobLogDto dto)
@@ -3456,40 +3614,134 @@ if (totalHours <= 8m)
 
 
 
-    [HttpPost("UpdateQCRemark")]
+   [HttpPost("UpdateQCRemark")]
     public async Task<IActionResult> UpdateQCRemark([FromBody] QCRemarkUpdateDto dto)
     {
-        if (dto == null || dto.trans_num == 0)
+        if (dto == null || dto.trans_num == 0 || string.IsNullOrEmpty(dto.column))
         {
-            return BadRequest(new { message = "Invalid transaction details." });
+            return BadRequest(new { message = "Invalid request." });
+        }
+
+        // Allowed columns (IMPORTANT for SQL injection protection)
+        var allowedColumns = new List<string>
+        {
+            "ongoing_comment",
+            "completed_comment",
+            "hold_comment",
+            "reject_comment"
+        };
+
+        if (!allowedColumns.Contains(dto.column))
+        {
+            return BadRequest(new { message = "Invalid column name." });
         }
 
         string connectionString = _configuration.GetConnectionString("DefaultConnection")!;
 
         using (SqlConnection connection = new SqlConnection(connectionString))
         {
-            string query = @"
-            UPDATE jobtran_mst 
-            SET Remark = @Remark
-            WHERE trans_num = @TransNo;
-        ";
+            string query = $@"
+                UPDATE jobtran_mst
+                SET {dto.column} = @Remark
+                WHERE trans_num = @TransNo
+            ";
 
             using (SqlCommand cmd = new SqlCommand(query, connection))
             {
-                cmd.Parameters.AddWithValue("@Remark", dto.Remark ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Remark", dto.remark ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@TransNo", dto.trans_num);
 
                 await connection.OpenAsync();
                 int rowsAffected = await cmd.ExecuteNonQueryAsync();
 
                 if (rowsAffected == 0)
-                    return BadRequest(new { message = "No record found for the given transaction number." });
+                    return BadRequest(new { message = "No record found." });
             }
         }
 
         return Ok(new { message = "Remark updated successfully." });
     }
 
+
+   [HttpPost("save-audit")]
+    public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
+    {
+        if (dto == null || string.IsNullOrEmpty(dto.Job))
+            return BadRequest("Invalid request");
+
+        // HEADER FIELDS
+        if (dto.Fields != null)
+        {
+            foreach (var field in dto.Fields)
+            {
+                var existing = await _context.JobReportAudit
+                    .FirstOrDefaultAsync(x =>
+                        x.Job == dto.Job &&
+                        x.ColumnName == field.Key &&
+                        x.OperationNo == null);
+
+                if (existing != null)
+                {
+                    existing.ColumnValue = field.Value;
+                    existing.UpdatedBy = dto.UpdatedBy;
+                    existing.UpdatedDate = DateTime.Now;
+                }
+                else
+                {
+                    var audit = new JobReportAudit
+                    {
+                        Job = dto.Job,
+                        ColumnName = field.Key,
+                        ColumnValue = field.Value,
+                        UpdatedBy = dto.UpdatedBy,
+                        UpdatedDate = DateTime.Now
+                    };
+
+                    await _context.JobReportAudit.AddAsync(audit);
+                }
+            }
+        }
+
+        // TRANSACTIONS
+        if (dto.Transactions != null)
+        {
+            foreach (var t in dto.Transactions)
+            {
+                var existing = await _context.JobReportAudit
+                    .FirstOrDefaultAsync(x =>
+                        x.Job == dto.Job &&
+                        x.OperationNo == t.OperationNo &&
+                        x.SerialNo == t.SerialNo &&
+                        x.ColumnName == t.ColumnName);
+
+                if (existing != null)
+                {
+                    existing.ColumnValue = t.ColumnValue;
+                    existing.UpdatedBy = dto.UpdatedBy;
+                    existing.UpdatedDate = DateTime.Now;
+                }
+                else
+                {
+                    var audit = new JobReportAudit
+                    {
+                        Job = dto.Job,
+                        OperationNo = t.OperationNo,
+                        SerialNo = t.SerialNo,
+                        ColumnName = t.ColumnName,
+                        ColumnValue = t.ColumnValue,
+                        UpdatedBy = dto.UpdatedBy,
+                        UpdatedDate = DateTime.Now
+                    };
+
+                    await _context.JobReportAudit.AddAsync(audit);
+                }
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Audit saved successfully" });
+    }
 
 
     [HttpPost("GetTransactionOverview")]
@@ -3596,6 +3848,12 @@ if (totalHours <= 8m)
                     j.start_time.HasValue &&
                     (now - j.start_time.Value).TotalHours > 8);
 
+            int CountHold(List<JobTranMst> list) =>
+                list.Count(j => j.status == "4");
+
+            int CountReject(List<JobTranMst> list) =>
+                list.Count(j => j.status == "5");
+
             // ================================
             // BUILD OVERVIEWS
             // ================================
@@ -3614,7 +3872,9 @@ if (totalHours <= 8m)
                 PausedQCJobs = CountPaused(qcJobs),
                 ExtendedQCJobs = CountExtended(qcJobs),
                 NormalCompletedQCJobs = CountNormalCompleted(qcJobs),
-                OngoingCriticalQCJobs = CountOngoingCritical(qcJobs)
+                OngoingCriticalQCJobs = CountOngoingCritical(qcJobs),
+                HoldQCJobs = CountHold(qcJobs),
+                RejectedQCJobs = CountReject(qcJobs)
             } : null;
 
             var verifyOverview = includeVerify ? new
@@ -3765,8 +4025,10 @@ if (totalHours <= 8m)
                      Progress = j.status switch
                      {
                          "1" => "Running",
-                         "2" => "Paused",
-                         "3" => "Completed",
+                        "2" => "Paused",
+                        "3" => "Completed",
+                        "4" => "Hold",
+                        "5" => "Rejected",
                          _ => "Unknown"
                      },
                      Type = j.wc == "VERIFY"
@@ -3922,6 +4184,92 @@ if (totalHours <= 8m)
 
 
 
+        [HttpPost("ReopenJobTransaction")]
+        public async Task<IActionResult> ReopenJobTransaction([FromBody] ReopenJobTransactionDto dto)
+        {
+            try
+            {
+                var latestRow = await _context.JobTranMst
+                    .Where(j =>
+                        j.job == dto.Job &&
+                        j.SerialNo == dto.SerialNumber &&
+                        j.oper_num == dto.OperationNumber &&
+                        j.wc == dto.WorkCenter &&
+                        j.status == "3" || j.status == "4" || j.status == "5")
+                    .OrderByDescending(j => j.trans_num)
+                    .FirstOrDefaultAsync();
+
+                if (latestRow == null)
+                    return NotFound("Completed transaction not found.");
+
+                // Update row
+                latestRow.status = "2";
+                latestRow.completed_flag = false;
+                latestRow.complete_op = 0;
+                latestRow.qty_complete = 0;
+                latestRow.qty_moved = 0;
+                latestRow.UpdatedBy = dto.UpdatedBy;
+
+                // 🔹 Insert into ReopenJobs table
+                var reopenLog = new ReopenJobs
+                {
+                    Job = dto.Job,
+                    SerialNumber = dto.SerialNumber,
+                    OperationNumber = (int)dto.OperationNumber,
+                    WorkCenter = dto.WorkCenter,
+                    UpdatedBy = dto.UpdatedBy,
+                    CreatedAt = DateTime.Now
+                };
+
+                _context.ReopenJobs.Add(reopenLog);
+
+                await _context.SaveChangesAsync();
+
+                int importDocId = 0;
+
+                if (!string.IsNullOrWhiteSpace(latestRow.import_doc_id))
+                {
+                    int.TryParse(latestRow.import_doc_id, out importDocId);
+                }
+
+                Console.WriteLine($"SyteLine Update -> TransNum: {latestRow.import_doc_id}");
+                Console.WriteLine($"Reopen Job -> Job:{dto.Job}, Serial:{dto.SerialNumber}, Oper:{dto.OperationNumber}, WC:{dto.WorkCenter}");
+                Console.WriteLine($"ImportDocId: {latestRow.import_doc_id}");
+                bool sytelineResult = true;
+
+                if (importDocId > 0)
+                {
+                    sytelineResult = await _sytelineService.UpdateJobTranCompletionAsync(
+                        importDocId,
+                        latestRow.complete_op ?? 0,
+                        latestRow.close_job ?? 0,
+                        latestRow.qty_complete ?? 0,
+                        latestRow.qty_moved ?? 0
+                    );
+
+                    if (!sytelineResult)
+                    {
+                        Console.WriteLine($"SyteLine update returned 0 rows for trans_num {importDocId}. It may already be updated.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("ImportDocId is missing, skipping SyteLine update.");
+                }
+                return Ok(new
+                {
+                    message = "Job transaction reopened successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    error = ex.Message,
+                    inner = ex.InnerException?.Message
+                });
+            }
+        }
 
 }
 

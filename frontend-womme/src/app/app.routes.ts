@@ -23,6 +23,7 @@ import { JobPoolDetails } from './admin/job-pool-details/job-pool-details';
 import { JobSyncDetailComponent } from './admin/job-sync-details/job-sync-details';
 import { JobPostedDetailComponent } from './admin/job-posted-details/job-posted-details';
 import { JobListComponent } from './admin/job-list/job-list';
+import { JobListComponent_copy } from './admin/job-list-copy/job-list-copy';
 import { workcenter } from './admin/workcenter/workcenter';
 import { MachineEmployeeComponent } from './admin/machine-employee/machine-employee';
 import { LoaderComponent } from './home/loader/loader';    
@@ -34,6 +35,7 @@ import { VerifyTransaction } from './admin/verify-transaction/verify-transaction
 import { DashboardVerify } from './admin/dashboard-verify/dashboard-verify';
 import { JobReportComponent } from './admin/job-report/job-report';
 import { NotificationComponent } from './admin/notifications/notifications';
+import { ReportsViewComponentCopy } from './admin/report-copy/reports-view-copy';
  
 export const routes: Routes = [
  
@@ -47,6 +49,7 @@ export const routes: Routes = [
   { path: 'unpostedjobtransaction', component: UnpostedJobTransaction, canActivate: [AuthGuard] },
   { path: 'postedjobtransaction', component: PostedJobTransaction, canActivate: [AuthGuard] },
   { path: 'reports', component: ReportsViewComponent, canActivate: [AuthGuard] },
+  { path: 'reports-copy', component: ReportsViewComponentCopy, canActivate: [AuthGuard] },
   { path: 'job-details', component: JobDetailComponent, canActivate: [AuthGuard] },
   { path: 'users', component: EmployeesComponent, canActivate: [AuthGuard] },
   { path: 'machines', component: MachineComponent, canActivate: [AuthGuard] },
@@ -61,6 +64,7 @@ export const routes: Routes = [
   { path:'job-report',component:JobReportComponent, canActivate: [AuthGuard]},
  
   {path:'JobListComponent',component:JobListComponent,canActivate: [AuthGuard]},
+  {path:'JobListComponent_copy',component:JobListComponent_copy,canActivate: [AuthGuard]},
   {path:'job-sync-details',component:JobSyncDetailComponent , canActivate: [AuthGuard]},
   {path:'job-posted-details',component:JobPostedDetailComponent , canActivate: [AuthGuard]},
   {path:'workcenter',component:workcenter , canActivate: [AuthGuard]},

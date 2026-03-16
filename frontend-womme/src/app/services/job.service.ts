@@ -393,6 +393,13 @@ deleteJobTransaction(
     );
   }
 
+ reopenJobTransaction(payload: any): Observable<any> {
+  return this.http.post<any>(
+    `${this.baseUrl}/post/ReopenJobTransaction`,
+    payload,
+    { headers: this.getHeaders() }
+  );
+}
 
   deleteMachineMaster(entryNo: number): Observable<any> {
     return this.http.delete<any>(`${this.baseUrl}/delete/DeleteMachineMaster/${entryNo}`, {
@@ -449,6 +456,13 @@ CheckPrevJob(jobData: any): Observable<any> {
       headers: this.getHeaders()
     });
   }
+
+  saveJobAudit(jobData: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/Post/save-audit`, jobData, {
+      headers: this.getHeaders()
+    });
+  }
+
 
 
 
@@ -887,10 +901,38 @@ completeSingleQCJob(payload: any): Observable<any> {
   );
 }
 
+holdQCJob(payload: any): Observable<any> {
+  return this.http.post<any>(
+    `${this.baseUrl}/Post/holdQCJob`,
+    payload
+  );
+}
+
+rejectQCJob(payload: any): Observable<any> {
+  return this.http.post<any>(
+    `${this.baseUrl}/Post/rejectQCJob`,
+    payload
+  );
+}
+
 /** Get all completed QC jobs */
 GetCompletedQCJobs(): Observable<{ data: any[], totalRecords: number }> {
   return this.http.get<{ data: any[], totalRecords: number }>(
     `${this.baseUrl}/Get/GetCompletedQCJobs`,
+    { headers: this.getHeaders() }
+  );
+}
+
+GetHoldQCJobs(): Observable<{ data: any[], totalRecords: number }> {
+  return this.http.get<{ data: any[], totalRecords: number }>(
+    `${this.baseUrl}/Get/GetHoldQCJobs`,
+    { headers: this.getHeaders() }
+  );
+}
+
+GetRejectedQCJobs(): Observable<{ data: any[], totalRecords: number }> {
+  return this.http.get<{ data: any[], totalRecords: number }>(
+    `${this.baseUrl}/Get/GetRejectedQCJobs`,
     { headers: this.getHeaders() }
   );
 }
@@ -917,7 +959,7 @@ markJobAsScrapped(payload: any): Observable<any> {
 
 getJobAsScrapped(){
   return this.http.get(`${this.baseUrl}/Get/GetScrappedQCJobs`);
-
 }
+
 }
 

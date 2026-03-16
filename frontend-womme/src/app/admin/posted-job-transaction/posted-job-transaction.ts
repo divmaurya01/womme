@@ -171,23 +171,23 @@ highlightedRowKey: string | null = null;
           
           this.allTransactions = [...this.transactions];
           // ✅ Highlight logic
-if (this.highlightType === 'extended') {
+          if (this.highlightType === 'extended') {
 
-  const extendedJob = this.transactions.find(job =>
-    job.allLogs?.some(log => log.shift === '2')
-  );
+            const extendedJob = this.transactions.find(job =>
+              job.allLogs?.some(log => log.shift === '2')
+            );
 
-  if (extendedJob) {
+            if (extendedJob) {
 
-    this.highlightedRowKey = this.getRowKey(extendedJob);
+              this.highlightedRowKey = this.getRowKey(extendedJob);
 
-    // Smooth scroll to row
-    setTimeout(() => {
-      const el = document.getElementById(this.highlightedRowKey!);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  }
-}
+              // Smooth scroll to row
+              setTimeout(() => {
+                const el = document.getElementById(this.highlightedRowKey!);
+                el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 300);
+            }
+          }
 
 
           this.totalRecords = this.transactions.length;
@@ -557,6 +557,59 @@ deleteJobTransaction(job: any) {
     }
   });
 }
- 
+
+reopenJobTransaction(job: any) {
+
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const employeeCode = userDetails?.employeeCode;
+
+  const payload = {
+    job: job.jobNumber,
+    serialNumber: job.serialNumber,
+    operationNumber: job.operationNumber,
+    workCenter: job.workCenter,
+    updatedBy: employeeCode
+  };
+
+  Swal.fire({
+    title: 'Reopen Job?',
+    text: `Do you want to reopen Job ${job.jobNumber}, Serial ${job.serialNumber}, Operation ${job.operationNumber}?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Reopen',
+    cancelButtonText: 'Cancel'
+  }).then(result => {
+
+    if (result.isConfirmed) {
+
+      this.loader.show();
+
+      this.jobService.reopenJobTransaction(payload)
+        .pipe(finalize(() => this.loader.hide()))
+        .subscribe({
+          next: (res) => {
+
+            Swal.fire({
+              icon: 'success',
+              title: 'Reopened',
+              text: res.message || 'Job reopened successfully',
+              confirmButtonText: 'OK'
+            }).then(() => {
+              this.loadJobsLazy();
+            });
+
+          },
+          error: (err) => {
+            Swal.fire(
+              'Error',
+              err.error?.message || 'Failed to reopen job',
+              'error'
+            );
+          }
+        });
+
+    }
+  });
+}
 
 }

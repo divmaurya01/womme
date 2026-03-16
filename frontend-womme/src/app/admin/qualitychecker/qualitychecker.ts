@@ -32,7 +32,7 @@ import html2pdf from 'html2pdf.js';
 })
 export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('dt') dt!: Table;
-    @ViewChild('tabView') tabView!: TabView;  // <-- new ViewChild
+  @ViewChild('tabView') tabView!: TabView;  // <-- new ViewChild
   activeTabIndex: number = 0;
   dtTrigger: Subject<any> = new Subject();
 
@@ -47,11 +47,12 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   activeJobTrans: any;
   ongoingJobs: any[] = [];
   completedJobs: any[] = [];
-  scrappedJobs: any[] = [];
+  holdJobs: any[] = [];
+  rejectedJobs: any[] = [];
   totalScrappedRecords: number = 0;
   loggedInUser: string = '';
   jobTimers: { [key: string]: any } = {};
-isExtendedMode: boolean = false;
+  isExtendedMode: boolean = false;
 
   constructor(
     private jobService: JobService,
@@ -62,42 +63,54 @@ isExtendedMode: boolean = false;
   ) {}
 
   ngOnInit(): void {
-    this.checkScreenSize();
-      this.route.queryParams.subscribe(params => {
-      const status = params['status'];
-      if (status === 'running') {
-        this.activeTabIndex = 1; // On Going Jobs tab
-        
-      } 
-       else if (status === 'paused') {
-        this.activeTabIndex = 1;
-       }
 
-        else if (status === 'critical') {
-        this.activeTabIndex = 1;
-       }
-     else if (status === 'extended') {
-        this.activeTabIndex = 2;
-        this.isExtendedMode = true;
-       }
-      else if (status === 'completed') {
-        this.activeTabIndex = 2; // Completed Jobs tab
-      } else if (status === 'scrapped') {
-        this.activeTabIndex = 3; // Scrapped Jobs tab
-      } else {
-        this.activeTabIndex = 0; // New Jobs
-      }
-    });
-    this.loadJobs();
-    this.loadOngoingJobs();
-    this.loadCompletedJobs();
-    this.loadScrappedJobs();
-  }
+  this.checkScreenSize();
+
+  this.route.queryParams.subscribe(params => {
+
+    const status = params['status'];
+
+    if (status === 'running' || status === 'paused' || status === 'critical') {
+      this.activeTabIndex = 1; // On Going Jobs
+    }
+
+    else if (status === 'extended') {
+      this.activeTabIndex = 2;
+      this.isExtendedMode = true;
+    }
+
+    else if (status === 'completed') {
+      this.activeTabIndex = 2; // Completed
+    }
+
+    else if (status === 'hold') {
+      this.activeTabIndex = 3; // Hold Jobs
+    }
+
+    else if (status === 'reject') {
+      this.activeTabIndex = 4; // Rejected Jobs
+    }
+
+    else {
+      this.activeTabIndex = 0; // New Jobs
+    }
+
+  });
+
+  this.loadJobs();
+  this.loadOngoingJobs();
+  this.loadCompletedJobs();
+  this.loadHoldJobs();
+  this.loadRejectedJobs();
+}
 
   ngAfterViewInit(): void {
     this.dtTrigger.next(true);
   }
 
+  showDecisionButtons(job:any){
+    job.showDecision = true;
+  }
   ngOnDestroy(): void {
     Object.values(this.jobTimers).forEach(timer => clearInterval(timer));
     this.dtTrigger.unsubscribe();
@@ -392,16 +405,21 @@ startQCJob(job: any) {
 
         let elapsedSeconds = 0;
 
-        // Calculate elapsed from backend start_time
-        if (startTime) {
-          elapsedSeconds = Math.floor(
-            (now.getTime() - startTime.getTime()) / 1000
-          );
-        }
+        if (x.status === "1") {
+          // running job
+          if (startTime) {
+            elapsedSeconds = Math.floor(
+              (now.getTime() - startTime.getTime()) / 1000
+            );
+          }
 
-        // Add previously accumulated hours (resume case)
-        if (x.total_a_hrs && x.total_a_hrs > 0) {
-          elapsedSeconds += Math.floor(x.total_a_hrs * 3600);
+          if (x.total_a_hrs) {
+            elapsedSeconds += Math.floor(x.total_a_hrs * 3600);
+          }
+
+        } else {
+          // paused job
+          elapsedSeconds = Math.floor((x.total_a_hrs || 0) * 3600);
         }
 
         // Safety
@@ -425,7 +443,7 @@ startQCJob(job: any) {
           elapsedTime: this.formatElapsedTime(elapsedSeconds),
 
           isPaused: x.status === "2",
-          remark: x.remark ?? "",
+          remark: x.ongoing_comment ?? "",
           qcGroup: x.qcgroup ?? null,
           timerInterval: null
         };
@@ -596,6 +614,8 @@ completeQCJob(job: any) {
           Swal.fire('Completed!', `Job ${job.jobNumber} completed successfully.`, 'success');
           this.loadJobs();
           this.loadOngoingJobs();
+          this.loadCompletedJobs();
+          this.activeTabIndex = 2; // auto open completed tab
         //  this.loadCompletedJobs();
         },
         error: (err) => {
@@ -707,9 +727,7 @@ completeQCJob(job: any) {
             jobs = jobs.filter((job: any) =>
               (job.empNum || '').trim() === employeeCode.trim()
             );
-          }
-
-          
+          }         
 
           //Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
           const grouped: { [key: string]: any[] } = jobs.reduce((acc: { [key: string]: any[] }, row: any) => {
@@ -742,79 +760,25 @@ completeQCJob(job: any) {
       });
   }
 
-loadScrappedJobs() {
-  this.isLoading = true;
-  this.loader.show();
-
-  this.jobService.getJobAsScrapped()
-    .pipe(finalize(() => this.loader.hide()))
-    .subscribe({
-      next: (res: any) => {
-        let jobs = res.data ?? [];
-
-        // Optional: Role-based filtering
-        const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-        const employeeCode = userDetails.employeeCode || '';
-        const roleid = userDetails.roleID || '';
-        if (roleid !== 1) {
-          jobs = jobs.filter((job: any) =>
-            (job.empNum || '').trim() === employeeCode.trim()
-          );
-        }
-
-
-        // Group by Job/Operation/Serial only (ignore wcCode & qcgroup)
-        const grouped: { [key: string]: any[] } = jobs.reduce((acc: { [key: string]: any[] }, row: any) => {
-          const key = `${row.jobNumber}|${row.operationNumber}|${row.serialNo}|${row.qcgroup}`;
-          if (!acc[key]) acc[key] = [];
-          acc[key].push(row);
-          return acc;
-        }, {});
-
-        // Build final array
-        this.scrappedJobs = Object.values(grouped).map((group: any[]) => {
-          // Sort by time (if applicable) or keep as-is
-          group.sort((a, b) => new Date(b.endTime || 0).getTime() - new Date(a.endTime || 0).getTime());
-          const lastRow = group[0];
-
-          return {
-            ...lastRow,
-            compositeKey: `${lastRow.jobNumber}-${lastRow.serialNo}-${lastRow.operationNumber}-${lastRow.qcgroup}`,
-            allLogs: group
-          };
-        });
-
-        this.totalScrappedRecords = this.scrappedJobs.length;
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Error fetching scrapped jobs:', err);
-        this.isLoading = false;
-      }
-    });
-}
 
 
 
 saveQCRemark(job: any) {
 
-  console.log('Job full object:', job);
-  console.log('Triggered saveQCRemark for job:', job);
-
   if (!job.remark || job.remark.trim() === '') {
-    console.warn('Remark is empty. Nothing to save.');
+    console.warn('Remark is empty.');
     return;
   }
 
   const payload = {
-    trans_num: job.trans_num,   
-    Remark: job.remark
+    trans_num: job.trans_num,
+    column: "ongoing_comment",
+    remark: job.remark
   };
-
-  console.log('Saving remark payload:', payload);
 
   this.jobService.updateQCRemark(payload).subscribe({
     next: (res: any) => {
+
       Swal.fire({
         icon: 'success',
         title: 'Remark Updated',
@@ -822,82 +786,317 @@ saveQCRemark(job: any) {
         timer: 2000,
         showConfirmButton: false
       });
-       job.isRemarkSaved = true;
+
+      job.isRemarkSaved = true;
     },
     error: (err: any) => {
-      console.error('Failed to update remark:', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: err.error?.message || 'Failed to update remark'
-      });
+      Swal.fire('Error', err.error?.message || 'Failed to update remark', 'error');
     }
   });
 }
 
+savecompleteRemark(job: any) {
 
-markAsScrapped(job: any) {
-  console.log('Triggered markAsScrapped for job:', job);
-
-  if (!job) {
-    console.warn('No job object found.');
+  if (!job.remark || job.remark.trim() === '') {
+    console.warn('Remark is empty.');
     return;
   }
- const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-  const employeeCode = userDetails.employeeCode || '';
-  // Prepare payload for API
+
   const payload = {
-    jobNumber: job.jobNumber,
-    serialNo: job.serialNo,
-    operationNumber: job.operationNumber,
-    loginUser: employeeCode 
+    trans_num: job.trans_num,
+    column: "completed_comment",
+    remark: job.remark
   };
 
-  console.log('Scrap job payload:', payload);
-
-  // Call the service
-  this.jobService.markJobAsScrapped(payload).subscribe({
+  this.jobService.updateQCRemark(payload).subscribe({
     next: (res: any) => {
-      console.log('Scrap response:', res);
 
-      if (res.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Job Scrapped',
-          text: res.message || 'Job marked as scrapped successfully.',
-          timer: 2000,
-          showConfirmButton: false
-        });
+      Swal.fire({
+        icon: 'success',
+        title: 'Remark Updated',
+        text: res.message || 'Remark updated successfully',
+        timer: 2000,
+        showConfirmButton: false
+      });
 
-        // Update frontend state
-        job.isScrapped = true;
-        this.scrappedJobs.push(job);
-
-        // Remove from completed jobs
-        this.completedJobs = this.completedJobs.filter(
-          j => j.serialNo !== job.serialNo
-        );
-      } else {
-        Swal.fire({
-          icon: 'warning',
-          title: 'Not Updated',
-          text: res.message || 'Job could not be marked as scrapped.'
-        });
-      }
+      job.isRemarkSaved = true;
     },
     error: (err: any) => {
-      console.error('Failed to mark job as scrapped:', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: err.error?.message || 'Failed to mark job as scrapped.'
-      });
+      Swal.fire('Error', err.error?.message || 'Failed to update remark', 'error');
     }
   });
 }
 
 
 
+
+acceptJob(job:any){
+  this.completeQCJob(job);
+}
+
+
+  buildJobPayload(job:any, remark?:string){
+
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const employeeCode = userDetails.employeeCode || '';
+
+  const now = new Date();
+
+  const localDateTime =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
+
+  return {
+    JobNumber: job.jobNumber,
+    SerialNo: job.serialNo,
+    OperationNumber: job.operationNumber,
+    Wc: job.wcCode,
+    Item: job.item,
+    EmpNum: employeeCode,
+    loginuser: employeeCode,
+    startTime: localDateTime,
+    remark: remark  
+  };
+}
+
+  holdJob(job:any){
+
+  Swal.fire({
+    title:'Hold Job',
+    input:'textarea',
+    inputLabel:'Enter Hold Comment',
+    inputPlaceholder:'Comment is required',
+    showCancelButton:true,
+    confirmButtonText:'Submit',
+    preConfirm:(value)=>{
+      if(!value || value.trim()===''){
+        Swal.showValidationMessage('Comment is required');
+      }
+      return value;
+    }
+  }).then(result=>{
+
+    if(result.isConfirmed){
+
+      const payload = this.buildJobPayload(job, result.value);
+
+      this.loader.show();
+
+      this.jobService.holdQCJob(payload)
+      .pipe(finalize(()=>this.loader.hide()))
+      .subscribe({
+
+        next:()=>{
+
+          Swal.fire('On Hold','Job moved to Hold','info');
+
+          this.loadJobs();
+          this.loadOngoingJobs();
+          this.loadCompletedJobs();
+          this.loadHoldJobs();
+          this.loadRejectedJobs();
+
+          this.activeTabIndex = 3;
+
+        },
+
+        error:(err)=>Swal.fire(
+          'Error',
+          err.error?.message || 'Failed to hold job',
+          'error'
+        )
+
+      });
+
+    }
+
+  });
+
+}
+
+rejectJob(job:any){
+
+  Swal.fire({
+    title:'Reject Job',
+    input:'textarea',
+    inputLabel:'Enter Reject Comment',
+    inputPlaceholder:'Comment is required',
+    showCancelButton:true,
+    confirmButtonText:'Submit',
+    preConfirm:(value)=>{
+      if(!value || value.trim()===''){
+        Swal.showValidationMessage('Comment is required');
+      }
+      return value;
+    }
+  }).then(result=>{
+
+    if(result.isConfirmed){
+
+      const payload = this.buildJobPayload(job, result.value);
+
+      this.loader.show();
+
+      this.jobService.rejectQCJob(payload)
+      .pipe(finalize(()=>this.loader.hide()))
+      .subscribe({
+
+        next:()=>{
+
+          Swal.fire('Rejected','Job Rejected','warning');
+
+          this.loadJobs();
+          this.loadOngoingJobs();
+          this.loadCompletedJobs();
+          this.loadHoldJobs();
+          this.loadRejectedJobs();
+
+          this.activeTabIndex = 4;
+
+        },
+
+        error:(err)=>Swal.fire(
+          'Error',
+          err.error?.message || 'Failed to reject job',
+          'error'
+        )
+
+      });
+
+    }
+
+  });
+
+}
+
+loadHoldJobs() {
+  this.isLoading = true;
+  this.loader.show();
+
+  this.jobService.GetHoldQCJobs()
+    .pipe(finalize(() => this.loader.hide()))
+    .subscribe({
+
+      next: (res: any) => {
+
+        let jobs = res.data ?? [];
+
+        const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+        const employeeCode = (userDetails.employeeCode || '').trim();
+        const roleid = Number(userDetails.roleID);
+
+        if (roleid !== 1) {
+          jobs = jobs.filter((job: any) =>
+            (job.empNum || '').trim() === employeeCode
+          );
+        }
+
+        const grouped: { [key: string]: any[] } = jobs.reduce((acc: any, row: any) => {
+
+          const key = `${row.jobNumber}|${row.operationNumber}|${row.serialNo}|${row.qcgroup}`;
+
+          if (!acc[key]) acc[key] = [];
+
+          acc[key].push(row);
+
+          return acc;
+
+        }, {});
+
+        this.holdJobs = Object.values(grouped).map((group: any[]) => {
+
+          group.sort((a, b) =>
+            new Date(b.endTime || 0).getTime() - new Date(a.endTime || 0).getTime()
+          );
+
+          const lastRow = group[0];
+
+          return {
+            ...lastRow,
+            compositeKey: `${lastRow.jobNumber}-${lastRow.serialNo}-${lastRow.operationNumber}-${lastRow.qcgroup}`,
+            allLogs: group
+          };
+
+        });
+
+        this.isLoading = false;
+
+      },
+
+      error: (err) => {
+        console.error('Error fetching hold jobs:', err);
+        this.isLoading = false;
+      }
+
+    });
+}
+
+loadRejectedJobs() {
+
+  this.isLoading = true;
+  this.loader.show();
+
+  this.jobService.GetRejectedQCJobs()
+    .pipe(finalize(() => this.loader.hide()))
+    .subscribe({
+
+      next: (res: any) => {
+
+        let jobs = res.data ?? [];
+
+        const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+        const employeeCode = (userDetails.employeeCode || '').trim();
+        const roleid = Number(userDetails.roleID);
+
+        if (roleid !== 1) {
+          jobs = jobs.filter((job: any) =>
+            (job.empNum || '').trim() === employeeCode
+          );
+        }
+
+        const grouped: { [key: string]: any[] } = jobs.reduce((acc: any, row: any) => {
+
+          const key = `${row.jobNumber}|${row.operationNumber}|${row.serialNo}|${row.qcgroup}`;
+
+          if (!acc[key]) acc[key] = [];
+
+          acc[key].push(row);
+
+          return acc;
+
+        }, {});
+
+        this.rejectedJobs = Object.values(grouped).map((group: any[]) => {
+
+          group.sort((a, b) =>
+            new Date(b.endTime || 0).getTime() - new Date(a.endTime || 0).getTime()
+          );
+
+          const lastRow = group[0];
+
+          return {
+            ...lastRow,
+            compositeKey: `${lastRow.jobNumber}-${lastRow.serialNo}-${lastRow.operationNumber}-${lastRow.qcgroup}`,
+            allLogs: group
+          };
+
+        });
+
+        this.isLoading = false;
+
+      },
+
+      error: (err) => {
+        console.error('Error fetching rejected jobs:', err);
+        this.isLoading = false;
+      }
+
+    });
+}
 
 
 }

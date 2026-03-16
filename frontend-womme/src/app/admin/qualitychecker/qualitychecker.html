@@ -119,7 +119,7 @@
         </p-tabPanel>
 
         <!-- Tab 2: On Going Jobs -->
-        <p-tabPanel header="On Going Jobs">
+        <p-tabPanel header="On Going Jobs" style="background-color: #ECC391;">
           <h4 class="mb-3">Ongoing Batches</h4>
 
           <div class="card p-1 mt-3 shadow-sm">
@@ -155,17 +155,49 @@
                     <td>{{ job.wcCode }}</td>
                     <td>{{ job.item }}</td>
                     <td>{{ job.emp_name }}</td>
-                    <td>{{ job.qtyReleased }}</td>
+                    <td>1</td>
                     <td>{{ job.elapsedTime || '00:00:00' }}</td>
 
                     <!-- Action column with Pause/Resume & Complete -->
-                    <td>
-                      <i [class.pi]="true" [class.action-circle]="true" [class.pi-play]="job.isPaused"
-                        [class.pi-pause]="!job.isPaused" title="{{ job.isPaused ? 'Resume' : 'Pause' }}"
+                    <td class="d-flex align-items-center gap-1">
+
+                      <!-- Pause / Resume -->
+                      <i [class.pi]="true"
+                        [class.action-circle]="true"
+                        [class.pi-play]="job.isPaused"
+                        [class.pi-pause]="!job.isPaused"
+                        title="{{ job.isPaused ? 'Resume' : 'Pause' }}"
                         (click)="togglePauseResume(job)">
                       </i>
 
-                      <i class="pi pi-stop action-circle stop" title="Complete" (click)="completeQCJob(job)"></i>
+                      <!-- Stop -->
+                      <i *ngIf="!job.showDecision"
+                        class="pi pi-stop action-circle stop"
+                        title="Stop"
+                        (click)="showDecisionButtons(job)">
+                      </i>
+
+                      <!-- Accept -->
+                      <button *ngIf="job.showDecision"
+                              class="btn btn-success btn-xs decision-btn"
+                              (click)="acceptJob(job)">
+                        Accept
+                      </button>
+
+                      <!-- Hold -->
+                      <button *ngIf="job.showDecision"
+                              class="btn btn-warning btn-xs decision-btn"
+                              (click)="holdJob(job)">
+                        Hold
+                      </button>
+
+                      <!-- Reject -->
+                      <button *ngIf="job.showDecision"
+                              class="btn btn-danger btn-xs decision-btn"
+                              (click)="rejectJob(job)">
+                        Reject
+                      </button>
+
                     </td>
 
                     <!-- NCR column -->
@@ -191,7 +223,7 @@
         </p-tabPanel>
 
         <!-- Tab 3: Completed Jobs -->
-        <p-tabPanel header="Completed Jobs">
+        <p-tabPanel header="Completed Jobs" style="background-color: #ECC391;">
           <h4 class="mb-3">Completed Batches</h4>
 
           <div class="card p-1 mt-3 shadow-sm">
@@ -210,8 +242,7 @@
                     <th style="background-color: #ECC391; padding: 10px;">Item</th>
                     <th style="background-color: #ECC391; padding: 10px;">Employee</th>
                     <th style="background-color: #ECC391; padding: 10px;">Qty</th>
-                    <th style="background-color: #ECC391; padding: 10px;">Total Hours</th>
-                    <th style="background-color: #ECC391;padding: 10px;">Scrapped</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Total Hours</th>                    
                     <th style="background-color: #ECC391; padding: 10px;">Remark</th>
                     <th style="background-color: #ECC391; padding: 10px;">Report</th>
                   </tr>
@@ -228,17 +259,14 @@
                     <td>{{ job.wcCode }}</td>
                     <td>{{ job.item }}</td>
                     <td>{{ job.emp_name }}</td>
-                    <td>{{ job.qtyReleased }}</td>
+                    <td>1</td>
                     <td>{{ formatTime(job.total_a_hrs) }}</td>
-                    <td>
-                      <input type="checkbox" [(ngModel)]="job.isScrapped" (change)="markAsScrapped(job)"
-                        [disabled]="job.isScrapped" />
-                    </td>
+                    
 
 
                     <td>
                       <input type="text" [(ngModel)]="job.remark" placeholder="Enter remark"
-                        (keyup.enter)="saveQCRemark(job)" class="form-control form-control-sm"
+                        (keyup.enter)="savecompleteRemark(job)" class="form-control form-control-sm"
                         title="Enter remark and click outside to save" />
                     </td>
 
@@ -257,46 +285,79 @@
         </p-tabPanel>
 
 
-        <p-tabPanel header="Scrapped Jobs">
-          <h4 class="mb-3">Scrapped Batches</h4>
+        <!-- HOLD JOBS TAB -->
+        <p-tabPanel header="Hold Jobs" style="background-color: #ECC391;">
+          <p-table [value]="holdJobs" [scrollable]="true" scrollHeight="400px">
+            <ng-template pTemplate="header">
+              <tr>
+                    <th style="background-color: #ECC391; padding: 10px;">S.No</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Job</th>
+                    <th style="background-color: #ECC391; padding: 10px;">SerialNo</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Opr No.</th>
+                    <th style="background-color: #ECC391; padding: 10px;">WC</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Item</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Employee</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Qty</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Total Hours</th>                    
+                    <th style="background-color: #ECC391; padding: 10px;">Remark</th>
+              </tr>
+            </ng-template>
 
-          <div class="card p-1 mt-3 shadow-sm">
-            <div class="card-body p-1">
-              <p-table [value]="scrappedJobs" [paginator]="true" [rows]="5000" [totalRecords]="scrappedJobs.length"
-                [responsiveLayout]="'scroll'" [scrollable]="true" scrollHeight="400px" [resizableColumns]="true"
-                [autoLayout]="true" columnResizeMode="expand" [showCurrentPageReport]="true"
-                currentPageReportTemplate="Showing {first}-{last} of {totalRecords}" dataKey="uniqueRowId">
-                <ng-template pTemplate="header">
-                  <tr>
-                    <th style="background-color: #ECC391;">S.No</th>
-                    <th style="background-color: #ECC391;">Job</th>
-                    <th style="background-color: #ECC391;">SerialNo</th>
-                    <th style="background-color: #ECC391;">Opr No.</th>
-                    <th style="background-color: #ECC391;">WC</th>
-                    <th style="background-color: #ECC391;">Item</th>
-                    <th style="background-color: #ECC391;">Employee</th>
-                    <th style="background-color: #ECC391;">Qty Scrapped</th>
-                    <th style="background-color: #ECC391;">Remark</th>
-                  </tr>
-                </ng-template>
-
-                <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
-                  <tr>
-                    <td>{{ rowIndex + 1 }}</td>
-                    <td>{{ job.jobNumber }}</td>
-                    <td>{{ job.serialNo }}</td>
-                    <td>{{ job.operationNumber }}</td>
-                    <td>{{ job.wcCode }}</td>
-                    <td>{{ job.item }}</td>
-                    <td>{{ job.emp_name }}</td>
-                    <td>{{ job.qtyScrapped }}</td>
-                    <td>{{ job.remark }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
-            </div>
-          </div>
+            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+              <tr>
+                <td>{{rowIndex+1}}</td>
+                <td>{{job.jobNumber}}</td>
+                <td>{{job.serialNo}}</td>
+                <td>{{job.operationNumber}}</td>
+                <td>{{job.wcCode}}</td>
+                <td>{{job.item}}</td>
+                <td>{{job.emp_name}}</td>
+                <td>1</td>
+                <td>{{formatTime(job.total_a_hrs)}}</td>
+                <td>{{job.remark}}</td>
+              </tr>
+            </ng-template>
+          </p-table>
         </p-tabPanel>
+
+
+        <!-- REJECT JOBS TAB -->
+        <p-tabPanel header="Rejected Jobs" style="background-color: #ECC391;">
+          <p-table [value]="rejectedJobs" [scrollable]="true" scrollHeight="400px">
+
+            <ng-template pTemplate="header">
+              <tr>
+                    <th style="background-color: #ECC391; padding: 10px;">S.No</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Job</th>
+                    <th style="background-color: #ECC391; padding: 10px;">SerialNo</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Opr No.</th>
+                    <th style="background-color: #ECC391; padding: 10px;">WC</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Item</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Employee</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Qty</th>
+                    <th style="background-color: #ECC391; padding: 10px;">Total Hours</th>                    
+                    <th style="background-color: #ECC391; padding: 10px;">Remark</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+              <tr>
+                <td>{{rowIndex+1}}</td>
+                <td>{{job.jobNumber}}</td>
+                <td>{{job.serialNo}}</td>
+                <td>{{job.operationNumber}}</td>
+                <td>{{job.wcCode}}</td>
+                <td>{{job.item}}</td>
+                <td>{{job.emp_name}}</td>
+                <td>1</td>
+                <td>{{formatTime(job.total_a_hrs)}}</td>
+                <td>{{job.remark}}</td>
+              </tr>
+            </ng-template>
+
+          </p-table>
+        </p-tabPanel>
+       
 
 
       </p-tabView>
