@@ -962,7 +962,7 @@ public class PostController : ControllerBase
                 wc = dto.Wc,
                 machine_id = lastJob.machine_id,
                 emp_num = dto.loginuser,
-                qty_complete = 1,
+                qty_complete = 0,
                 oper_num = dto.OperationNumber,
                 next_oper = lastJob.next_oper,
                 trans_date = now,
@@ -2280,191 +2280,186 @@ public class PostController : ControllerBase
 
 
 
-    [HttpPost("StartSingleQCJob")]
-    public async Task<IActionResult> StartSingleQCJob([FromBody] StartJobRequestDto jobDto)
+   [HttpPost("StartSingleQCJob")]
+public async Task<IActionResult> StartSingleQCJob([FromBody] StartJobRequestDto jobDto)
+{
+    if (jobDto == null)
+        return BadRequest("Invalid request");
+
+    try
     {
-        if (jobDto == null)
-            return BadRequest("Invalid request");
+        // 1️⃣ Get job route
+        var jobRoutes = await (
+            from jr in _context.JobRouteMst
+            join wm in _context.WcMst on jr.Wc equals wm.wc
+            where jr.Job == jobDto.JobNumber
+            select new { jr.Job, jr.OperNum, jr.Wc, wm.dept }
+        ).OrderBy(x => x.OperNum).ToListAsync();
 
-        try
+        if (!jobRoutes.Any())
+            return NotFound(new { message = "No job route found for this job." });
+
+        var currentOper = jobRoutes.FirstOrDefault(r => r.OperNum == jobDto.OperationNumber);
+        if (currentOper == null)
+            return NotFound(new { message = "Operation not found in job route." });
+
+        // 2️⃣ Previous operation check
+        var currentIndex = jobRoutes.FindIndex(r => r.OperNum == jobDto.OperationNumber);
+        var prevOper = currentIndex > 0 ? jobRoutes[currentIndex - 1] : null;
+
+        if (prevOper != null)
         {
-            // 1️⃣ Fetch the job route details
-            var jobRoutes = await (
-                from jr in _context.JobRouteMst
-                join wm in _context.WcMst on jr.Wc equals wm.wc
-                where jr.Job == jobDto.JobNumber
-                select new { jr.Job, jr.OperNum, jr.Wc, wm.dept }
-            ).OrderBy(x => x.OperNum).ToListAsync();
-
-            if (!jobRoutes.Any())
-                return NotFound(new { message = "No job route found for this job." });
-
-            var currentOper = jobRoutes.FirstOrDefault(r => r.OperNum == jobDto.OperationNumber);
-            if (currentOper == null)
-                return NotFound(new { message = "Operation not found in job route." });
-
-            // ✅ Find previous operation
-            // 🔥 Find current operation index in the job route list
-            var prevIndex = jobRoutes.FindIndex(r => r.OperNum == jobDto.OperationNumber);
-
-            // 🔥 Determine previous operation dynamically
-            var prevOper = prevIndex > 0 ? jobRoutes[prevIndex - 1] : null;
-
-            if (prevOper != null)
+            if (!(prevOper.dept == "OPR" && prevOper.Wc.ToLower().Contains("issue")))
             {
-                // Bypass rule: if previous dept == "OPR" and WC contains "issue"
-                if (!(prevOper.dept == "OPR" && prevOper.Wc.ToLower().Contains("issue")))
-                {
-                    // Check if previous operation completed (status = 3)
-                    var prevStatus = await _context.JobTranMst
-                        .Where(t => t.job == jobDto.JobNumber && t.oper_num == prevOper.OperNum)
-                        .OrderByDescending(t => t.trans_date)
-                        .Select(t => t.status)
-                        .FirstOrDefaultAsync();
+                var prevStatus = await _context.JobTranMst
+                    .Where(t => t.job == jobDto.JobNumber && t.oper_num == prevOper.OperNum)
+                    .OrderByDescending(t => t.trans_date)
+                    .ThenByDescending(t => t.trans_num)
+                    .Select(t => t.status)
+                    .FirstOrDefaultAsync();
 
-                    if (prevStatus != "3")
+                if (prevStatus != "3")
+                {
+                    return BadRequest(new
                     {
-                        return BadRequest(new
-                        {
-                            message = $"Previous operation ({prevOper.OperNum}) not completed."
-                        });
-                    }
+                        message = $"Previous operation ({prevOper.OperNum}) not completed."
+                    });
                 }
             }
-            // 🔥 If no previous operation exists, bypass the check (this is valid)
-            else
-            {
-                return BadRequest(new { message = "Previous operation not found — cannot start QC." });
-            }
-
-            // ✅ Continue your existing logic from here
-            var lastJob = await _context.JobTranMst
-                .Where(j => j.job == jobDto.JobNumber
-                            && j.oper_num == jobDto.OperationNumber
-                            && j.SerialNo == jobDto.SerialNo)
-                .OrderByDescending(j => j.trans_date)
-                .FirstOrDefaultAsync();
-
-            if (lastJob != null)
-            {
-                if (lastJob.status == "1")
-                    return BadRequest(new { message = "Job is already started." });
-                if (lastJob.status == "3")
-                    return BadRequest(new { message = "Job is already completed." });
-
-                if (lastJob.status == "2" && lastJob.start_time.HasValue)
-                {
-                    // Use client time — NOT server time
-                    var now = jobDto.StartTime != null
-                        ? DateTime.Parse(jobDto.StartTime)
-                        : DateTime.Now;
-
-                    TimeSpan duration = now - lastJob.start_time.Value;
-
-                    lastJob.a_hrs = (decimal)duration.TotalHours;
-                    lastJob.end_time = now;
-
-                    _context.JobTranMst.Update(lastJob);
-                }
-
-            }
-
-            // ✅ Get next operation
-            var currentIndex = jobRoutes.FindIndex(r => r.OperNum == jobDto.OperationNumber);
-            string? nextOperation = (currentIndex + 1 < jobRoutes.Count)
-                ? jobRoutes[currentIndex + 1].OperNum.ToString()
-                : null;
-
-            // ✅ Employee rate
-            var employeeRate = await _context.EmployeeMst
-                .Where(e => e.emp_num == jobDto.EmpNum)
-                .Select(e => e.mfg_reg_rate)
-                .FirstOrDefaultAsync();
-
-            if (employeeRate == 0)
-                return NotFound(new { message = "Employee not found or rate = 0." });
-
-            // ✅ Next transaction number
-            decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
-
-            // ✅ QC group logic
-            string qcGroupNumber = (lastJob != null && !string.IsNullOrEmpty(lastJob.qcgroup))
-                ? lastJob.qcgroup
-                : new Random().Next(1000, 9999).ToString();
-
-            // ✅ Create new transaction
-            var jobTran = new JobTranMst
-            {
-                site_ref = "DEFAULT",
-                trans_num = nextTransNum,
-                job = jobDto.JobNumber,
-                SerialNo = jobDto.SerialNo,
-                item = jobDto.Item,
-                wc = jobDto.Wc,
-                emp_num = jobDto.EmpNum,
-                qty_complete = 0,
-                oper_num = jobDto.OperationNumber,
-                next_oper = int.TryParse(nextOperation, out var val) ? val : (int?)null,
-                trans_date = jobDto.StartTime != null
-                             ? DateTime.Parse(jobDto.StartTime)
-                             : DateTime.Now,
-                RecordDate = jobDto.StartTime != null
-                             ? DateTime.Parse(jobDto.StartTime)
-                             : DateTime.Now,
-                CreateDate = jobDto.StartTime != null
-                             ? DateTime.Parse(jobDto.StartTime)
-                             : DateTime.Now,
-                CreatedBy = jobDto.loginuser,
-                UpdatedBy = jobDto.loginuser,
-                completed_flag = false,
-                suffix = 0,
-                trans_type = "M",
-                qty_scrapped = 0,
-                qty_moved = 0,
-                pay_rate = "R",
-                whse = "MAIN",
-                close_job = 0,
-                issue_parent = 0,
-                complete_op = 0,
-                shift = "1",
-                posted = 1,
-                job_rate = employeeRate,
-                Uf_MovedOKToStock = 0,
-                start_time = jobDto.StartTime != null
-                            ? DateTime.Parse(jobDto.StartTime)
-                            : DateTime.Now,  // NOT UtcNow
-
-
-                status = "1",
-                qcgroup = qcGroupNumber,
-                RowPointer = Guid.NewGuid()
-            };
-
-            _context.JobTranMst.Add(jobTran);
-            await _context.SaveChangesAsync();
-
-
-
-            return Ok(new
-            {
-                success = true,
-                message = "Single QC job started successfully.",
-                qcGroup = qcGroupNumber,
-                nextOperation
-            });
         }
-        catch (Exception ex)
+        else
         {
-            return StatusCode(500, new
-            {
-                success = false,
-                message = "Error while starting job",
-                error = ex.Message,
-                innerError = ex.InnerException?.Message
-            });
+            return BadRequest(new { message = "Previous operation not found — cannot start QC." });
         }
-    }
 
+        // 3️⃣ Get latest transaction (FIXED ORDERING 🔥)
+        var lastJob = await _context.JobTranMst
+            .Where(j => j.job == jobDto.JobNumber
+                        && j.oper_num == jobDto.OperationNumber
+                        && j.SerialNo == jobDto.SerialNo)
+            .OrderByDescending(j => j.trans_date)
+            .ThenByDescending(j => j.trans_num) // ✅ IMPORTANT FIX
+            .FirstOrDefaultAsync();
+
+        // 4️⃣ Status handling (FIXED LOGIC 🔥)
+        if (lastJob != null)
+        {
+            // ✅ If reopened → allow fresh start
+            if (lastJob.reopen_flag == true)
+            {
+                // do nothing → allow new start
+            }
+            else if (lastJob.status == "1")
+            {
+                return BadRequest(new { message = "Job is already started." });
+            }
+            else if (lastJob.status == "3")
+            {
+                return BadRequest(new { message = "Job is already completed." });
+            }
+
+            // ✅ Resume only if NOT reopened
+            if (lastJob.status == "2" && lastJob.start_time.HasValue && lastJob.reopen_flag != true)
+            {
+                var now = jobDto.StartTime != null
+                    ? DateTime.Parse(jobDto.StartTime)
+                    : DateTime.Now;
+
+                TimeSpan duration = now - lastJob.start_time.Value;
+
+                lastJob.a_hrs = (decimal)duration.TotalHours;
+                lastJob.end_time = now;
+
+                _context.JobTranMst.Update(lastJob);
+            }
+        }
+
+        // 5️⃣ Next operation
+        string? nextOperation = (currentIndex + 1 < jobRoutes.Count)
+            ? jobRoutes[currentIndex + 1].OperNum.ToString()
+            : null;
+
+        // 6️⃣ Employee rate
+        var employeeRate = await _context.EmployeeMst
+            .Where(e => e.emp_num == jobDto.EmpNum)
+            .Select(e => e.mfg_reg_rate)
+            .FirstOrDefaultAsync();
+
+        if (employeeRate == 0)
+            return NotFound(new { message = "Employee not found or rate = 0." });
+
+        // 7️⃣ Next trans number
+        decimal nextTransNum = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
+
+        // 8️⃣ QC group
+        string qcGroupNumber = (lastJob != null && !string.IsNullOrEmpty(lastJob.qcgroup))
+            ? lastJob.qcgroup
+            : new Random().Next(1000, 9999).ToString();
+
+        // 9️⃣ Create new transaction
+        var nowTime = jobDto.StartTime != null
+            ? DateTime.Parse(jobDto.StartTime)
+            : DateTime.Now;
+
+        var jobTran = new JobTranMst
+        {
+            site_ref = "DEFAULT",
+            trans_num = nextTransNum,
+            job = jobDto.JobNumber,
+            SerialNo = jobDto.SerialNo,
+            item = jobDto.Item,
+            wc = jobDto.Wc,
+            emp_num = jobDto.EmpNum,
+            qty_complete = 0,
+            oper_num = jobDto.OperationNumber,
+            next_oper = int.TryParse(nextOperation, out var val) ? val : (int?)null,
+            trans_date = nowTime,
+            RecordDate = nowTime,
+            CreateDate = nowTime,
+            CreatedBy = jobDto.loginuser,
+            UpdatedBy = jobDto.loginuser,
+            completed_flag = false,
+            suffix = 0,
+            trans_type = "M",
+            qty_scrapped = 0,
+            qty_moved = 0,
+            pay_rate = "R",
+            whse = "MAIN",
+            close_job = 0,
+            issue_parent = 0,
+            complete_op = 0,
+            shift = "1",
+            posted = 1,
+            job_rate = employeeRate,
+            Uf_MovedOKToStock = 0,
+            start_time = nowTime,
+            status = "1",
+            qcgroup = qcGroupNumber,
+            RowPointer = Guid.NewGuid()
+        };
+
+        _context.JobTranMst.Add(jobTran);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            success = true,
+            message = "Single QC job started successfully.",
+            qcGroup = qcGroupNumber,
+            nextOperation
+        });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new
+        {
+            success = false,
+            message = "Error while starting job",
+            error = ex.Message,
+            innerError = ex.InnerException?.Message
+        });
+    }
+}
 
 
     [HttpPost("StartGroupQCJobs")]
@@ -2929,7 +2924,7 @@ if (totalHours <= 8m)
                 SerialNo = latestJob.SerialNo,
                 item = latestJob.item,
                 wc = latestJob.wc,
-                emp_num = latestJob.emp_num,
+                emp_num = dto.loginuser,
                 qty_complete = 1,
                 oper_num = latestJob.oper_num,
                 next_oper = latestJob.next_oper,
@@ -3109,7 +3104,7 @@ if (totalHours <= 8m)
                             site_ref = firstRow.site_ref,
                             suffix = firstRow.suffix,
                             machine_id = firstRow.machine_id,
-                            emp_num = firstRow.emp_num,
+                            emp_num = dto.loginuser,
                             qcgroup = lastQcGroup,
                             trans_class = firstRow.trans_class,
                             item = firstRow.item,
@@ -3162,7 +3157,7 @@ if (totalHours <= 8m)
                         site_ref = firstRow.site_ref,
                         suffix = firstRow.suffix,
                         machine_id = firstRow.machine_id,
-                        emp_num = firstRow.emp_num,
+                        emp_num = dto.loginuser,
                         qcgroup = lastQcGroup,
                         trans_class = firstRow.trans_class,
                         item = firstRow.item,
@@ -3664,84 +3659,83 @@ if (totalHours <= 8m)
 
 
    [HttpPost("save-audit")]
-    public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
+public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
+{
+    if (dto == null || string.IsNullOrEmpty(dto.Job))
+        return BadRequest("Invalid request");
+
+    // HEADER FIELDS
+    if (dto.Fields != null)
     {
-        if (dto == null || string.IsNullOrEmpty(dto.Job))
-            return BadRequest("Invalid request");
-
-        // HEADER FIELDS
-        if (dto.Fields != null)
+        foreach (var field in dto.Fields)
         {
-            foreach (var field in dto.Fields)
+            var existing = await _context.JobReportAudit
+                .FirstOrDefaultAsync(x =>
+                    x.Job        == dto.Job &&
+                    x.ColumnName == field.Key &&
+                    x.OperationNo == null);
+
+            if (existing != null)
             {
-                var existing = await _context.JobReportAudit
-                    .FirstOrDefaultAsync(x =>
-                        x.Job == dto.Job &&
-                        x.ColumnName == field.Key &&
-                        x.OperationNo == null);
-
-                if (existing != null)
+                existing.ColumnValue  = field.Value;
+                existing.UpdatedBy    = dto.UpdatedBy;
+                existing.UpdatedDate  = DateTime.Now;
+            }
+            else
+            {
+                await _context.JobReportAudit.AddAsync(new JobReportAudit
                 {
-                    existing.ColumnValue = field.Value;
-                    existing.UpdatedBy = dto.UpdatedBy;
-                    existing.UpdatedDate = DateTime.Now;
-                }
-                else
-                {
-                    var audit = new JobReportAudit
-                    {
-                        Job = dto.Job,
-                        ColumnName = field.Key,
-                        ColumnValue = field.Value,
-                        UpdatedBy = dto.UpdatedBy,
-                        UpdatedDate = DateTime.Now
-                    };
-
-                    await _context.JobReportAudit.AddAsync(audit);
-                }
+                    Job          = dto.Job,
+                    ColumnName   = field.Key,
+                    ColumnValue  = field.Value,
+                    UpdatedBy    = dto.UpdatedBy,
+                    UpdatedDate  = DateTime.Now
+                });
             }
         }
-
-        // TRANSACTIONS
-        if (dto.Transactions != null)
-        {
-            foreach (var t in dto.Transactions)
-            {
-                var existing = await _context.JobReportAudit
-                    .FirstOrDefaultAsync(x =>
-                        x.Job == dto.Job &&
-                        x.OperationNo == t.OperationNo &&
-                        x.SerialNo == t.SerialNo &&
-                        x.ColumnName == t.ColumnName);
-
-                if (existing != null)
-                {
-                    existing.ColumnValue = t.ColumnValue;
-                    existing.UpdatedBy = dto.UpdatedBy;
-                    existing.UpdatedDate = DateTime.Now;
-                }
-                else
-                {
-                    var audit = new JobReportAudit
-                    {
-                        Job = dto.Job,
-                        OperationNo = t.OperationNo,
-                        SerialNo = t.SerialNo,
-                        ColumnName = t.ColumnName,
-                        ColumnValue = t.ColumnValue,
-                        UpdatedBy = dto.UpdatedBy,
-                        UpdatedDate = DateTime.Now
-                    };
-
-                    await _context.JobReportAudit.AddAsync(audit);
-                }
-            }
-        }
-
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Audit saved successfully" });
     }
+
+    // TRANSACTIONS
+    if (dto.Transactions != null)
+    {
+        foreach (var t in dto.Transactions)
+        {
+            var existing = await _context.JobReportAudit
+                .FirstOrDefaultAsync(x =>
+                    x.Job         == dto.Job &&
+                    x.OperationNo == t.OperationNo &&
+                    x.SerialNo    == t.SerialNo &&
+                    x.ColumnName  == t.ColumnName);
+
+            if (existing != null)
+            {
+                existing.ColumnValue = t.ColumnValue;
+                existing.UpdatedBy   = dto.UpdatedBy;
+                existing.UpdatedDate = DateTime.Now;
+            }
+            else
+            {
+                await _context.JobReportAudit.AddAsync(new JobReportAudit
+                {
+                    Job          = dto.Job,
+                    OperationNo  = t.OperationNo,
+                    SerialNo     = t.SerialNo,
+                    ColumnName   = t.ColumnName,
+                    ColumnValue  = t.ColumnValue,
+                    UpdatedBy    = dto.UpdatedBy,
+                    UpdatedDate  = DateTime.Now
+                });
+            }
+        }
+    }
+
+    // FORM NO / REV NO — upsert into JobFormRevMst
+    
+
+    await _context.SaveChangesAsync();
+
+    return Ok(new { message = "Audit saved successfully" });
+}
 
 
     [HttpPost("GetTransactionOverview")]
@@ -4270,6 +4264,205 @@ if (totalHours <= 8m)
                 });
             }
         }
+
+
+   [HttpPost("SubmitReopenHoldJob")]
+    public async Task<IActionResult> SubmitReopenHoldJob([FromBody] ReopenTrackDto dto)
+    {
+        if (dto == null)
+            return BadRequest("Invalid request.");
+    
+        try
+        {
+            var now = string.IsNullOrEmpty(dto.SubmittedOn)
+                        ? DateTime.Now
+                        : DateTime.Parse(dto.SubmittedOn);
+    
+            // ── Employee rate of the person who reopened ────────────────────
+            var empRate = await _context.EmployeeMst
+                .Where(e => e.emp_num == dto.SubmittedBy)
+                .Select(e => e.mfg_reg_rate)
+                .FirstOrDefaultAsync() ?? 0m;
+    
+            // ───────────────────────────────────────────────────────────────
+            // HELPER — builds a reopen waiting row from any source row
+            // ───────────────────────────────────────────────────────────────
+            JobTranMst BuildReopenRow(JobTranMst src, decimal transNum)
+            {
+                return new JobTranMst
+                {
+                    site_ref       = src.site_ref ?? "DEFAULT",
+                    trans_num      = transNum,
+                    job            = src.job,
+                    SerialNo       = src.SerialNo,
+                    suffix         = src.suffix,
+                    oper_num       = src.oper_num,
+                    next_oper      = src.next_oper,
+                    wc             = src.wc,
+                    item           = src.item,
+                    trans_class    = src.trans_class,
+                    qcgroup        = src.qcgroup,
+                    trans_type     = src.trans_type,   // "D" normal, "M" QC — kept as-is
+    
+                    trans_date     = now,
+                    RecordDate     = now,
+                    CreateDate     = now,
+    
+                    // ← KEY: waiting to be started
+                    status         = "2",
+                    reopen_flag    = true,
+    
+                    // zeroed — not started yet
+                    start_time     = now,
+                    end_time       = null,
+                    a_hrs          = 0,
+                    a_dollar       = 0,
+    
+                    qty_complete   = 0,
+                    qty_scrapped   = 0,
+                    qty_moved      = 0,
+                    complete_op    = 0,
+                    close_job      = 0,
+                    completed_flag = false,
+    
+                    pay_rate       = src.pay_rate ?? "R",
+                    job_rate       = empRate > 0 ? empRate : src.job_rate,
+                    whse           = src.whse ?? "MAIN",
+                    shift          = "1",
+                    posted         = 1,
+                    issue_parent   = src.issue_parent,
+                    machine_id     = src.machine_id,
+                    emp_num        = dto.SubmittedBy,
+    
+                    CreatedBy      = dto.SubmittedBy,
+                    UpdatedBy      = dto.SubmittedBy,
+                    InWorkflow     = 0,
+                    NoteExistsFlag = 0,
+                    RowPointer     = Guid.NewGuid()
+                };
+            }
+    
+            // ───────────────────────────────────────────────────────────────
+            // JOB 1 — The HOLD or REJECTED job (e.g. Opr 110)
+            // ───────────────────────────────────────────────────────────────
+            var holdLastRow = await _context.JobTranMst
+                .Where(j =>
+                    j.job      == dto.HoldJobNumber &&
+                    j.SerialNo == dto.HoldSerialNo  &&
+                    j.oper_num == dto.HoldOperationNumber &&
+                    j.wc       == dto.HoldWc)
+                .OrderByDescending(j => j.trans_num)
+                .FirstOrDefaultAsync();
+    
+            if (holdLastRow == null)
+                return NotFound(new
+                {
+                    message = $"No transaction found for {dto.HoldStatus} job: " +
+                            $"{dto.HoldJobNumber} / Serial {dto.HoldSerialNo} / Opr {dto.HoldOperationNumber}"
+                });
+    
+            decimal transNum1 = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
+            var holdReopenRow = BuildReopenRow(holdLastRow, transNum1);
+    
+            _context.JobTranMst.Add(holdReopenRow);
+            await _context.SaveChangesAsync();
+    
+            // ───────────────────────────────────────────────────────────────
+            // JOB 2 — The previously completed job selected in dialog (e.g. Opr 40)
+            // ───────────────────────────────────────────────────────────────
+            var prevLastRow = await _context.JobTranMst
+                .Where(j =>
+                    j.job      == dto.PrevJobNumber &&
+                    j.SerialNo == dto.PrevSerialNo  &&
+                    j.oper_num == dto.PrevOperationNumber &&
+                    j.wc       == dto.PrevWc)
+                .OrderByDescending(j => j.trans_num)
+                .FirstOrDefaultAsync();
+    
+            if (prevLastRow == null)
+                return NotFound(new
+                {
+                    message = $"No transaction found for previous job: " +
+                            $"{dto.PrevJobNumber} / Serial {dto.PrevSerialNo} / Opr {dto.PrevOperationNumber}"
+                });
+    
+            decimal transNum2 = (_context.JobTranMst.Max(j => (decimal?)j.trans_num) ?? 0) + 1;
+            var prevReopenRow = BuildReopenRow(prevLastRow, transNum2);
+    
+            _context.JobTranMst.Add(prevReopenRow);
+            await _context.SaveChangesAsync();
+    
+            // ───────────────────────────────────────────────────────────────
+            // TRACK RECORD — logs both jobs and who reopened them
+            // HoldStatus = "HOLD" or "REJECTED" — drives which track tab it shows in
+            // ───────────────────────────────────────────────────────────────
+            var track = new JobReopenTrack
+            {
+                HoldJobNumber       = dto.HoldJobNumber,
+                HoldSerialNo        = dto.HoldSerialNo,
+                HoldOperationNumber = dto.HoldOperationNumber,
+                HoldWc              = dto.HoldWc,
+                HoldItem            = dto.HoldItem,
+                HoldStatus          = dto.HoldStatus,   // "HOLD" or "REJECTED"
+    
+                PrevJobNumber       = dto.PrevJobNumber,
+                PrevSerialNo        = dto.PrevSerialNo,
+                PrevOperationNumber = dto.PrevOperationNumber,
+                PrevWc              = dto.PrevWc,
+                PrevItem            = dto.PrevItem,
+                PrevStatus          = "COMPLETED",
+    
+                NewTransNum  = (int)transNum1,   // hold/rejected job reopen trans
+                NewTransNum2 = (int)transNum2,   // prev completed job reopen trans
+    
+                SubmittedBy  = dto.SubmittedBy,
+                SubmittedOn  = now
+            };
+    
+            _context.JobReopenTrack.Add(track);
+            await _context.SaveChangesAsync();
+    
+            return Ok(new
+            {
+                message          = $"Both jobs reopened ({dto.HoldStatus}). Waiting to be started.",
+                holdNewTransNum  = transNum1,   // Opr 110 reopen row
+                prevNewTransNum  = transNum2,   // Opr 40 reopen row
+                trackId          = track.Id
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
+    }
+
+    [HttpPost("save-form")]
+    public IActionResult SaveForm([FromBody] FormDto dto)
+    {
+        var entity = new JobFormRevMst
+        {
+            FormNo_revno = dto.FormNo_revno,
+            UpdatedBy = dto.UpdatedBy,
+            UpdatedDate = DateTime.Now
+        };
+
+        _context.JobFormRevMst.Add(entity);
+        _context.SaveChanges();
+
+        return Ok(new { message = "Saved successfully" });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 

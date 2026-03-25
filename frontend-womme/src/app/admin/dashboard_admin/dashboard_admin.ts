@@ -156,6 +156,7 @@ export class DashboardOverviewComponent {
       IncludeVerify: includeVerify,  
       PageNumber: this.currentPage,
       PageSize: this.pageSize
+      
     };
 
     this.jobService.GetTransactionData(payload).subscribe({

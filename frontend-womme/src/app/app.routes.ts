@@ -36,6 +36,7 @@ import { DashboardVerify } from './admin/dashboard-verify/dashboard-verify';
 import { JobReportComponent } from './admin/job-report/job-report';
 import { NotificationComponent } from './admin/notifications/notifications';
 import { ReportsViewComponentCopy } from './admin/report-copy/reports-view-copy';
+import { ProjectDashboardComponent } from './admin/project-dashboard/project-dashboard';
  
 export const routes: Routes = [
  
@@ -47,7 +48,7 @@ export const routes: Routes = [
   { path: 'issuejobtransaction', component: Issuetransaction, canActivate: [AuthGuard] },
   { path: 'verify-transaction', component: VerifyTransaction, canActivate: [AuthGuard] },
   { path: 'unpostedjobtransaction', component: UnpostedJobTransaction, canActivate: [AuthGuard] },
-  { path: 'postedjobtransaction', component: PostedJobTransaction, canActivate: [AuthGuard] },
+  { path: 'postedjobtransaction', component: PostedJobTransaction, canActivate: [AuthGuard]},
   { path: 'reports', component: ReportsViewComponent, canActivate: [AuthGuard] },
   { path: 'reports-copy', component: ReportsViewComponentCopy, canActivate: [AuthGuard] },
   { path: 'job-details', component: JobDetailComponent, canActivate: [AuthGuard] },
@@ -65,6 +66,7 @@ export const routes: Routes = [
  
   {path:'JobListComponent',component:JobListComponent,canActivate: [AuthGuard]},
   {path:'JobListComponent_copy',component:JobListComponent_copy,canActivate: [AuthGuard]},
+  {path: 'project-dashboard', component: ProjectDashboardComponent, canActivate: [AuthGuard]},
   {path:'job-sync-details',component:JobSyncDetailComponent , canActivate: [AuthGuard]},
   {path:'job-posted-details',component:JobPostedDetailComponent , canActivate: [AuthGuard]},
   {path:'workcenter',component:workcenter , canActivate: [AuthGuard]},

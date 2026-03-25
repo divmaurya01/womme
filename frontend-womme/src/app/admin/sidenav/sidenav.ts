@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faChartLine, faUserTie, faClipboardCheck, faUserCheck, faSyncAlt, faArrowUpRightDots, faCheckCircle, faClockRotateLeft, faCloudUploadAlt, faSpellCheck, faFileLines, faChartColumn, faDiagramProject, faNetworkWired, faIndustry, faUsers, faCogs, faBoxesStacked, faUserShield, faReceipt, faCalendarDays, faGear } from '@fortawesome/free-solid-svg-icons';
 import {CdkDragDrop, moveItemInArray, DragDropModule} from '@angular/cdk/drag-drop';
+import { faProjectDiagram } from '@fortawesome/free-solid-svg-icons';
 import { JobService } from '../../services/job.service'; // use your existing JobService
 import { ActivatedRoute } from '@angular/router'; // Import this
 import { NgZone } from '@angular/core';
@@ -62,6 +63,7 @@ export class SidenavComponent implements OnInit {
         { label: 'Main Reports', link: '/JobListComponent', icon: faFileLines, color: '#0288D1' },
         { label: 'Edit Reports', link: '/JobListComponent_copy', icon: faFileLines, color: '#02d12b' },
         { label: 'Job Report', link: '/job-report', icon: faChartColumn, color: '#ff7300ff' },
+        { label: 'Project Dashboard', link: '/project-dashboard', icon: faReceipt, color: 'rgb(108, 56, 14)' },
       ],
     },
 

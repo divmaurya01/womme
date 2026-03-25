@@ -51,6 +51,27 @@
 
             <!-- === JOB META DATA TABLE === -->
             <table class="meta-info-table" style="width:100%">
+              
+             <!-- <tr>
+                <td colspan="2">
+                  <strong>Form &amp; Rev No.:</strong>&nbsp;
+
+                  <tr>
+                <td colspan="2">
+                  <strong>Form &amp; Rev No.:</strong>&nbsp;
+                  <span *ngIf="!isEditMode">
+                    {{ jobData.formNo_revno || '(QC) WOM/098 Rev 7 WORLDWIDE OILFIELD MACHINE' }}
+                  </span>
+                  <input *ngIf="isEditMode"
+                        type="text"
+                        class="form-control d-inline-block w-auto"
+                        style="min-width: 220px;"
+                        [(ngModel)]="auditData.formNo_revno"
+                        placeholder="Enter Form & Rev No." />
+                </td>
+                <td></td>
+                <td></td>
+              </tr> -->
               <tr>
                 <td>
                   <strong>Job Date:</strong>
@@ -177,7 +198,7 @@
                       </td>
                       <td *ngIf="i === 0"
                           [attr.rowspan]="operation?.transactions?.length || 1"
-                          style="vertical-align: middle; font-size:13px">
+                          style="vertical-align: middle; font-size:11px; padding-left: 50px;">
 
                         <div><strong>WC:</strong> {{ operation.wc }}</div>
                         <div><strong>Description:</strong> {{ operation.description }}</div>
@@ -250,6 +271,9 @@
           </div>
         </div>
       </div>
+
+
+
 
       <ng-template #loading>
         <p>Loading job report...</p>

@@ -11,7 +11,7 @@ import Swal from 'sweetalert2';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { LoaderService } from '../../services/loader.service';
-import { finalize, flatMap } from 'rxjs/operators';
+import { finalize } from 'rxjs/operators';
 import { BrowserQRCodeReader } from '@zxing/browser';
 import * as XLSX from 'xlsx';
 
@@ -34,8 +34,8 @@ export class UnpostedJobTransaction implements OnInit {
   @ViewChild('dt') dt!: Table;
   dtTrigger: Subject<any> = new Subject();
 
-  employeeCode:string = '';
-  role_id:number = 0;
+  employeeCode: string = '';
+  role_id: number = 0;
   transactions: any[] = [];
   matchedData: any = {};
   totalRecords: number = 0;
@@ -43,20 +43,15 @@ export class UnpostedJobTransaction implements OnInit {
   size: number = 5000;
   searchTerm: string = '';
   isLoading: boolean = false;
- isSidebarHidden = window.innerWidth <= 1024;
+  isSidebarHidden = window.innerWidth <= 1024;
 
   allTransactions: any[] = [];
   filteredTransactions: any[] = [];
   globalSearch: string = '';
 
-
-
-
-
   activeJobTrans: any[] = [];
   showWizard: boolean = false;
   wizardStep: number = 1;
-  
 
   useCamera = false;
   useFile = false;
@@ -68,113 +63,94 @@ export class UnpostedJobTransaction implements OnInit {
 
   selectedJob: any = null;
   qrReader = new BrowserQRCodeReader();
-  availableMachines: string[] = [];  // fill from API when needed
-  availableEmployees: string[] = []; // fill from API when needed
+  availableMachines: string[] = [];
+  availableEmployees: string[] = [];
 
   activeTimers: { [key: string]: any } = {};
-  // Scanner-specific
   availableDevices: MediaDeviceInfo[] = [];
   selectedDevice: MediaDeviceInfo | null = null;
 
-  constructor(private jobService: JobService,
-              private router: Router,
-              private route: ActivatedRoute,
-              private loader: LoaderService,
-              private zone: NgZone) {}
+  constructor(
+    private jobService: JobService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private loader: LoaderService,
+    private zone: NgZone
+  ) {}
 
   ngOnInit(): void {
     this.checkScreenSize();
     this.loadJobs();
-    
   }
 
   ngOnDestroy() {
     Object.values(this.activeTimers).forEach(timer => clearInterval(timer));
   }
 
- @HostListener('window:resize')
-  onResize() {
-    this.checkScreenSize();
+  @HostListener('window:resize')
+  onResize() { this.checkScreenSize(); }
+
+  checkScreenSize() {
+    this.isSidebarHidden = window.innerWidth <= 1024;
   }
 
-    checkScreenSize() {
-    if (window.innerWidth <= 1024) {
-      this.isSidebarHidden = true;   // Mobile → hidden
-    } else {
-      this.isSidebarHidden = false;  // Desktop → visible
-    }
-  }
+  // ── Load Jobs ─────────────────────────────────────────────────────────
+
   loadJobs(pageEvent?: any) {
     this.isLoading = true;
     this.loader.show();
-
-    const page = pageEvent?.first ? pageEvent.first / pageEvent.rows : this.page;
-    const size = pageEvent?.rows ?? this.size;
 
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     this.employeeCode = userDetails?.employeeCode;
     this.role_id = userDetails.roleID;
 
-    // Load unposted jobs
     this.jobService.GetUnpostedTransactions(0, 100000, '', this.employeeCode)
       .subscribe({
         next: (jobRes: any) => {
           const rawJobs = jobRes.data ?? [];
 
-          // Load next-job-active info
           this.jobService.getIsNextJobActive().subscribe({
             next: (nextRes: any) => {
 
-              // --------------------------------------
               // Build job|serial → next operations map
-              // --------------------------------------
               const nextOpMap = new Map<string, number[]>();
-
               (nextRes.data ?? []).forEach((x: any) => {
                 const key = `${x.job}|${x.serialNo}`;
                 if (!nextOpMap.has(key)) nextOpMap.set(key, []);
                 nextOpMap.get(key)!.push(Number(x.nextOper));
               });
 
-              // --------------------------------------
-              // FINAL FILTER + MAP (ONCE)
-              // --------------------------------------
               let filteredJobs = rawJobs.map((x: any) => ({
-                serialNo: (x.serialNo ?? '').toString().trim(),
-                jobNumber: (x.job ?? '').toString().trim(),
-                qtyReleased: x.qtyReleased,
+                serialNo:        (x.serialNo ?? '').toString().trim(),
+                jobNumber:       (x.job ?? '').toString().trim(),
+                qtyReleased:     x.qtyReleased,
                 operationNumber: x.operNum ?? x.operationNumber,
-                wcCode: (x.wcCode ?? '').toString().trim(),
-                wcDescription: (x.wcDescription ?? '').toString().trim(),
-                emp_num: '',
-                machine_id: '',
-                a_hrs: 0
+                wcCode:          (x.wcCode ?? '').toString().trim(),
+                wcDescription:   (x.wcDescription ?? '').toString().trim(),
+                emp_num:         '',
+                machine_id:      '',
+                a_hrs:           0
               }));
 
-              // Apply next-job filter ONLY for role 4
+              // Apply next-job filter for role 4 and 2
               if (this.role_id === 4 || this.role_id === 2) {
                 filteredJobs = filteredJobs.filter((job: any) => {
                   const key = `${job.jobNumber}|${job.serialNo}`;
                   const nextOps = nextOpMap.get(key) ?? [];
                   return nextOps.includes(Number(job.operationNumber));
                 });
-
               }
 
-              // SINGLE ASSIGNMENT
-              this.allTransactions = filteredJobs;          // master copy
-              this.filteredTransactions = [...filteredJobs]; // table data
-              this.transactions = this.filteredTransactions; // for timers logic
-              this.totalRecords = this.filteredTransactions.length;
+              this.allTransactions      = filteredJobs;
+              this.filteredTransactions = [...filteredJobs];
+              this.transactions         = this.filteredTransactions;
+              this.totalRecords         = this.filteredTransactions.length;
 
-
-              // Load running transactions AFTER final list
+              // Load active transactions AFTER jobs are set
               this.loadActiveJobTransactions();
 
               this.isLoading = false;
               this.loader.hide();
-
-              console.log('Final jobs shown:', this.transactions.length);
             },
             error: err => this.handleError(err)
           });
@@ -184,38 +160,99 @@ export class UnpostedJobTransaction implements OnInit {
   }
 
   private handleError(err: any) {
-    console.error('API Error:', err);
-  
     this.isLoading = false;
     this.loader.hide();
-  
     Swal.fire({
       icon: 'error',
       title: 'Error',
       text: err?.error?.message || 'Something went wrong. Please try again.',
     });
   }
-  
 
   onSearchChange(value: string) {
     this.searchTerm = value;
     this.loadJobs({ first: 0, rows: this.size });
   }
 
+  // ── Active Job Transactions & Timer Mapping ───────────────────────────
+
+  loadActiveJobTransactions() {
+    this.jobService.GetActiveJobTransactions().subscribe({
+      next: (res: any) => {
+        this.activeJobTrans = res?.data ?? [];
+        this.mapTransToJobs();
+      },
+      error: err => console.error('Error fetching active job transactions:', err)
+    });
+  }
+
+  mapTransToJobs() {
+    if (!this.transactions?.length || !this.activeJobTrans?.length) return;
+
+    this.transactions = this.transactions.map(job => {
+      const match = this.activeJobTrans.find(tr =>
+        (tr.job ?? '').toString().trim()    === job.jobNumber &&
+        Number(tr.oper_num)                 === Number(job.operationNumber) &&
+        (tr.serialNo ?? tr.serial_no ?? tr.SerialNo ?? '').toString().trim() === job.serialNo
+      );
+
+      if (match) {
+        // Use serialNo + operationNumber as unique timer key
+        const key = `${job.serialNo}-${job.operationNumber}`;
+
+        const accumulated = Math.floor((match.total_a_hrs ?? 0) * 3600);
+        let elapsedSeconds = accumulated;
+
+        if (match.status === '1' && match.start_time) {
+          const startTime = new Date(match.start_time);
+          elapsedSeconds += Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+
+          if (this.activeTimers[key]) clearInterval(this.activeTimers[key]);
+
+          this.activeTimers[key] = setInterval(() => {
+            const target = this.transactions.find(
+              x => x.serialNo === job.serialNo && x.operationNumber === job.operationNumber
+            );
+            if (target) target.elapsedSeconds += 1;
+          }, 1000);
+
+        } else {
+          // Paused or stopped — clear timer
+          if (this.activeTimers[key]) {
+            clearInterval(this.activeTimers[key]);
+            delete this.activeTimers[key];
+          }
+        }
+
+        return {
+          ...job,
+          emp_num:       match.emp_num    ?? '',
+          emp_name:      match.emp_name   ?? '',
+          machine_id:    match.machine_id ?? '',
+          a_hrs:         accumulated,
+          status:        match.status,
+          elapsedSeconds
+        };
+      }
+
+      return job; // no match → status stays null → Start button shown
+    });
+
+    this.filteredTransactions = [...this.transactions];
+  }
+
+  // ── Start Job Wizard ──────────────────────────────────────────────────
+
   startJobWizard(job: any) {
     this.jobService.canStartJob(job.jobNumber, job.serialNo, job.operationNumber).subscribe({
       next: (res) => {
         if (res.canStart) {
-          
-          this.selectedJob = job;
-          this.wizardStep = 1;
-          this.scannedData = null;
-          this.stepValid = false;
-          this.showWizard = true;
-          this.useCamera = true;
-
-          console.log('Selected row data:', job);
-
+          this.selectedJob  = job;
+          this.wizardStep   = 1;
+          this.scannedData  = null;
+          this.stepValid    = false;
+          this.showWizard   = true;
+          this.useCamera    = true;
           this.fetchEmployees();
           this.fetchMachines();
         } else {
@@ -223,116 +260,76 @@ export class UnpostedJobTransaction implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Error calling canStartJob:', err);
         Swal.fire('Error', 'Unable to verify job start condition', 'error');
       }
     });
   }
 
-
-  
-
-
-
-
-
   fetchEmployees() {
     if (!this.selectedJob) return;
-    const jobNumber = this.selectedJob.jobNumber;
-    const operationNumber = this.selectedJob.operationNumber;
-
-    this.jobService.getEmployeesForJob(jobNumber, operationNumber)
+    this.jobService.getEmployeesForJob(this.selectedJob.jobNumber, this.selectedJob.operationNumber)
       .subscribe({
-        next: (res: any) => {
-          // Map to empNum strings
-          this.availableEmployees = (res ?? []).map((e: any) => e.empNum);
-        },
-        error: (err) => {
-          console.error('Error fetching employees:', err);
-        }
+        next: (res: any) => { this.availableEmployees = (res ?? []).map((e: any) => e.empNum); },
+        error: (err) => { console.error('Error fetching employees:', err); }
       });
   }
 
   fetchMachines() {
     if (!this.selectedJob) return;
-    const jobNumber = this.selectedJob.jobNumber;
-    const operationNumber = this.selectedJob.operationNumber;
-
-    this.jobService.getMachinesForJob(jobNumber, operationNumber)
+    this.jobService.getMachinesForJob(this.selectedJob.jobNumber, this.selectedJob.operationNumber)
       .subscribe({
-        next: (res: any) => {
-          // Map to machineId strings
-          this.availableMachines = (res ?? []).map((m: any) => m.machineId);
-        },
-        error: (err) => {
-          console.error('Error fetching machines:', err);
-        }
+        next: (res: any) => { this.availableMachines = (res ?? []).map((m: any) => m.machineId); },
+        error: (err) => { console.error('Error fetching machines:', err); }
       });
   }
 
-
   onCamerasFound(devices: MediaDeviceInfo[]) {
     this.availableDevices = devices || [];
-
-    // Prefer back camera
     this.selectedDevice =
       devices.find(d => d.label.toLowerCase().includes('back')) ||
       devices[0] ||
       null;
   }
 
+  handleScannedData(raw: string) {
+    try {
+      this.scannedData = JSON.parse(raw);
+    } catch {
+      this.scannedData = this.parseQrData(raw);
+    }
+    this.validateStep();
+  }
 
-      handleScannedData(raw: string) {
-        try {
-          this.scannedData = JSON.parse(raw);
-        } catch {
-          this.scannedData = this.parseQrData(raw);
-        }
-        console.log('Decoded QR:', this.scannedData);
-        this.validateStep();
-      }
+  parseQrData(raw: string): any {
+    const obj: any = {};
+    raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(line => {
+      const [k, ...rest] = line.split(':');
+      if (k && rest.length) obj[k.trim()] = rest.join(':').trim();
+    });
+    return obj;
+  }
 
-      parseQrData(raw: string): any {
-        const obj: any = {};
-        raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(line => {
-          const [k, ...rest] = line.split(':');
-          if (k && rest.length) obj[k.trim()] = rest.join(':').trim();
-        });
-        return obj;
-      }
-
-  
-      async onFileSelected(event: any) {
-          const file = event.target.files?.[0];
-          if (!file) return;
-  
-          const imageUrl = URL.createObjectURL(file);
-  
-          try {
-            const result = await this.qrReader.decodeFromImageUrl(imageUrl);
-            this.handleScannedData(result.getText());
-          } catch (err: any) {
-            this.showWizard = false;
-            console.error('QR decode failed:', err);
-            Swal.fire('Error', 'Unable to read QR code from image', 'error');
-          }
-        }
-  
+  async onFileSelected(event: any) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const result = await this.qrReader.decodeFromImageUrl(imageUrl);
+      this.handleScannedData(result.getText());
+    } catch (err: any) {
+      this.showWizard = false;
+      Swal.fire('Error', 'Unable to read QR code from image', 'error');
+    }
+  }
 
   validateStep() {
     this.stepValid = false;
-
     if (!this.scannedData || !this.selectedJob) return;
 
     let parsed: any;
-
     if (typeof this.scannedData === 'string') {
-      try {
-        parsed = JSON.parse(this.scannedData);
-      } catch (e) {
-        console.error('Invalid QR data', e);
-        return;
-      }
+      try { parsed = JSON.parse(this.scannedData); }
+      catch (e) { return; }
     } else {
       parsed = this.scannedData;
     }
@@ -341,11 +338,11 @@ export class UnpostedJobTransaction implements OnInit {
       case 1:
         this.stepValid = parsed.job === this.selectedJob.jobNumber;
         if (this.stepValid) {
-          this.matchedData.jobNumber = parsed.job;
-          this.matchedData.serialNo = this.selectedJob.serialNo;
-          this.matchedData.wc = this.selectedJob.wcCode;
-          this.matchedData.qtyReleased = this.selectedJob.qtyReleased;         
-          this.matchedData.loginuser = this.employeeCode;
+          this.matchedData.jobNumber    = parsed.job;
+          this.matchedData.serialNo     = this.selectedJob.serialNo;
+          this.matchedData.wc           = this.selectedJob.wcCode;
+          this.matchedData.qtyReleased  = this.selectedJob.qtyReleased;
+          this.matchedData.loginuser    = this.employeeCode;
         }
         break;
 
@@ -358,11 +355,8 @@ export class UnpostedJobTransaction implements OnInit {
 
       case 3:
         this.stepValid = this.availableMachines.includes(parsed.machineNumber);
-
         if (this.stepValid) {
           this.matchedData.machineNumber = parsed.machineNumber;
-
-          // If role_id is 4, auto-fill empNum as current employee
           if (this.role_id === 4 || this.role_id === 2) {
             parsed.empNum = this.employeeCode;
             this.scannedData = parsed;
@@ -380,239 +374,140 @@ export class UnpostedJobTransaction implements OnInit {
     }
   }
 
-
-
-
-
   nextStep() {
     if (!this.stepValid) return;
-
     if (this.wizardStep === 3 && (this.role_id === 4 || this.role_id === 2)) {
-      
       this.finishWizard();
     } else {
       this.wizardStep++;
       this.scannedData = null;
-      this.stepValid = false;
+      this.stepValid   = false;
     }
   }
-
 
   prevStep() {
     if (this.wizardStep > 1) {
       this.wizardStep--;
       this.scannedData = null;
-      this.stepValid = false;
+      this.stepValid   = false;
     }
   }
 
   finishWizard() {
-      const now = new Date();
+    const now = new Date();
+    const localDateTime =
+      now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0') + 'T' +
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0') + ':' +
+      String(now.getSeconds()).padStart(2, '0');
 
-  const localDateTime =
-    now.getFullYear() + '-' +
-    String(now.getMonth() + 1).padStart(2, '0') + '-' +
-    String(now.getDate()).padStart(2, '0') + 'T' +
-    String(now.getHours()).padStart(2, '0') + ':' +
-    String(now.getMinutes()).padStart(2, '0') + ':' +
-    String(now.getSeconds()).padStart(2, '0');
+    this.matchedData.startTime = localDateTime;
 
-  this.matchedData.startTime = localDateTime;   // 🔥 ADD THIS
-
-    console.log('Matched Data:', this.matchedData);
-
-      this.loader.show();
-      this.jobService.startJob(this.matchedData).pipe( finalize(() => { this.loader.hide(); })).subscribe({
-      next: (res: any) => {
-       Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: 'Job has been started successfully!',
-        showConfirmButton: false,
-        timer: 3000
+    this.loader.show();
+    this.jobService.startJob(this.matchedData)
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: () => {
+          Swal.fire({ icon: 'success', title: 'Success', text: 'Job has been started successfully!', showConfirmButton: false, timer: 3000 });
+          this.searchTerm  = '';
+          this.showWizard  = false;
+          this.matchedData = {};
+          this.loadJobs();
+          this.loadActiveJobTransactions();
+        },
+        error: () => Swal.fire('Error', 'Failed to start job', 'error')
       });
-    this.searchTerm = '';  
-    this.loadJobs();
-        this.loadActiveJobTransactions();
-        this.showWizard = false;
-        this.matchedData = {}; // reset after success
-      },
-      error: (err) => {
-        console.error('Error starting job:', err);
-        Swal.fire('Error', 'Failed to start job', 'error');
-      }
-    });
   }
+
+  // ── Pause Job ─────────────────────────────────────────────────────────
 
   PauseJob(selectedRow: any) {
-    console.log('Selected Row Data:', selectedRow);
     const now = new Date();
+    const localDateTime =
+      now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0') + 'T' +
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0') + ':' +
+      String(now.getSeconds()).padStart(2, '0');
 
-  const localDateTime =
-    now.getFullYear() + '-' +
-    String(now.getMonth() + 1).padStart(2, '0') + '-' +
-    String(now.getDate()).padStart(2, '0') + 'T' +
-    String(now.getHours()).padStart(2, '0') + ':' +
-    String(now.getMinutes()).padStart(2, '0') + ':' +
-    String(now.getSeconds()).padStart(2, '0');
-
-    // Build payload for API
     const payload = {
-      jobNumber: selectedRow.jobNumber,
-      serialNo: selectedRow.serialNo,
-      wc: selectedRow.wcCode,
+      jobNumber:       selectedRow.jobNumber,
+      serialNo:        selectedRow.serialNo,
+      wc:              selectedRow.wcCode,
       operationNumber: Number(selectedRow.operationNumber),
-      machineNumber: selectedRow.machine_id, // use actual machine_id
-      empNum: selectedRow.emp_num,         // use actual emp_num
-      qtyReleased: selectedRow.qtyReleased,
-      loginuser: this.employeeCode, // logged-in user
-      startTime: localDateTime
+      machineNumber:   selectedRow.machine_id,
+      empNum:          selectedRow.emp_num,
+      qtyReleased:     selectedRow.qtyReleased,
+      loginuser:       this.employeeCode,
+      startTime:       localDateTime
     };
 
-    console.log(payload);
     this.loader.show();
-    this.jobService.PauseJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
-      next: (res: any) => {
-        // Stop timer for this job
-        if (this.activeTimers[selectedRow.serialNo]) {
-          clearInterval(this.activeTimers[selectedRow.serialNo]);
-          delete this.activeTimers[selectedRow.serialNo];
-        }
-
-                  Swal.fire({
-                      icon: 'success',
-                      title: 'Success',
-                      text: 'Job has been paused successfully!',
-                      showConfirmButton: false,
-                      timer: 3000
-                    });
-
-          this.searchTerm = '';  
-          this.loadJobs();
-        // Reload active job transactions
-        this.loadActiveJobTransactions();
-      },
-      error: (err) => {
-        console.error('Error pausing job:', err);
-        Swal.fire('Error', 'Failed to pause job', 'error');
-      }
-    });
-  }
-
-
-  CompleteJob(selectedRow: any) {
-    console.log('Selected Row Data:', selectedRow);
-    const now = new Date();
-
-  const localDateTime =
-    now.getFullYear() + '-' +
-    String(now.getMonth() + 1).padStart(2, '0') + '-' +
-    String(now.getDate()).padStart(2, '0') + 'T' +
-    String(now.getHours()).padStart(2, '0') + ':' +
-    String(now.getMinutes()).padStart(2, '0') + ':' +
-    String(now.getSeconds()).padStart(2, '0');
-
-    // Build payload for API
-    const payload = {
-      jobNumber: selectedRow.jobNumber,
-      serialNo: selectedRow.serialNo,
-      wc: selectedRow.wcCode,
-      operationNumber: Number(selectedRow.operationNumber),
-      machineNumber: selectedRow.machine_id, // use actual machine_id
-      empNum: selectedRow.emp_num,         // use actual emp_num
-      qtyReleased: selectedRow.qtyReleased,
-      loginuser: this.employeeCode, // or whichever user is logged in
-       startTime: localDateTime 
-    };
-    this.loader.show();
-    this.jobService.CompleteJob(payload).pipe( finalize(() => { this.loader.hide(); })).subscribe({
-      next: (res: any) => {
-                Swal.fire({
-              icon: 'success',
-              title: 'Success',
-              text: 'Job has been completed successfully!',
-              showConfirmButton: false,
-              timer: 3000
-            });
-
-        clearInterval(this.activeTimers[selectedRow.serialNo]);
-        this.searchTerm = '';  
-    this.loadJobs();
-        this.loadActiveJobTransactions();
-      },
-      error: (err) => {
-        console.error('Error pausing job:', err);
-        Swal.fire('Error', 'Failed to pause job', 'error');
-      }
-    });
-  }
-
-
-  loadActiveJobTransactions() {
-    this.jobService.GetActiveJobTransactions().subscribe({
-      next: (res: any) => {
-        this.activeJobTrans = res?.data ?? [];
-        this.mapTransToJobs();
-      },
-      error: err => console.error('Error fetching active job transactions:', err)
-    });
-  }
-
-  mapTransToJobs() {
-    if (!this.transactions?.length || !this.activeJobTrans?.length) return;
-
-    this.transactions = this.transactions.map(job => {
-      const match = this.activeJobTrans.find(tr =>
-        (tr.job ?? '').toString().trim() === job.jobNumber &&
-        Number(tr.oper_num) === Number(job.operationNumber) &&
-        (tr.serialNo ?? tr.serial_no ?? tr.SerialNo ?? '').toString().trim() === job.serialNo
-      );
-
-      if (match) {
-        const key = job.serialNo;
-
-        // Convert backend hours to seconds
-        const accumulated = Math.floor((match.total_a_hrs ?? 0) * 3600);
-
-        let elapsedSeconds = accumulated;
-
-        // Only start timer if job is running
-        if (match.status === "1" && match.start_time) {
-          const startTime = new Date(match.start_time);
-          elapsedSeconds += Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
-
-          if (this.activeTimers[key]) clearInterval(this.activeTimers[key]);
-
-          this.activeTimers[key] = setInterval(() => {
-            const target = this.transactions.find(x => x.serialNo === key);
-            if (target) target.elapsedSeconds += 1;
-          }, 1000);
-        } 
-        else {
-          // paused or completed
+    this.jobService.PauseJob(payload)
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: () => {
+          const key = `${selectedRow.serialNo}-${selectedRow.operationNumber}`;
           if (this.activeTimers[key]) {
             clearInterval(this.activeTimers[key]);
             delete this.activeTimers[key];
           }
-        }
-
-        return {
-          ...job,
-          emp_num: match.emp_num ?? '',
-          emp_name:match.emp_name ?? '',
-          machine_id: match.machine_id ?? '',
-          a_hrs: accumulated,
-          status: match.status,
-          elapsedSeconds
-        };
-      }
-
-      return job;
-    });
-    this.filteredTransactions = [...this.transactions]; 
+          Swal.fire({ icon: 'success', title: 'Success', text: 'Job has been paused successfully!', showConfirmButton: false, timer: 3000 });
+          this.searchTerm = '';
+          this.loadJobs();
+          this.loadActiveJobTransactions();
+        },
+        error: () => Swal.fire('Error', 'Failed to pause job', 'error')
+      });
   }
 
+  // ── Complete Job ──────────────────────────────────────────────────────
 
+  CompleteJob(selectedRow: any) {
+    const now = new Date();
+    const localDateTime =
+      now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0') + 'T' +
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0') + ':' +
+      String(now.getSeconds()).padStart(2, '0');
+
+    const payload = {
+      jobNumber:       selectedRow.jobNumber,
+      serialNo:        selectedRow.serialNo,
+      wc:              selectedRow.wcCode,
+      operationNumber: Number(selectedRow.operationNumber),
+      machineNumber:   selectedRow.machine_id,
+      empNum:          selectedRow.emp_num,
+      qtyReleased:     selectedRow.qtyReleased,
+      loginuser:       this.employeeCode,
+      startTime:       localDateTime
+    };
+
+    this.loader.show();
+    this.jobService.CompleteJob(payload)
+      .pipe(finalize(() => this.loader.hide()))
+      .subscribe({
+        next: () => {
+          Swal.fire({ icon: 'success', title: 'Success', text: 'Job has been completed successfully!', showConfirmButton: false, timer: 3000 });
+          const key = `${selectedRow.serialNo}-${selectedRow.operationNumber}`;
+          if (this.activeTimers[key]) {
+            clearInterval(this.activeTimers[key]);
+            delete this.activeTimers[key];
+          }
+          this.searchTerm = '';
+          this.loadJobs();
+          this.loadActiveJobTransactions();
+        },
+        error: () => Swal.fire('Error', 'Failed to complete job', 'error')
+      });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
 
   formatTime(seconds: number): string {
     if (!seconds && seconds !== 0) return '00:00:00';
@@ -622,72 +517,46 @@ export class UnpostedJobTransaction implements OnInit {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
-
-
-
-
   getStepMessage(): string {
-    if (this.stepValid) return 'Matched successfully';
-    return 'Scanned data does not match';
+    return this.stepValid ? 'Matched successfully' : 'Scanned data does not match';
   }
 
-  getMachineList() {
-    return this.availableMachines.join(', ');
-  }
+  getMachineList()  { return this.availableMachines.join(', '); }
+  getEmployeeList() { return this.availableEmployees.join(', '); }
 
-  getEmployeeList() {
-    return this.availableEmployees.join(', ');
-  }
-
-  toggleSidebar(): void {
-    this.isSidebarHidden = !this.isSidebarHidden;
-  }
-
+  toggleSidebar(): void { this.isSidebarHidden = !this.isSidebarHidden; }
 
   onGlobalSearch(): void {
-  const raw = this.globalSearch.toLowerCase().trim();
-
-  if (!raw) {
-    this.filteredTransactions = [...this.allTransactions];
+    const raw = this.globalSearch.toLowerCase().trim();
+    if (!raw) {
+      this.filteredTransactions = [...this.allTransactions];
+      this.transactions = this.filteredTransactions;
+      return;
+    }
+    const keywords = raw.split('|').map(k => k.trim());
+    this.filteredTransactions = this.allTransactions.filter(job =>
+      keywords.some(keyword =>
+        Object.values(job).some(val => val?.toString().toLowerCase().includes(keyword))
+      )
+    );
     this.transactions = this.filteredTransactions;
-    return;
   }
 
-  const keywords = raw.split('|').map(k => k.trim());
-
-  this.filteredTransactions = this.allTransactions.filter(job =>
-    keywords.some(keyword =>
-      Object.values(job).some(val =>
-        val?.toString().toLowerCase().includes(keyword)
-      )
-    )
-  );
-
-  this.transactions = this.filteredTransactions;
-}
-
-exportToExcel(): void {
-  if (!this.filteredTransactions.length) return;
-
-  const exportData = this.filteredTransactions.map((x, i) => ({
-    'Sr No': i + 1,
-    'Job': x.jobNumber,
-    'Serial': x.serialNo,
-    'Qty': x.qtyReleased,
-    'Operation': x.operationNumber,
-    'WC': x.wcCode,
-    'Employee': x.emp_name,
-    'Machine': x.machine_id
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(exportData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Jobs');
-  XLSX.writeFile(wb, 'UnpostedJobs.xlsx');
-}
-
-
-
-
-
+  exportToExcel(): void {
+    if (!this.filteredTransactions.length) return;
+    const exportData = this.filteredTransactions.map((x, i) => ({
+      'Sr No':     i + 1,
+      'Job':       x.jobNumber,
+      'Serial':    x.serialNo,
+      'Qty':       x.qtyReleased,
+      'Operation': x.operationNumber,
+      'WC':        x.wcCode,
+      'Employee':  x.emp_name,
+      'Machine':   x.machine_id
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Jobs');
+    XLSX.writeFile(wb, 'UnpostedJobs.xlsx');
+  }
 }

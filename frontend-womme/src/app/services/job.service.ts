@@ -550,8 +550,15 @@ CheckPrevJob(jobData: any): Observable<any> {
       headers: this.getHeaders()
     });
   }
+  
+ GetQaQcEmployees(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/Get/GetQaQcEmployees`, {
+      headers: this.getHeaders()
+    });
+  }
 
 
+  
 
   createAssignedJob(data: {
     employeeCode: string;
@@ -570,6 +577,10 @@ CheckPrevJob(jobData: any): Observable<any> {
       { headers: this.getHeaders() }
     );
   }
+
+
+  
+
   addCalendar(payload: { date: string; flag: number }) {
     return this.http.post(`${this.baseUrl}/Calendar/AddCalendar`, payload,{
     headers: this.getHeaders()
@@ -594,6 +605,26 @@ CheckPrevJob(jobData: any): Observable<any> {
 
     });
   }
+
+   SubmitReopenHoldJob(payload: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Post/SubmitReopenHoldJob`, payload,{
+    headers: this.getHeaders()
+
+    });
+  }
+
+
+   GetHoldSubmittedJobs(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/Get/GetHoldSubmittedJobs`,{
+              headers: this.getHeaders()
+      });    
+    }
+
+     GetRejectSubmittedJobs(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/Get/GetRejectSubmittedJobs`,{
+              headers: this.getHeaders()
+      });    
+    }
 
    getJobProgress(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/Get/getJobProgress`,{
@@ -923,6 +954,13 @@ GetCompletedQCJobs(): Observable<{ data: any[], totalRecords: number }> {
   );
 }
 
+GetAllCompletedJobs() {
+  return this.http.get<{ data: any[], totalRecords: number }>(
+    `${this.baseUrl}/Get/GetAllCompletedJobs`,
+    { headers: this.getHeaders() }
+  );
+}
+
 GetHoldQCJobs(): Observable<{ data: any[], totalRecords: number }> {
   return this.http.get<{ data: any[], totalRecords: number }>(
     `${this.baseUrl}/Get/GetHoldQCJobs`,
@@ -930,12 +968,30 @@ GetHoldQCJobs(): Observable<{ data: any[], totalRecords: number }> {
   );
 }
 
+getLatestForm(): Observable<{ data: any[], totalRecords: number }> {
+  return this.http.get<{ data: any[], totalRecords: number }>(
+    `${this.baseUrl}/Get/GetLatestForm`,
+    { headers: this.getHeaders() }
+  );
+}
+
+
+
+
+
 GetRejectedQCJobs(): Observable<{ data: any[], totalRecords: number }> {
   return this.http.get<{ data: any[], totalRecords: number }>(
     `${this.baseUrl}/Get/GetRejectedQCJobs`,
     { headers: this.getHeaders() }
   );
 }
+
+
+
+saveForm(payload: any) {
+  return this.http.post(`${this.baseUrl}/Post/save-form`, payload);
+}
+
 
 updateQCRemark(payload: any) {
   return this.http.post(`${this.baseUrl}/Post/UpdateQCRemark`, payload);

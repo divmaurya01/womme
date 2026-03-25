@@ -1,0 +1,319 @@
+<app-header (toggleSidebar)="toggleSidebar()"></app-header>
+
+<div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
+  <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
+
+  <main class="main-content p-3">
+    <section class="table-wrapper">
+
+      <h3 class="mb-3">Project Dashboard</h3>
+
+      <p-tabView #tabView [activeIndex]="activeTabIndex">
+
+        <!-- Tab 1: Hold Jobs -->
+        <p-tabPanel header="Hold Jobs" style="background-color: #ECC391;">
+          <p-table [value]="holdJobs" [scrollable]="true" scrollHeight="400px"
+                   [paginator]="true" [rows]="50" [showCurrentPageReport]="true"
+                   currentPageReportTemplate="Showing {first}-{last} of {totalRecords}">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color:#ECC391; padding:10px;">S.No</th>
+                <th style="background-color:#ECC391; padding:10px;">Job</th>
+                <th style="background-color:#ECC391; padding:10px;">SerialNo</th>
+                <th style="background-color:#ECC391; padding:10px;">Opr No.</th>
+                <th style="background-color:#ECC391; padding:10px;">WC</th>
+                <th style="background-color:#ECC391; padding:10px;">Item</th>
+                <th style="background-color:#ECC391; padding:10px;">Employee</th>
+                <th style="background-color:#ECC391; padding:10px;">Total Hours</th>
+                <th style="background-color:#ECC391; padding:10px;">Remark</th>
+                <th style="background-color:#ECC391; padding:10px;">Action</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td>{{ job.jobNumber }}</td>
+                <td>{{ job.serialNo }}</td>
+                <td>{{ job.operationNumber }}</td>
+                <td>{{ job.wcCode }}</td>
+                <td>{{ job.item }}</td>
+                <td>{{ job.emp_name }}</td>
+                <td>{{ formatTime(job.total_a_hrs) }}</td>
+                <td>{{ job.remark }}</td>
+                <td>
+                  <button class="btn btn-sm btn-primary d-flex align-items-center gap-1"
+                          (click)="openReopenDialog(job, 'hold')">
+                    <i class="pi pi-refresh"></i> Reopen
+                  </button>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr><td colspan="10" class="text-center p-3 text-muted">No hold jobs found.</td></tr>
+            </ng-template>
+          </p-table>
+        </p-tabPanel>
+
+        <!-- Tab 2: Rejected Jobs -->
+        <p-tabPanel header="Rejected Jobs" style="background-color: #ECC391;">
+          <p-table [value]="rejectedJobs" [scrollable]="true" scrollHeight="400px"
+                   [paginator]="true" [rows]="50" [showCurrentPageReport]="true"
+                   currentPageReportTemplate="Showing {first}-{last} of {totalRecords}">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color:#ECC391; padding:10px;">S.No</th>
+                <th style="background-color:#ECC391; padding:10px;">Job</th>
+                <th style="background-color:#ECC391; padding:10px;">SerialNo</th>
+                <th style="background-color:#ECC391; padding:10px;">Opr No.</th>
+                <th style="background-color:#ECC391; padding:10px;">WC</th>
+                <th style="background-color:#ECC391; padding:10px;">Item</th>
+                <th style="background-color:#ECC391; padding:10px;">Employee</th>
+                <th style="background-color:#ECC391; padding:10px;">Total Hours</th>
+                <th style="background-color:#ECC391; padding:10px;">Remark</th>
+                <th style="background-color:#ECC391; padding:10px;">Action</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td>{{ job.jobNumber }}</td>
+                <td>{{ job.serialNo }}</td>
+                <td>{{ job.operationNumber }}</td>
+                <td>{{ job.wcCode }}</td>
+                <td>{{ job.item }}</td>
+                <td>{{ job.emp_name }}</td>
+                <td>{{ formatTime(job.total_a_hrs) }}</td>
+                <td>{{ job.remark }}</td>
+                <td>
+                  <button class="btn btn-sm btn-warning d-flex align-items-center gap-1"
+                          (click)="openReopenDialog(job, 'reject')">
+                    <i class="pi pi-refresh"></i> Reopen
+                  </button>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr><td colspan="10" class="text-center p-3 text-muted">No rejected jobs found.</td></tr>
+            </ng-template>
+          </p-table>
+        </p-tabPanel>
+
+        <!-- Tab 3: Hold Submitted -->
+        <p-tabPanel header="Hold Submitted" style="background-color: #ECC391;">
+          <p-table [value]="holdSubmittedJobs" [scrollable]="true" scrollHeight="400px"
+                   [paginator]="true" [rows]="50" [showCurrentPageReport]="true"
+                   currentPageReportTemplate="Showing {first}-{last} of {totalRecords}">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color:#ECC391; padding:10px;">S.No</th>
+                <th style="background-color:#ECC391; padding:10px;">Hold Job</th>
+                <th style="background-color:#ECC391; padding:10px;">Hold SerialNo</th>
+                <th style="background-color:#ECC391; padding:10px;">Hold Opr No.</th>
+                <th style="background-color:#ECC391; padding:10px;">Hold Status</th>
+                <th style="background-color:#ECC391; padding:10px;">Start Job</th>
+                <th style="background-color:#ECC391; padding:10px;">Start SerialNo</th>
+                <th style="background-color:#ECC391; padding:10px;">Start Opr No.</th>
+                <th style="background-color:#ECC391; padding:10px;">New Trans#</th>
+                <th style="background-color:#ECC391; padding:10px;">Submitted On</th>
+                <th style="background-color:#ECC391; padding:10px;">Submitted By</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-rec let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td>{{ rec.holdJobNumber }}</td>
+                <td>{{ rec.holdSerialNo }}</td>
+                <td>{{ rec.holdOperationNumber }}</td>
+                <td><span class="badge bg-warning text-dark">{{ rec.holdStatus || 'HOLD' }}</span></td>
+                <td>{{ rec.prevJobNumber }}</td>
+                <td>{{ rec.prevSerialNo }}</td>
+                <td>{{ rec.prevOperationNumber }}</td>
+                <td>{{ rec.newTransNum || '-' }}</td>
+                <td>{{ rec.submittedOn | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ rec.submittedBy }}</td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr><td colspan="11" class="text-center p-3 text-muted">No records found.</td></tr>
+            </ng-template>
+          </p-table>
+        </p-tabPanel>
+
+        <!-- Tab 4: Reject Submitted -->
+        <p-tabPanel header="Reject Submitted" style="background-color: #ECC391;">
+          <p-table [value]="rejectSubmittedJobs" [scrollable]="true" scrollHeight="400px"
+                   [paginator]="true" [rows]="50" [showCurrentPageReport]="true"
+                   currentPageReportTemplate="Showing {first}-{last} of {totalRecords}">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="background-color:#ECC391; padding:10px;">S.No</th>
+                <th style="background-color:#ECC391; padding:10px;">Rejected Job</th>
+                <th style="background-color:#ECC391; padding:10px;">Rejected SerialNo</th>
+                <th style="background-color:#ECC391; padding:10px;">Rejected Opr No.</th>
+                <th style="background-color:#ECC391; padding:10px;">Reject Status</th>
+                <th style="background-color:#ECC391; padding:10px;">Start Job</th>
+                <th style="background-color:#ECC391; padding:10px;">Start SerialNo</th>
+                <th style="background-color:#ECC391; padding:10px;">Start Opr No.</th>
+                <th style="background-color:#ECC391; padding:10px;">New Trans#</th>
+                <th style="background-color:#ECC391; padding:10px;">Submitted On</th>
+                <th style="background-color:#ECC391; padding:10px;">Submitted By</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-rec let-rowIndex="rowIndex">
+              <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td>{{ rec.holdJobNumber }}</td>
+                <td>{{ rec.holdSerialNo }}</td>
+                <td>{{ rec.holdOperationNumber }}</td>
+                <td><span class="badge bg-danger">{{ rec.holdStatus || 'REJECTED' }}</span></td>
+                <td>{{ rec.prevJobNumber }}</td>
+                <td>{{ rec.prevSerialNo }}</td>
+                <td>{{ rec.prevOperationNumber }}</td>
+                <td>{{ rec.newTransNum || '-' }}</td>
+                <td>{{ rec.submittedOn | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ rec.submittedBy }}</td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr><td colspan="11" class="text-center p-3 text-muted">No records found.</td></tr>
+            </ng-template>
+          </p-table>
+        </p-tabPanel>
+
+      </p-tabView>
+    </section>
+  </main>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- REOPEN DIALOG                                                 -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div *ngIf="showReopenDialog" class="ro-overlay" (click)="onOverlayClick($event)">
+  <div class="ro-modal" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="ro-header" [ngClass]="reopenSource === 'reject' ? 'ro-header-reject' : 'ro-header-hold'">
+      <div class="d-flex align-items-center gap-2">
+        <div class="ro-icon-circle">
+          <i class="pi" [class.pi-lock]="reopenSource==='hold'" [class.pi-ban]="reopenSource==='reject'"></i>
+        </div>
+        <div>
+          <div style="font-size:16px; font-weight:700;">
+            {{ reopenSource === 'reject' ? 'Reopen Rejected Job' : 'Reopen Hold Job' }}
+          </div>
+          <div style="font-size:12px; opacity:.82;">
+            Job: <strong>{{ selectedHoldJob?.jobNumber }}</strong> &nbsp;|&nbsp;
+            Serial: <strong>{{ selectedHoldJob?.serialNo }}</strong> &nbsp;|&nbsp;
+            Opr: <strong>{{ selectedHoldJob?.operationNumber }}</strong>
+          </div>
+        </div>
+      </div>
+      <button class="ro-close-btn" (click)="closeReopenDialog()">
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+
+    <!-- Info Strip -->
+    <div class="ro-info-strip">
+      <div class="ro-chip"><span class="ro-chip-lbl">WC</span><span class="ro-chip-val">{{ selectedHoldJob?.wcCode }}</span></div>
+      <div class="ro-chip"><span class="ro-chip-lbl">Item</span><span class="ro-chip-val">{{ selectedHoldJob?.item }}</span></div>
+      <div class="ro-chip"><span class="ro-chip-lbl">Employee</span><span class="ro-chip-val">{{ selectedHoldJob?.emp_name }}</span></div>
+      <div class="ro-chip">
+        <span class="ro-chip-lbl">Status</span>
+        <span class="ro-chip-val">
+          <span class="badge" [ngClass]="reopenSource==='reject' ? 'bg-danger' : 'bg-warning text-dark'">
+            {{ reopenSource === 'reject' ? 'REJECTED' : 'ON HOLD' }}
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="ro-body">
+
+      <div class="ro-section-label">
+        <i class="pi pi-check-circle" style="color:#1565C0; margin-right:6px;"></i>
+        Select a completed operation to restart the job from
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="loadingPrevJobs" class="ro-center-state">
+        <i class="pi pi-spin pi-spinner" style="font-size:28px; color:#1565C0;"></i>
+        <div class="mt-2">Loading completed operations...</div>
+      </div>
+
+      <!-- Empty -->
+      <div *ngIf="!loadingPrevJobs && previousCompletedJobs.length === 0" class="ro-center-state" style="color:#aaa;">
+        <i class="pi pi-inbox" style="font-size:36px;"></i>
+        <div class="mt-2">
+          No completed operations found for
+          <strong>{{ selectedHoldJob?.jobNumber }}</strong> / <strong>{{ selectedHoldJob?.serialNo }}</strong>
+        </div>
+      </div>
+
+      <!-- Operation Cards -->
+      <div *ngIf="!loadingPrevJobs && previousCompletedJobs.length > 0" class="ro-cards-grid">
+        <div *ngFor="let prev of previousCompletedJobs"
+             class="ro-op-card"
+             [class.ro-op-card-selected]="selectedPrevJob?.compositeKey === prev.compositeKey"
+             (click)="selectPrevJob(prev)">
+          <div class="ro-op-check" *ngIf="selectedPrevJob?.compositeKey === prev.compositeKey">
+            <i class="pi pi-check" style="font-size:10px;"></i>
+          </div>
+          <div class="ro-op-num">Opr {{ prev.operationNumber }}</div>
+          <div class="ro-op-wc">WC: {{ prev.wcCode }}</div>
+          <div style="font-size:10px; color:#888; margin-top:2px;">
+            {{ prev.transType === 'M' ? 'QC' : 'OPR' }}
+          </div>
+          <div class="ro-op-emp">{{ prev.emp_name || prev.empNum }}</div>
+          <div class="ro-op-hrs">{{ formatTime(prev.total_a_hrs) }}</div>
+          <div style="margin-top:6px;">
+            <span class="badge bg-success" style="font-size:10px;">COMPLETED</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirm Preview -->
+      <div *ngIf="selectedPrevJob" class="ro-confirm-panel">
+        <div class="ro-confirm-title">
+          <i class="pi pi-info-circle" style="margin-right:6px;"></i> What will happen on Submit
+        </div>
+        <div class="ro-confirm-grid">
+          <div class="ro-cg-lbl">Hold/Rejected Job:</div>
+          <div class="ro-cg-val">
+            {{ selectedHoldJob?.jobNumber }} / Opr {{ selectedHoldJob?.operationNumber }}
+            → status set to <strong style="color:#1565C0;">STARTED</strong>
+          </div>
+          <div class="ro-cg-lbl">Restart from Opr:</div>
+          <div class="ro-cg-val">
+            Opr {{ selectedPrevJob?.operationNumber }} (WC: {{ selectedPrevJob?.wcCode }})
+            — new start transaction will be created
+          </div>
+          <div class="ro-cg-lbl">Tracked by:</div>
+          <div class="ro-cg-val">{{ currentUser }} at {{ nowLabel }}</div>
+        </div>
+      </div>
+
+    </div><!-- /ro-body -->
+
+    <!-- Footer -->
+    <div class="ro-footer">
+      <button class="btn btn-secondary btn-sm" (click)="closeReopenDialog()">
+        <i class="pi pi-times"></i> Cancel
+      </button>
+      <button class="btn btn-sm"
+              [ngClass]="reopenSource==='reject' ? 'btn-danger' : 'btn-primary'"
+              [disabled]="!selectedPrevJob || submittingReopen"
+              (click)="submitReopen()">
+        <i class="pi"
+           [class.pi-spin]="submittingReopen"
+           [class.pi-spinner]="submittingReopen"
+           [class.pi-refresh]="!submittingReopen"></i>
+        {{ submittingReopen ? 'Submitting...' : 'Confirm & Restart Job' }}
+      </button>
+    </div>
+
+  </div>
+</div>
+

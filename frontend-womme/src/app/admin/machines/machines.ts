@@ -31,6 +31,9 @@ export class MachineComponent implements OnInit {
   globalSearch = '';
   role_id: number = 0;
 
+  formData: any = {
+    formNo_revno: ''
+  };
 
 
   newMachine: any = {
@@ -51,6 +54,7 @@ editingMachineEntryNo: number | null = null;
 
   ngOnInit(): void {
     this.checkScreenSize();
+    this.loadForm();
     const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
     this.role_id = userDetails?.roleID;
     this.loadMachines();
@@ -58,6 +62,14 @@ editingMachineEntryNo: number | null = null;
  @HostListener('window:resize')
   onResize() {
     this.checkScreenSize();
+  }
+
+  loadForm() {
+    this.jobService.getLatestForm().subscribe(res => {
+      if (res) {
+        this.formData = res;
+      }
+    });
   }
 
     checkScreenSize() {
@@ -69,6 +81,19 @@ editingMachineEntryNo: number | null = null;
   }
   toggleSidebar(): void {
     this.isSidebarHidden = !this.isSidebarHidden;
+  }
+
+  saveForm() {
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+
+    const payload = {
+      formNo_revno: this.formData.formNo_revno,
+      updatedBy: userDetails.employeeCode || ''
+    };
+
+    this.jobService.saveForm(payload).subscribe(() => {
+      this.loadForm(); // 🔥 refresh latest after save
+    });
   }
 
   loadMachines(): void {

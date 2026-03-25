@@ -40,6 +40,8 @@ namespace WommeAPI.Data
         public DbSet<SyncLog> SyncLog { get; set; }
         public DbSet<JobReportAudit> JobReportAudit { get; set; }
         public DbSet<ReopenJobs> ReopenJobs { get; set; }
+        public DbSet<JobFormRevMst> JobFormRevMst { get; set; }
+        public DbSet<JobReopenTrack> JobReopenTrack { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AssignedJob>()

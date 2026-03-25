@@ -1763,6 +1763,7 @@ public string? TransType { get; set; }
         public string? completed_comment { get; set; }
         public string? hold_comment { get; set; }
         public string? reject_comment { get; set; }
+        public bool? reopen_flag { get; set; }
     }
 
     public class JobPoolRequest
@@ -2211,6 +2212,7 @@ public string? TransType { get; set; }
         public int? Suffix { get; set; }
         public string? UfItemDescription2 { get; set; }
         public List<JobOperationDto> Operations { get; set; } = new();
+        public string? FormNo_revno { get; set; }
     }
 
     public class JobOperationDto
@@ -2728,6 +2730,7 @@ public class JobReportAudit
         public Dictionary<string, string>? Fields { get; set; }
 
         public List<JobTransactionAuditDto>? Transactions { get; set; }
+        public string? FormNo_revno { get; set; }
     }
 
     public class JobTransactionAuditDto
@@ -2766,7 +2769,84 @@ public class JobReportAudit
 
         public DateTime CreatedAt { get; set; }
     }
+
+   [Table("JobFormRevMst")]   // must match SQL table name exactly
+    public class JobFormRevMst
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [MaxLength(100)]
+        public string? FormNo_revno { get; set; }
+
+        [MaxLength(50)]
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedDate { get; set; }
+    }
  
+
+    [Table("JobReopenTrack")]
+    public class JobReopenTrack
+    {
+        [Key]
+        public int Id { get; set; }
+    
+        public string? HoldJobNumber       { get; set; }
+        public string? HoldSerialNo        { get; set; }
+        public int     HoldOperationNumber { get; set; }
+        public string? HoldWc              { get; set; }
+        public string? HoldItem            { get; set; }
+        public string? HoldStatus          { get; set; }
+    
+        public string? PrevJobNumber       { get; set; }
+        public string? PrevSerialNo        { get; set; }
+        public int     PrevOperationNumber { get; set; }
+        public string? PrevWc              { get; set; }
+        public string? PrevItem            { get; set; }
+        public string? PrevStatus          { get; set; }
+    
+        public int?      NewTransNum  { get; set; }
+        public int? NewTransNum2 { get; set; }
+        public string?   SubmittedBy  { get; set; }
+        public DateTime  SubmittedOn  { get; set; }
+    }
+    
+    // Also add a DTO for the API body:
+    public class ReopenTrackDto
+    {
+        public string? HoldJobNumber       { get; set; }
+        public string? HoldSerialNo        { get; set; }
+        public int     HoldOperationNumber { get; set; }
+        public string? HoldWc              { get; set; }
+        public string? HoldItem            { get; set; }
+        public string? HoldStatus          { get; set; }
+    
+        public string? PrevJobNumber       { get; set; }
+        public string? PrevSerialNo        { get; set; }
+        public int     PrevOperationNumber { get; set; }
+        public string? PrevWc              { get; set; }
+        public string? PrevItem            { get; set; }
+        public string? PrevStatus          { get; set; }
+    
+        public int?    NewTransNum  { get; set; }
+        public string? SubmittedBy  { get; set; }
+        public string? SubmittedOn  { get; set; }
+    }
+
+    public class FormDto
+    {
+        public string FormNo_revno { get; set; }
+        public string UpdatedBy { get; set; }
+    }
+
+
+
+
+
+
+
+
 
 }
 
