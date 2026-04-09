@@ -191,6 +191,98 @@ namespace WommeAPI.Services
     }
 
 
+    public async Task UpdateJobRouteMstAsync(
+        string job,
+        int operNum,
+        decimal qty,
+        decimal addedHrs,
+        string updatedBy,
+        int? nextOperNum = null)  // ← ADD THIS
+    {
+        try
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                // ── Step 1: Read current run_hrs_t_lbr ──────────────
+                string fetchSql = @"
+                    SELECT ISNULL(run_hrs_t_lbr, 0)
+                    FROM jobroute_mst
+                    WHERE job      = @job
+                    AND oper_num = @operNum";
+
+                decimal currentRunHrs = 0m;
+
+                using (SqlCommand fetchCmd = new SqlCommand(fetchSql, conn))
+                {
+                    fetchCmd.Parameters.AddWithValue("@job",     job);
+                    fetchCmd.Parameters.AddWithValue("@operNum", operNum);
+
+                    var result = await fetchCmd.ExecuteScalarAsync();
+                    if (result != null && result != DBNull.Value)
+                        currentRunHrs = Convert.ToDecimal(result);
+                }
+
+                decimal newRunHrs = currentRunHrs + addedHrs;
+
+                Console.WriteLine($"[Syteline] jobroute_mst — current run_hrs_t_lbr={currentRunHrs}, adding={addedHrs}, new={newRunHrs}");
+
+                // ── Step 2: Update current operation ────────────────
+                string updateSql = @"
+                    UPDATE jobroute_mst
+                    SET
+                        qty_moved      = ISNULL(qty_moved,    0) + @qty,
+                        qty_received   = ISNULL(qty_received, 0) + @qty,
+                        qty_complete   = ISNULL(qty_complete, 0) + @qty,
+                        run_hrs_t_lbr  = @newRunHrs,
+                        UpdatedBy      = @updatedBy,
+                        RecordDate     = GETDATE()
+                    WHERE job      = @job
+                    AND oper_num = @operNum";
+
+                using (SqlCommand updateCmd = new SqlCommand(updateSql, conn))
+                {
+                    updateCmd.Parameters.AddWithValue("@qty",       qty);
+                    updateCmd.Parameters.AddWithValue("@newRunHrs", newRunHrs);
+                    updateCmd.Parameters.AddWithValue("@updatedBy", updatedBy ?? "system");
+                    updateCmd.Parameters.AddWithValue("@job",       job);
+                    updateCmd.Parameters.AddWithValue("@operNum",   operNum);
+
+                    int rows = await updateCmd.ExecuteNonQueryAsync();
+                    Console.WriteLine($"[Syteline] jobroute_mst updated — rows affected: {rows}");
+                }
+
+                // ── Step 3: Update NEXT operation's qty_received only ─
+                if (nextOperNum.HasValue)
+                {
+                    string nextOperSql = @"
+                        UPDATE jobroute_mst
+                        SET
+                            qty_received = ISNULL(qty_received, 0) + @qty,
+                            UpdatedBy    = @updatedBy,
+                            RecordDate   = GETDATE()
+                        WHERE job      = @job
+                        AND oper_num = @nextOperNum";
+
+                    using (SqlCommand nextOperCmd = new SqlCommand(nextOperSql, conn))
+                    {
+                        nextOperCmd.Parameters.AddWithValue("@qty",         qty);
+                        nextOperCmd.Parameters.AddWithValue("@updatedBy",   updatedBy ?? "system");
+                        nextOperCmd.Parameters.AddWithValue("@job",         job);
+                        nextOperCmd.Parameters.AddWithValue("@nextOperNum", nextOperNum.Value);
+
+                        int nextRows = await nextOperCmd.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[Syteline] jobroute_mst next oper ({nextOperNum}) qty_received updated — rows affected: {nextRows}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Syteline] UpdateJobRouteMstAsync ERROR: {ex.Message}");
+        }
+    }
 
     public async Task InsertJobTransBulkAsync(IEnumerable<JobTranMst> jobTransList)
     {

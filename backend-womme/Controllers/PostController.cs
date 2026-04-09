@@ -907,11 +907,71 @@ public class PostController : ControllerBase
                 }
             }
 
+            // ─────────────────────────────────────────────────────────────
+            // 🔹 UPDATE jobroute_mst on job completion
+            // ─────────────────────────────────────────────────────────────
 
+            // Parse qty from serial number suffix (e.g. "FJTST00001-1" → 1)
+            decimal qtyFromSerial = 1; // default
+            if (!string.IsNullOrEmpty(dto.SerialNo))
+            {
+                var parts = dto.SerialNo.Split('-');
+                if (parts.Length > 1 && decimal.TryParse(parts[^1], out decimal parsedQty))
+                    qtyFromSerial = parsedQty;
+            }
 
+            // ── 1. Update LOCAL jobroute_mst (via EF) ──────────────────
+            var localRoute = await _context.JobRouteMst
+                .FirstOrDefaultAsync(r =>
+                    r.Job == dto.JobNumber &&
+                    r.OperNum == dto.OperationNumber);
 
+            if (localRoute != null)
+            {
+                localRoute.QtyMoved    = (localRoute.QtyMoved    ?? 0) + qtyFromSerial;
+                localRoute.QtyReceived = (localRoute.QtyReceived ?? 0) + qtyFromSerial;
+                localRoute.QtyComplete = (localRoute.QtyComplete ?? 0) + qtyFromSerial;
+                localRoute.RunHrsTLbr  = (localRoute.RunHrsTLbr  ?? 0) + totalHours;
+                localRoute.UpdatedBy   = dto.loginuser;
+                localRoute.RecordDate  = now;
+
+                _context.JobRouteMst.Update(localRoute);
+            }
+
+            // ── Update next operation's qty_received (LOCAL) ────────────
+            if (lastJob.next_oper.HasValue)
+            {
+                var nextRoute = await _context.JobRouteMst
+                    .FirstOrDefaultAsync(r =>
+                        r.Job == dto.JobNumber &&
+                        r.OperNum == lastJob.next_oper.Value);
+
+                if (nextRoute != null)
+                {
+                    nextRoute.QtyReceived = (nextRoute.QtyReceived ?? 0) + qtyFromSerial;
+                    nextRoute.UpdatedBy   = dto.loginuser;
+                    nextRoute.RecordDate  = now;
+
+                    _context.JobRouteMst.Update(nextRoute);
+                    Console.WriteLine($"[LOCAL] next oper ({lastJob.next_oper}) qty_received updated");
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // ── 2. Update SYTELINE jobroute_mst (via raw SQL) ──────────
+            await _sytelineService.UpdateJobRouteMstAsync(
+                dto.JobNumber,
+                dto.OperationNumber,
+                qtyFromSerial,
+                totalHours,
+                dto.loginuser,
+                lastJob.next_oper);   // ← ADD THIS
 
             return Ok(new { success = true, message = "Job completed successfully." });
+
+
+           
         }
         catch (Exception ex)
         {
@@ -2258,11 +2318,82 @@ public class PostController : ControllerBase
             }
 
 
+            // ─────────────────────────────────────────────────────────────
+            // 🔹 UPDATE jobroute_mst on issue job completion
+            // ─────────────────────────────────────────────────────────────
+
+            // Parse qty from serial number suffix (e.g. "FJTST00001-1" → 1)
+            decimal qtyFromSerial = 1; // default
+            if (!string.IsNullOrEmpty(jobDto.SerialNo))
+            {
+                var parts = jobDto.SerialNo.Split('-');
+                if (parts.Length > 1 && decimal.TryParse(parts[^1], out decimal parsedQty))
+                    qtyFromSerial = parsedQty;
+            }
+
+            // ── 1. Update LOCAL jobroute_mst (via EF) ──────────────────
+            var localRoute = await _context.JobRouteMst
+                .FirstOrDefaultAsync(r =>
+                    r.Job == jobDto.JobNumber &&
+                    r.OperNum == jobDto.OperationNumber);
+
+            if (localRoute != null)
+            {
+                localRoute.QtyMoved    = (localRoute.QtyMoved    ?? 0) + qtyFromSerial;
+                localRoute.QtyReceived = (localRoute.QtyReceived ?? 0) + qtyFromSerial;
+                localRoute.QtyComplete = (localRoute.QtyComplete ?? 0) + qtyFromSerial;
+                localRoute.UpdatedBy  = jobDto.loginuser;
+                localRoute.RecordDate = now;
+
+                _context.JobRouteMst.Update(localRoute);
+                Console.WriteLine($"[LOCAL] jobroute_mst updated — Job={jobDto.JobNumber}, Oper={jobDto.OperationNumber}, Qty={qtyFromSerial}");
+            }
+            else
+            {
+                Console.WriteLine($"[LOCAL] jobroute_mst row NOT FOUND — Job={jobDto.JobNumber}, Oper={jobDto.OperationNumber}");
+            }
+
+            // ── Update NEXT operation's qty_received (LOCAL) ────────────
+            if (nextOper.HasValue)
+            {
+                var nextRoute = await _context.JobRouteMst
+                    .FirstOrDefaultAsync(r =>
+                        r.Job == jobDto.JobNumber &&
+                        r.OperNum == nextOper.Value);
+
+                if (nextRoute != null)
+                {
+                    nextRoute.QtyReceived = (nextRoute.QtyReceived ?? 0) + qtyFromSerial;
+                    nextRoute.UpdatedBy   = jobDto.loginuser;
+                    nextRoute.RecordDate  = now;
+
+                    _context.JobRouteMst.Update(nextRoute);
+                    Console.WriteLine($"[LOCAL] next oper ({nextOper}) qty_received updated — Job={jobDto.JobNumber}");
+                }
+                else
+                {
+                    Console.WriteLine($"[LOCAL] next oper ({nextOper}) NOT FOUND in jobroute_mst");
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // ── 2. Update SYTELINE jobroute_mst (via raw SQL) ──────────
+            await _sytelineService.UpdateJobRouteMstAsync(
+                jobDto.JobNumber,
+                jobDto.OperationNumber,
+                qtyFromSerial,
+                0m,              // no hours — issue jobs are instantaneous
+                jobDto.loginuser,
+                nextOper);       // ← ADD THIS
+
             return Ok(new
             {
                 success = true,
                 message = "Issue job processed successfully"
             });
+
+            
         }
         catch (Exception ex)
         {
@@ -3270,7 +3401,78 @@ if (totalHours <= 8m)
             }
 
 
+            // ─────────────────────────────────────────────────────────────
+            // 🔹 UPDATE jobroute_mst on job completion
+            // ─────────────────────────────────────────────────────────────
 
+            // Parse qty from serial number suffix (e.g. "FJTST00001-1" → 1)
+            decimal qtyFromSerial = 1; // default
+            if (!string.IsNullOrEmpty(dto.SerialNo))
+            {
+                var parts = dto.SerialNo.Split('-');
+                if (parts.Length > 1 && decimal.TryParse(parts[^1], out decimal parsedQty))
+                    qtyFromSerial = parsedQty;
+            }
+
+            // ── 1. Update LOCAL jobroute_mst (via EF) ──────────────────
+            var localRoute = await _context.JobRouteMst
+                .FirstOrDefaultAsync(r =>
+                    r.Job == dto.JobNumber &&
+                    r.OperNum == dto.OperationNumber);
+
+            if (localRoute != null)
+            {
+                localRoute.QtyMoved    = (localRoute.QtyMoved    ?? 0) + qtyFromSerial;
+                localRoute.QtyReceived = (localRoute.QtyReceived ?? 0) + qtyFromSerial;
+                localRoute.QtyComplete = (localRoute.QtyComplete ?? 0) + qtyFromSerial;
+                localRoute.RunHrsTLbr  = (localRoute.RunHrsTLbr  ?? 0) + totalHours;
+                localRoute.UpdatedBy   = dto.loginuser;
+                localRoute.RecordDate  = now;
+
+                _context.JobRouteMst.Update(localRoute);
+                Console.WriteLine($"[LOCAL] jobroute_mst updated — Job={dto.JobNumber}, Oper={dto.OperationNumber}, Qty={qtyFromSerial}, AddedHrs={totalHours}");
+            }
+            else
+            {
+                Console.WriteLine($"[LOCAL] jobroute_mst row NOT FOUND — Job={dto.JobNumber}, Oper={dto.OperationNumber}");
+            }
+
+            // ── Update NEXT operation's qty_received (LOCAL) ────────────
+            int? nextOperForRoute = latestJob.next_oper;   // already fetched at top of method
+
+            if (nextOperForRoute.HasValue)
+            {
+                var nextRoute = await _context.JobRouteMst
+                    .FirstOrDefaultAsync(r =>
+                        r.Job == dto.JobNumber &&
+                        r.OperNum == nextOperForRoute.Value);
+
+                if (nextRoute != null)
+                {
+                    nextRoute.QtyReceived = (nextRoute.QtyReceived ?? 0) + qtyFromSerial;
+                    nextRoute.UpdatedBy   = dto.loginuser;
+                    nextRoute.RecordDate  = now;
+
+                    _context.JobRouteMst.Update(nextRoute);
+                    Console.WriteLine($"[LOCAL] next oper ({nextOperForRoute}) qty_received updated — Job={dto.JobNumber}");
+                }
+                else
+                {
+                    Console.WriteLine($"[LOCAL] next oper ({nextOperForRoute}) NOT FOUND in jobroute_mst");
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // ── 2. Update SYTELINE jobroute_mst (via raw SQL) ──────────
+           
+            await _sytelineService.UpdateJobRouteMstAsync(
+                dto.JobNumber,
+                dto.OperationNumber,
+                qtyFromSerial,
+                totalHours,
+                dto.loginuser,
+                latestJob.next_oper);   // ← ADD THIS
 
 
             return Ok(new

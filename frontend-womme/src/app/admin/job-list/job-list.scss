@@ -141,3 +141,64 @@
   height: 26px;
   line-height: 26px;
 }
+
+// Word wrap for all table cells
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
+  white-space: normal !important;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 200px;
+  vertical-align: top;
+  padding: 8px 10px;
+}
+
+// Word wrap for headers too
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th {
+  white-space: normal !important;
+  word-wrap: break-word;
+  vertical-align: middle;
+  padding: 10px;
+}
+
+// Specific column widths
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th:nth-child(1),
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td:nth-child(1) {
+  min-width: 60px;
+  max-width: 60px;   // S.No
+}
+
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th:nth-child(2),
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td:nth-child(2) {
+  min-width: 120px;
+  max-width: 150px;  // Job
+}
+
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th:nth-child(3),
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td:nth-child(3) {
+  min-width: 100px;
+  max-width: 130px;  // Item
+}
+
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th:nth-child(4),
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td:nth-child(4) {
+  min-width: 100px;
+  max-width: 130px;  // WC Code
+}
+
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th:nth-child(5),
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td:nth-child(5) {
+  min-width: 180px;
+  max-width: 220px;  // Employee Name — widest
+}
+
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th:nth-child(6),
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td:nth-child(6) {
+  min-width: 130px;
+  max-width: 160px;  // Last Modified
+}
+
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th:nth-child(7),
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td:nth-child(7) {
+  min-width: 150px;
+  max-width: 200px;  // Last Modified By
+}

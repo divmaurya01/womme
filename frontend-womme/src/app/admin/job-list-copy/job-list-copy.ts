@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit ,ViewChild} from '@angular/core';
 import { Router ,ActivatedRoute} from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { HeaderComponent } from '../header/header';
 import { SidenavComponent } from '../sidenav/sidenav';
 import { JobService } from '../../services/job.service';
@@ -16,21 +16,22 @@ import { finalize } from 'rxjs/operators';
   selector: 'app-job-list-copy',
   templateUrl: './job-list-copy.html',
   styleUrls: ['./job-list-copy.scss'],
-  imports:[CommonModule,FormsModule,HeaderComponent,SidenavComponent,TableModule]
+  imports:[CommonModule,FormsModule,HeaderComponent,SidenavComponent,TableModule, DatePipe]
 })
 export class JobListComponent_copy implements OnInit {
 
   jobs: any[] = [];
   loading = true;
- isSidebarHidden = window.innerWidth <= 1024;
+  isSidebarHidden = window.innerWidth <= 1024;
   isLoading = false;
   syncMessage: string | null = null;
   isError = false;
 
   operations: any[] = []; // JobTranMst transactions
   totalRecords = 0;
-  searchTerm = '';
-    // Timer intervals per row
+  searchTerm = '';  
+  auditMap: { [job: string]: { lastModifiedDate: string, lastModifiedByName: string } | undefined } = {};
+  // Timer intervals per row
   timerIntervals: { [jobKey: string]: any } = {};
   jobTimers: { [jobKey: string]: string } = {};
   @ViewChild('dt') dt!: Table;
@@ -84,31 +85,29 @@ export class JobListComponent_copy implements OnInit {
         });
 
         // 2️⃣ Build ONE ROW PER JOB
-        this.operations = Object.keys(grouped).map(jobKey => {
+        this.operations = Object.keys(grouped).map((jobKey, index) => {
           const rows = grouped[jobKey];
 
           // pick first row for common fields
           const first = rows[0];
 
           return {
-            job: first.job,
-            item: first.item,
-            empName: first.empName,
-            wc: first.wcDescription,
-
-            // combine logs if available
-            logDetails: rows.flatMap(r => r.logDetails || []),
-
-            // for timer key
-            jobKey: first.job
+            sno:               index + 1,
+            job:               first.job,
+            item:              first.item,
+            wcCode:            first.wcCode,
+            empName:           first.empName,
+            lastModifiedDate:  first.lastModifiedDate,   // ← comes directly from API
+            lastModifiedByName: first.lastModifiedByName, // ← comes directly from API
+            logDetails:        rows.flatMap((r: any) => r.logDetails || []),
+            jobKey:            first.job
           };
         });
 
         this.totalRecords = this.operations.length;
         this.isLoading = false;
 
-        this.totalRecords = res.total;
-        this.isLoading = false;
+        
 
         this.operations.forEach(job => {
           const jobKey = this.getJobKey(job);
@@ -121,6 +120,17 @@ export class JobListComponent_copy implements OnInit {
       }
     });
   }
+
+  // In component .ts
+  getAuditDate(job: string): string {
+    return this.auditMap[job]?.lastModifiedDate ?? '-';
+  }
+
+  getAuditBy(job: string): string {
+    return this.auditMap[job]?.lastModifiedByName ?? '-';
+  }
+
+
    getJobKey(job: any): string {
       return job.job;
     }

@@ -51,10 +51,9 @@
             [loading]="isLoading"
             [responsiveLayout]="'scroll'"
             [scrollable]="true"
-            scrollHeight="400px"
-            [resizableColumns]="true"
-            [autoLayout]="true"
-            columnResizeMode="expand"
+            scrollHeight="600px"        
+            [resizableColumns]="false"  
+            [autoLayout]="false"        
             [showCurrentPageReport]="true"
             currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
             [globalFilterFields]="['job','item','wc','empName']"
@@ -63,68 +62,50 @@
 
             <ng-template pTemplate="header">
               <tr>
-                <th pSortableColumn="job" style="background-color:#ECC391;padding:10px;">
-                  Job
-                  <p-sortIcon field="job"></p-sortIcon>
+                <th style="background-color:#ECC391;">S.No</th>
+                <th pSortableColumn="job" style="background-color:#ECC391;">
+                  Job <p-sortIcon field="job"></p-sortIcon>
                 </th>
-
-                <th pSortableColumn="item" style="background-color:#ECC391;padding:10px;">
-                  Item
-                  <p-sortIcon field="item"></p-sortIcon>
+                <th pSortableColumn="item" style="background-color:#ECC391;">
+                  Item <p-sortIcon field="item"></p-sortIcon>
                 </th>
-
-                <th style="background-color:#ECC391;padding:10px;">
-                  Status
+                <th pSortableColumn="wcCode" style="background-color:#ECC391;">
+                  WC Code <p-sortIcon field="wcCode"></p-sortIcon>
                 </th>
-
-                <th pSortableColumn="timer" style="background-color:#ECC391;padding:10px;">
-                  Timer
-                  <p-sortIcon field="timer"></p-sortIcon>
+                <th pSortableColumn="empName" style="background-color:#ECC391;">
+                  Employee Name <p-sortIcon field="empName"></p-sortIcon>
                 </th>
-
-                <th pSortableColumn="wc" style="background-color:#ECC391;padding:10px;">
-                  Work Center
-                  <p-sortIcon field="wc"></p-sortIcon>
-                </th>
+                <th style="background-color:#ECC391;">Last Modified</th>
+                <th style="background-color:#ECC391;">Last Modified By</th>
               </tr>
             </ng-template>
 
-<!--(click)="onJobClick(job.jobNumber)"-->
             <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
-            <tr>
-              <td>
-                <a href="javascript:void(0)"
-                  (click)="onJobClick(job.job)"
-                  class="text-primary text-decoration-underline">
-                  {{ job.job }}
-                </a>
-              </td>
+              <tr>
+                <td>{{ job.sno }}</td>
 
-              <td>{{ job.item }}</td>
+                <td>
+                  <a href="javascript:void(0)"
+                    (click)="onJobClick(job.job)"
+                    class="text-primary text-decoration-underline">
+                    {{ job.job }}
+                  </a>
+                </td>
 
-              <!-- STATUS -->
-              <td>
-                <span 
-                  *ngIf="getJobStatus(job.logDetails) !== '-'"
-                  class="badge"
-                  [ngClass]="{
-                    'bg-success': getJobStatus(job.logDetails) === 'Started',
-                    'bg-warning': getJobStatus(job.logDetails) === 'Paused',
-                    'bg-primary': getJobStatus(job.logDetails) === 'Completed'
-                  }">
-                  {{ getJobStatus(job.logDetails) }}
-                </span>
-                <span *ngIf="getJobStatus(job.logDetails) === '-'">-</span>
-              </td>
+                <td>{{ job.item }}</td>
+                <td>{{ job.wcCode }}</td>
 
-              <!-- TIMER -->
-              <td style="font-family: monospace; font-weight: bold;">
-                {{ jobTimers[getJobKey(job)] || '00:00:00' }}
-              </td>
+                <!-- Employee Name — will wrap long names like "RAJASHEKHAR CHANNABASAPPA, KUMBAPOOR" -->
+                <td style="white-space: normal; word-break: break-word;">
+                  {{ job.empName }}
+                </td>
 
-              <td>{{ job.wc }}</td>
-            </tr>
-          </ng-template>
+                <td>{{ job.lastModifiedDate ? (job.lastModifiedDate | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                <td style="white-space: normal; word-break: break-word;">
+                  {{ job.lastModifiedByName || '-' }}
+                </td>
+              </tr>
+            </ng-template>
 
 
           </p-table>

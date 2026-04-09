@@ -632,6 +632,8 @@ CheckPrevJob(jobData: any): Observable<any> {
       });    
     }
 
+   
+
   startJob(payload: any): Observable<any> {
     const url = `${this.baseUrl}/Post/StartJob`;
     return this.http.post(url, payload, { headers: this.getHeaders() });
@@ -651,7 +653,7 @@ CheckPrevJob(jobData: any): Observable<any> {
   startIssueJob(payload: any): Observable<any> {
     const url = `${this.baseUrl}/Post/startIssueJob`;
     return this.http.post(url, payload, { headers: this.getHeaders() });
-  }
+  } 
 
   startQCJob(payload: any): Observable<any> {
     const url = `${this.baseUrl}/Post/StartSingleQCJob`;

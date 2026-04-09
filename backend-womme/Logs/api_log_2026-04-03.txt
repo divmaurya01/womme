@@ -1,0 +1,7 @@
+﻿[2026-04-03 04:43:27] API: POST /api/Auth/login Status: 500 ERROR: An exception has been raised that is likely due to a transient failure. Consider enabling transient error resiliency by adding 'EnableRetryOnFailure' to the 'UseSqlServer' call.
+[2026-04-03 04:44:35] API: POST /api/Auth/login Status: 200
+[2026-04-03 04:44:43] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-04-03 04:44:43] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-04-03 04:44:43] API: GET /api/Get/GetEmployeeAndMachineStats Status: 200
+[2026-04-03 04:44:43] API: POST /api/Post/GetTransactionOverview Status: 200
+[2026-04-03 04:44:43] API: POST /api/Post/GetTransactionData Status: 200
