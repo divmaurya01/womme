@@ -290,7 +290,6 @@ startApproval(job: any) {
 
 
 saveRemark(job: any) {
-
   if (!job.remark || job.remark.trim() === '') {
     Swal.fire('Warning', 'Please enter remark', 'warning');
     return;
@@ -298,7 +297,8 @@ saveRemark(job: any) {
 
   const payload = {
     trans_num: job.trans_number,
-    Remark: job.remark
+    column: 'remark',
+    remark: job.remark
   };
 
   this.loaderService.show();
@@ -307,22 +307,14 @@ saveRemark(job: any) {
     .pipe(finalize(() => this.loaderService.hide()))
     .subscribe({
       next: (res: any) => {
-        Swal.fire({
-          icon: 'success',
-          title: 'Remark Saved',
-          timer: 1500,
-          showConfirmButton: false
-        });
-
-        // ✅ UI STATE CHANGE
-        job.isRemarkSaved = true;   // hide Save button
+        Swal.fire({ icon: 'success', title: 'Remark Saved', timer: 1500, showConfirmButton: false });
+        job.isRemarkSaved = true;
       },
       error: () => {
         Swal.fire('Error', 'Failed to save remark', 'error');
       }
     });
 }
-
 
 
 verifyJob(job: any) {

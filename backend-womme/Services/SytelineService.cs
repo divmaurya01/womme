@@ -91,7 +91,7 @@ namespace WommeAPI.Services
 
                         cmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
                         cmd.Parameters.AddWithValue("@Status", "1");
-                        cmd.Parameters.AddWithValue("@QCGroup", jobTran.qcgroup);
+                        cmd.Parameters.AddWithValue("@QCGroup", jobTran.qcgroup ?? (object)DBNull.Value);
 
                         cmd.Parameters.AddWithValue("@CreatedBy", jobTran.emp_num);
                         cmd.Parameters.AddWithValue("@UpdatedBy", jobTran.emp_num);

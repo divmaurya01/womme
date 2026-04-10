@@ -3825,7 +3825,8 @@ if (totalHours <= 8m)
             "ongoing_comment",
             "completed_comment",
             "hold_comment",
-            "reject_comment"
+            "reject_comment",
+            "remark" 
         };
 
         if (!allowedColumns.Contains(dto.column))
