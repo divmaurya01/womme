@@ -234,6 +234,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
     this.jobService.GetActiveQCJobs().subscribe({
       next: (res: any) => {
         const allJobs = res?.data ?? [];
+        console.log('Raw API job sample:', allJobs[0]); 
         Object.values(this.jobTimers).forEach(t => clearInterval(t));
         this.jobTimers = {};
 
@@ -373,7 +374,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
         const ud  = JSON.parse(localStorage.getItem('userDetails') || '{}');
         const emp = (ud.employeeCode || '').trim();
         const rid = Number(ud.roleID);
-        if (rid !== 1) jobs = jobs.filter((job: any) => (job.empNum || '').trim() === emp);
+       if (rid !== 1 && rid !== 2) jobs = jobs.filter((job: any) => (job.empNum || '').trim() === emp);
 
         const grouped: { [k: string]: any[] } = jobs.reduce((acc: any, row: any) => {
           const key = `${row.jobNumber}|${row.operationNumber}|${row.serialNo}|${row.qcgroup}`;
@@ -393,7 +394,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  saveQCRemark(job: any) {
+  saveQCRemark(job: any) {    
     if (!job.remark?.trim()) return;
     this.jobService.updateQCRemark({ trans_num: job.trans_num, column: 'ongoing_comment', remark: job.remark }).subscribe({
       next: (res: any) => Swal.fire({ icon: 'success', title: 'Remark Updated', text: res.message, timer: 2000, showConfirmButton: false }),

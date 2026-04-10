@@ -996,7 +996,8 @@ saveForm(payload: any) {
 
 
 updateQCRemark(payload: any) {
-  return this.http.post(`${this.baseUrl}/Post/UpdateQCRemark`, payload);
+  return this.http.post(`${this.baseUrl}/Post/UpdateQCRemark`, payload, 
+    { headers: this.getHeaders() });
 }
 
 GetTransactionOverview(payload: any) {

@@ -282,12 +282,17 @@ public class SchedulerController : ControllerBase
                 int empInserted = 0;
                 foreach (var src in srcEmployees)
                 {
+                    // ✅ Skip if primary key fields are null
+                    if (string.IsNullOrEmpty(src.emp_num) || string.IsNullOrEmpty(src.site_ref))
+                        continue;
+
                     if (existingEmployees.Contains(src.emp_num)) continue;
 
                     _localContext.EmployeeMst.Add(new EmployeeMst
                     {
                         emp_num = src.emp_num,
                         name = src.name,
+                        site_ref = src.site_ref,   // ✅ map it
                         RecordDate = GetSafeSqlDateTime(src.RecordDate)
                     });
                     empInserted++;

@@ -2634,6 +2634,7 @@ public IActionResult GetActiveQCJobs()
         )
         .Select(x => new
         {
+            x.Latest.trans_num,
             x.Latest!.job,
             x.Latest.SerialNo,
             x.Latest.oper_num,

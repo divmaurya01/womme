@@ -174,7 +174,7 @@ export class ProjectDashboardComponent implements OnInit, AfterViewInit, OnDestr
     const ud = JSON.parse(localStorage.getItem('userDetails') || '{}');
     const emp = (ud.employeeCode || '').trim();
     const rid = Number(ud.roleID);
-    if (rid !== 1) {
+    if (rid !== 1 && rid !== 2) {
       return jobs.filter((j: any) => (j.empNum || '').trim() === emp);
     }
     return jobs;

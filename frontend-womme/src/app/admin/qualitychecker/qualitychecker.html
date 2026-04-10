@@ -139,8 +139,14 @@
                       <input type="text" [value]="job.ncr || ''" disabled class="form-control form-control-sm" />
                     </td>
                     <td>
-                      <input type="text" [(ngModel)]="job.remark" placeholder="Enter remark"
-                        (keyup.enter)="saveQCRemark(job)" class="form-control form-control-sm" />
+                      <div class="d-flex align-items-center gap-1">
+                        <input type="text" [(ngModel)]="job.remark" placeholder="Enter remark"
+                          class="form-control form-control-sm" />
+                        <button class="btn btn-success btn-sm p-1" style="min-width:28px; height:28px;cursor: pointer;"
+                          (click)="saveQCRemark(job)" title="Save Remark">
+                          <i class="pi pi-check" style="font-size:12px;"></i>
+                        </button>
+                      </div>
                     </td>
                     <td>
                       <i class="pi pi-file-pdf" style="cursor:pointer;" (click)="viewReport(job)" title="Report"></i>
@@ -193,8 +199,14 @@
                     <td>1</td>
                     <td>{{ formatTime(job.total_a_hrs) }}</td>
                     <td>
-                      <input type="text" [(ngModel)]="job.remark" placeholder="Enter remark"
-                        (keyup.enter)="savecompleteRemark(job)" class="form-control form-control-sm" />
+                      <div class="d-flex align-items-center gap-1">
+                        <input type="text" [(ngModel)]="job.remark" placeholder="Enter remark"
+                          class="form-control form-control-sm" />
+                        <button class="btn btn-success btn-sm p-1" style="min-width:28px; height:28px;cursor: pointer;"
+                          (click)="savecompleteRemark(job)" title="Save Remark">
+                          <i class="pi pi-check" style="font-size:12px;"></i>
+                        </button>
+                      </div>
                     </td>
                     <td>
                       <i class="pi pi-file-pdf" style="cursor:pointer; color:#1976d2;"

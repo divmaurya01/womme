@@ -232,8 +232,7 @@ namespace WommeAPI.Services
                 string updateSql = @"
                     UPDATE jobroute_mst
                     SET
-                        qty_moved      = ISNULL(qty_moved,    0) + @qty,
-                        qty_received   = ISNULL(qty_received, 0) + @qty,
+                        qty_moved      = ISNULL(qty_moved,    0) + @qty,                        
                         qty_complete   = ISNULL(qty_complete, 0) + @qty,
                         run_hrs_t_lbr  = @newRunHrs,
                         UpdatedBy      = @updatedBy,

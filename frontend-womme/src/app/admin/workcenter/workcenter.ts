@@ -136,7 +136,7 @@ export class workcenter implements OnInit {
         if (res && res.data) {
           this.workCenters = res.data.map((wc: any, index: number) => {
             const womFormatted = wc.womm_id
-              ? `WME00${wc.womm_id.toString().padStart(3, '0')}`
+              ? `WME00${wc.womm_id.toString()}`
               : '';
 
             return {
@@ -183,7 +183,7 @@ onGlobalSearch(): void {
 
 formatWomMid(womm_id: number | null): string {
   if (!womm_id) return '-';
-  return `WME00${womm_id.toString().padStart(3, '0')}`;
+  return `WME00${womm_id.toString()}`;
 }
 
 
