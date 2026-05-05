@@ -83,8 +83,29 @@
                 <td>{{ job.serialNumber }}</td>
                 <td>{{ formatTimer(job.timerHours || job.total_hours || 0) }}</td>
                 <td>{{ job.operationNumber }}</td>
-                <td>{{ job.employee_name }}</td>
-                <td>{{ job.machine_name }}</td>
+                <!-- Employee cell — show all employees stacked -->
+                <td>
+                  <ng-container *ngIf="job.allEmployees?.length > 1; else singleEmp">
+                    <div *ngFor="let emp of job.allEmployees" style="line-height: 1.6;">
+                      {{ emp.name }}
+                    </div>
+                  </ng-container>
+                  <ng-template #singleEmp>
+                    {{ job.employee_name }}
+                  </ng-template>
+                </td>
+
+                <!-- Machine cell — show all machines stacked -->
+                <td>
+                  <ng-container *ngIf="job.allMachines?.length > 1; else singleMachine">
+                    <div *ngFor="let m of job.allMachines" style="line-height: 1.6;">
+                      {{ m.name }}
+                    </div>
+                  </ng-container>
+                  <ng-template #singleMachine>
+                    {{ job.machine_name }}
+                  </ng-template>
+                </td>
                 <td>{{ job.workCenter }}</td>
                 <td class="text-center">
                   <!-- Reopen Button -->

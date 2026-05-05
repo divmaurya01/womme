@@ -28,7 +28,8 @@ export class DashboardOverviewComponent {
     pausedJobs: 0,
     normalCompletedJobs: 0,
     extendedJobs: 0,
-    ongoingCriticalJobs: 0
+    ongoingCriticalJobs: 0,
+    nextOperationJobs: 0 
   };
 
  qc = {
@@ -38,7 +39,8 @@ export class DashboardOverviewComponent {
   extendedQCJobs: 0,
   ongoingCriticalQCJobs: 0,
   holdQCJobs: 0,
-  rejectedQCJobs: 0
+  rejectedQCJobs: 0,
+  nextOperationQCJobs: 0
 };
 
   verify = {
@@ -60,11 +62,12 @@ export class DashboardOverviewComponent {
     machineUtilization: "0%"
   };
 
-  jobData: any[] = [];
+  allJobData: any[] = [];     // full dataset loaded once
+  jobData:    any[] = [];     // current page slice
   currentPage = 1;
-  pageSize = 10;
+  pageSize    = 10;
   totalRecords = 0;
-  totalPages = 0;
+  totalPages   = 0;
   hoveredRow: number = -1;
   roleId: number = 0;
    isSidebarHidden = window.innerWidth <= 1024;
@@ -154,41 +157,49 @@ export class DashboardOverviewComponent {
       IncludeTransaction: includeTransaction,
       IncludeQC: includeQC,
       IncludeVerify: includeVerify,  
-      PageNumber: this.currentPage,
-      PageSize: this.pageSize
+      PageNumber: 1,
+      PageSize: 99999   // ← load everything once
       
     };
 
     this.jobService.GetTransactionData(payload).subscribe({
       next: (res: any) => {
         if (res.success) {
-          this.jobData = res.data || [];
-          this.totalRecords = res.totalRecords || 0;
-          this.totalPages = Math.ceil(this.totalRecords / this.pageSize);
+          this.allJobData  = res.data || [];
+          this.totalRecords = this.allJobData.length;
+          this.totalPages   = Math.ceil(this.totalRecords / this.pageSize);
+          this.currentPage  = 1;
+          this.slicePage();   // render first page instantly
         }
       },
       error: (err) => console.error('Error loading job data:', err)
     });
   }
 
+  // ── Instant client-side slice — no API call ───────────────────────────
+  slicePage() {
+    const start = (this.currentPage - 1) * this.pageSize;
+    this.jobData = this.allJobData.slice(start, start + this.pageSize);
+  }
+
   nextPage() {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
-      this.loadTransactionData();
+      this.slicePage();   // ← instant, no API
     }
   }
 
   prevPage() {
     if (this.currentPage > 1) {
       this.currentPage--;
-      this.loadTransactionData();
+      this.slicePage();   // ← instant, no API
     }
   }
 
   goToPage(page: number) {
     if (page < 1 || page > this.totalPages) return;
     this.currentPage = page;
-    this.loadTransactionData();
+    this.slicePage();
   }
 
 getIdlePercentageEmployee(): number {
@@ -215,22 +226,15 @@ getIdlePercentageMachine(): number {
 
 getStatusBadgeClass(status: string): string {
   switch (status) {
-    case 'Completed':
-      return 'badge badge-success';
-    case 'Paused':
-      return 'badge badge-warning';
-    case 'Extended':
-      return 'badge badge-danger';
-    case 'Ongoing Critical':
-      return 'badge badge-dark';
-    case 'Running':
-      return 'badge badge-primary';
-    case 'Hold':
-      return 'badge badge-info';
-    case 'Rejected':
-      return 'badge badge-danger';
-    default:
-      return 'badge badge-secondary';
+    case 'Running':          return 'badge badge-success';
+    case 'Paused':           return 'badge badge-warning';
+    case 'Extended':         return 'badge badge-danger';
+    case 'Ongoing Critical': return 'badge badge-dark';
+    case 'Completed':        return 'badge badge-success';
+    case 'Hold':             return 'badge badge-info';
+    case 'Rejected':         return 'badge badge-danger';
+    case 'Next Operation':   return 'badge badge-primary';  // ← add
+    default:                 return 'badge badge-secondary';
   }
 }
 

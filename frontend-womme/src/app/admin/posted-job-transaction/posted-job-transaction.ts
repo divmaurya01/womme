@@ -147,24 +147,37 @@ highlightedRowKey: string | null = null;
           }, {});
 
           // Build final array
-          this.transactions = Object.values(grouped).map((group: any[]) => { 
-           
+          this.transactions = Object.values(grouped).map((group: any[]) => {
             group.sort((a, b) => new Date(a.trans_date).getTime() - new Date(b.trans_date).getTime());
 
-            // Prefer the completed row (status = 3) if it exists, else use the last one
             const completed = group.find(g => g.status === '3');
             const lastRow = completed || group[group.length - 1];
             const totalHours = group
-            .filter(g => g.status === '3')      // all completed/OT rows
-            .reduce((sum, g) => sum + (g.total_hours || 0), 0);
+              .filter(g => g.status === '3')
+              .reduce((sum, g) => sum + (g.total_hours || 0), 0);
+
+            // ✅ Collect all unique employees from logs
+            const allEmployees = [...new Map(
+              group
+                .filter(g => g.employee_num && g.employee_name)
+                .map(g => [g.employee_num, g.employee_name])
+            ).entries()].map(([num, name]) => ({ num, name }));
+
+            // ✅ Collect all unique machines from logs
+            const allMachines = [...new Map(
+              group
+                .filter(g => g.machine_num && g.machine_name)
+                .map(g => [g.machine_num, g.machine_name])
+            ).entries()].map(([num, name]) => ({ num, name }));
 
             return {
               ...lastRow,
-              trans_num: lastRow.trans_num,
-              timerHours: totalHours, // Already summed when status = 3
-              allLogs: group
+              trans_num:    lastRow.trans_num,
+              timerHours:   totalHours,
+              allLogs:      group,
+              allEmployees,   // ← new
+              allMachines     // ← new
             };
-
           });
 
           

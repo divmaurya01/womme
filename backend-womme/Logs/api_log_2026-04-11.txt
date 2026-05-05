@@ -1,0 +1,12 @@
+﻿[2026-04-11 06:14:02] API: POST /api/Auth/login Status: 200
+[2026-04-11 06:14:13] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-04-11 06:14:14] API: GET /api/Get/RolePageMappings?roleID=1 Status: 500
+[2026-04-11 06:14:14] API: GET /api/Get/GetEmployeeAndMachineStats Status: 500
+[2026-04-11 06:14:14] API: POST /api/Post/GetTransactionOverview Status: 200
+[2026-04-11 06:14:44] API: POST /api/Auth/login Status: 500 ERROR: A connection was successfully established with the server, but then an error occurred during the pre-login handshake. (provider: SSL Provider, error: 0 - The wait operation timed out.)
+[2026-04-11 06:14:14] API: POST /api/Post/GetTransactionData Status: 200
+[2026-04-11 06:15:55] API: POST /api/Auth/login Status: 200
+[2026-04-11 06:15:59] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-04-11 06:16:01] API: GET /api/Get/GetEmployeeAndMachineStats Status: 500
+[2026-04-11 06:16:01] API: GET /api/Get/RolePageMappings?roleID=1 Status: 500
+[2026-04-11 06:16:48] API: POST /api/Auth/login Status: 500 ERROR: An exception has been raised that is likely due to a transient failure. Consider enabling transient error resiliency by adding 'EnableRetryOnFailure' to the 'UseSqlServer' call.

@@ -3941,56 +3941,34 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
 }
 
 
-    [HttpPost("GetTransactionOverview")]
-    public async Task<IActionResult> GetTransactionOverview(
-        [FromBody] TransactionOverviewRequest request)
+   [HttpPost("GetTransactionOverview")]
+    public async Task<IActionResult> GetTransactionOverview([FromBody] TransactionOverviewRequest request)
     {
         try
         {
             var now = DateTime.UtcNow;
 
-            bool todayOnly = request.todayOnly == 1;
+            bool todayOnly          = request.todayOnly == 1;
             bool includeTransaction = request.includeTransaction == 1;
-            bool includeQC = request.includeQC == 1;
-            bool includeVerify = request.IncludeVerify == 1;
+            bool includeQC          = request.includeQC == 1;
+            bool includeVerify      = request.IncludeVerify == 1;
 
+            // ── Single DB hit ─────────────────────────────────────────────
             var query = _context.JobTranMst.AsQueryable();
-
-            // ================================
-            // TODAY FILTER (OPTIONAL)
-            // ================================
             if (todayOnly)
             {
                 var today = now.Date;
-                query = query.Where(j =>
-                    j.trans_date.HasValue &&
-                    j.trans_date.Value.Date == today);
+                query = query.Where(j => j.trans_date.HasValue && j.trans_date.Value.Date == today);
             }
-
-            // ================================
-            // LOAD ALL ROWS (needed for implicit completion check)
-            // ================================
             var allRows = await query.ToListAsync();
 
-            // ================================
-            // GET LATEST TRANSACTION PER JOB
-            // ================================
-            List<JobTranMst> GetLatestJobs(Func<JobTranMst, bool> filter)
-            {
-                return allRows
+            // ── Latest job per group ──────────────────────────────────────
+            List<JobTranMst> GetLatestJobs(Func<JobTranMst, bool> filter) =>
+                allRows
                     .Where(filter)
-                    .GroupBy(j => new
-                    {
-                        j.job,
-                        j.SerialNo,
-                        j.wc,
-                        j.oper_num
-                    })
-                    .Select(g => g
-                        .OrderByDescending(x => x.trans_num)
-                        .First())
+                    .GroupBy(j => new { j.job, j.SerialNo, j.wc, j.oper_num })
+                    .Select(g => g.OrderByDescending(x => x.trans_num).First())
                     .ToList();
-            }
 
             var normalJobs = includeTransaction
                 ? GetLatestJobs(j => j.trans_type != "M" && j.wc != "VERIFY")
@@ -4004,25 +3982,24 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                 ? GetLatestJobs(j => j.wc == "VERIFY")
                 : new List<JobTranMst>();
 
-            // ================================
-            // HELPER: IMPLICIT COMPLETION
-            // ================================
-            bool IsImplicitlyCompleted(JobTranMst job)
-            {
-                return allRows.Any(x =>
-                    x.job == job.job &&
-                    x.SerialNo == job.SerialNo &&
-                    x.oper_num > job.oper_num
-                );
-            }
+            // ── Implicit completion — O(1) via HashSet ────────────────────
+            var implicitlyCompletedKeys = allRows
+                .GroupBy(x => new { x.job, x.SerialNo })
+                .SelectMany(g =>
+                {
+                    var ops = g.Select(x => x.oper_num).ToHashSet();
+                    return g
+                        .Where(x => ops.Any(o => o > x.oper_num))
+                        .Select(x => $"{x.job}|{x.SerialNo}|{x.wc}|{x.oper_num}");
+                })
+                .ToHashSet();
 
-            // ================================
-            // COMMON CALCULATIONS
-            // ================================
+            bool IsImplicitlyCompleted(JobTranMst j) =>
+                implicitlyCompletedKeys.Contains($"{j.job}|{j.SerialNo}|{j.wc}|{j.oper_num}");
+
+            // ── Standard counters ─────────────────────────────────────────
             int CountRunning(List<JobTranMst> list) =>
-                list.Count(j =>
-                    j.status == "1" &&
-                    !IsImplicitlyCompleted(j));
+                list.Count(j => j.status == "1" && !IsImplicitlyCompleted(j));
 
             int CountPaused(List<JobTranMst> list) =>
                 list.Count(j => j.status == "2");
@@ -4030,8 +4007,7 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
             int CountExtended(List<JobTranMst> list) =>
                 list.Count(j =>
                     (j.status == "3" || IsImplicitlyCompleted(j)) &&
-                    j.a_hrs.HasValue &&
-                    j.a_hrs.Value > 8);
+                    j.a_hrs.HasValue && j.a_hrs.Value > 8);
 
             int CountNormalCompleted(List<JobTranMst> list) =>
                 list.Count(j =>
@@ -4045,57 +4021,133 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                     j.start_time.HasValue &&
                     (now - j.start_time.Value).TotalHours > 8);
 
-            int CountHold(List<JobTranMst> list) =>
-                list.Count(j => j.status == "4");
+            int CountHold(List<JobTranMst> list)  => list.Count(j => j.status == "4");
+            int CountReject(List<JobTranMst> list) => list.Count(j => j.status == "5");
 
-            int CountReject(List<JobTranMst> list) =>
-                list.Count(j => j.status == "5");
+            // ── Next Operation setup ──────────────────────────────────────
 
-            // ================================
-            // BUILD OVERVIEWS
-            // ================================
+            // All job+serial pairs in dataset
+            var allJobSerials = allRows
+                .Where(j => j.SerialNo != null)
+                .Select(j => new { j.job, j.SerialNo })
+                .Distinct()
+                .ToList();
+
+            // Max started oper_num per job+serial
+            var maxStartedOper = allRows
+                .Where(j => j.SerialNo != null && j.oper_num != null)
+                .GroupBy(x => new { x.job, x.SerialNo })
+                .ToDictionary(
+                    g => $"{g.Key.job}|{g.Key.SerialNo}",
+                    g => g.Max(x => x.oper_num)
+                );
+
+            // Load JobRouteMst for relevant jobs
+            var jobNumbers = allJobSerials.Select(x => x.job).Distinct().ToList();
+
+            var routeByJob = (await _context.JobRouteMst
+                .Where(r => jobNumbers.Contains(r.Job))
+                .OrderBy(r => r.Job)
+                .ThenBy(r => r.OperNum)
+                .ToListAsync())
+                .GroupBy(r => r.Job)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderBy(r => r.OperNum)
+                        .Select(r => new { r.OperNum, r.Wc })
+                        .ToList()
+                );
+
+            // Load QC WC codes for type classification
+            var qcWcSet = (await _context.WcMst
+                .Where(w => w.dept == "QA/ QC")
+                .Select(w => w.wc)
+                .ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Build next op info per job+serial
+            var nextOpInfos = allJobSerials
+                .Select(js =>
+                {
+                    var key     = $"{js.job}|{js.SerialNo}";
+                    var maxOper = maxStartedOper.ContainsKey(key)
+                        ? maxStartedOper[key]
+                        : (decimal?)null;
+
+                    if (maxOper == null) return null;
+                    if (!routeByJob.ContainsKey(js.job)) return null;
+
+                    var nextOp = routeByJob[js.job].FirstOrDefault(r => r.OperNum > maxOper);
+                    if (nextOp == null) return null;
+
+                    bool isQcWc = nextOp.Wc != null && qcWcSet.Contains(nextOp.Wc);
+
+                    return new
+                    {
+                        js.job,
+                        js.SerialNo,
+                        nextOper = nextOp.OperNum,
+                        nextWc   = nextOp.Wc,
+                        isQcWc
+                    };
+                })
+                .Where(x => x != null)
+                .ToList();
+
+            // CountNextOperation — split by QC vs Transaction
+            // forQC=true  → count next ops where next WC is a QC dept WC
+            // forQC=false → count next ops where next WC is NOT a QC dept WC
+            int CountNextOperation(List<JobTranMst> list, bool forQC)
+            {
+                var listJobSerials = list
+                    .Select(j => $"{j.job}|{j.SerialNo}")
+                    .ToHashSet();
+
+                return nextOpInfos.Count(n =>
+                    listJobSerials.Contains($"{n!.job}|{n.SerialNo}") &&
+                    (forQC ? n.isQcWc : !n.isQcWc)
+                );
+            }
+
+            // ── Build overviews ───────────────────────────────────────────
             var transactionOverview = includeTransaction ? new
             {
-                RunningJobs = CountRunning(normalJobs),
-                PausedJobs = CountPaused(normalJobs),
-                ExtendedJobs = CountExtended(normalJobs),
+                RunningJobs         = CountRunning(normalJobs),
+                PausedJobs          = CountPaused(normalJobs),
+                ExtendedJobs        = CountExtended(normalJobs),
                 NormalCompletedJobs = CountNormalCompleted(normalJobs),
-                OngoingCriticalJobs = CountOngoingCritical(normalJobs)
-            } : null;
+                OngoingCriticalJobs = CountOngoingCritical(normalJobs),
+                NextOperationJobs   = CountNextOperation(normalJobs, forQC: false)
+            } : (object?)null;
 
             var qcOverview = includeQC ? new
             {
-                RunningQCJobs = CountRunning(qcJobs),
-                PausedQCJobs = CountPaused(qcJobs),
-                ExtendedQCJobs = CountExtended(qcJobs),
+                RunningQCJobs         = CountRunning(qcJobs),
+                PausedQCJobs          = CountPaused(qcJobs),
+                ExtendedQCJobs        = CountExtended(qcJobs),
                 NormalCompletedQCJobs = CountNormalCompleted(qcJobs),
                 OngoingCriticalQCJobs = CountOngoingCritical(qcJobs),
-                HoldQCJobs = CountHold(qcJobs),
-                RejectedQCJobs = CountReject(qcJobs)
-            } : null;
+                HoldQCJobs            = CountHold(qcJobs),
+                RejectedQCJobs        = CountReject(qcJobs),
+                NextOperationQCJobs   = CountNextOperation(qcJobs, forQC: true)
+            } : (object?)null;
 
             var verifyOverview = includeVerify ? new
             {
-                RunningVerifyJobs = CountRunning(verifyJobs),
-                PausedVerifyJobs = CountPaused(verifyJobs),
-                ExtendedVerifyJobs = CountExtended(verifyJobs),
+                RunningVerifyJobs         = CountRunning(verifyJobs),
+                PausedVerifyJobs          = CountPaused(verifyJobs),
+                ExtendedVerifyJobs        = CountExtended(verifyJobs),
                 NormalCompletedVerifyJobs = CountNormalCompleted(verifyJobs),
                 OngoingCriticalVerifyJobs = CountOngoingCritical(verifyJobs)
-            } : null;
+            } : (object?)null;
 
-            // ================================
-            // RESPONSE
-            // ================================
             return Ok(new
             {
                 success = true,
-                todayOnly,
-                includeTransaction,
-                includeQC,
-                includeVerify,
+                todayOnly, includeTransaction, includeQC, includeVerify,
                 TransactionOverview = transactionOverview,
-                QCOverview = qcOverview,
-                VerifyOverview = verifyOverview
+                QCOverview          = qcOverview,
+                VerifyOverview      = verifyOverview
             });
         }
         catch (Exception ex)
@@ -4104,13 +4156,10 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
             {
                 success = false,
                 message = "Error while fetching transaction overview",
-                error = ex.Message
+                error   = ex.Message
             });
         }
     }
-
-
-
 
 
     [HttpPost("GetTransactionData")]
@@ -4119,75 +4168,123 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
         try
         {
             var today = DateTime.UtcNow.Date;
-            bool todayOnly = filter.TodayOnly == 1;
+
+            bool todayOnly          = filter.TodayOnly == 1;
             bool includeTransaction = filter.IncludeTransaction == 1;
-            bool includeQC = filter.IncludeQC == 1;
-            bool includeVerify = filter.IncludeVerify == 1;
+            bool includeQC          = filter.IncludeQC == 1;
+            bool includeVerify      = filter.IncludeVerify == 1;
 
             int pageNumber = filter.PageNumber <= 0 ? 1 : filter.PageNumber;
-            int pageSize = filter.PageSize <= 0 ? 50 : filter.PageSize;
+            int pageSize   = filter.PageSize   <= 0 ? 50 : filter.PageSize;
 
-            var allTransQuery = _context.JobTranMst.AsQueryable();
-
-            if (todayOnly)
-                allTransQuery = allTransQuery.Where(j => j.trans_date.HasValue && j.trans_date.Value.Date == today);
+            // ── Single DB hit ─────────────────────────────────────────────
+            var allRows = await _context.JobTranMst
+                .Where(j => !todayOnly || (j.trans_date.HasValue && j.trans_date.Value.Date == today))
+                .ToListAsync();
 
             List<JobTranMst> latestNormal = new();
-            List<JobTranMst> latestQC = new();
+            List<JobTranMst> latestQC     = new();
             List<JobTranMst> latestVerify = new();
 
-            // Fetch latest Transaction Jobs safely (in-memory grouping)
             if (includeTransaction)
             {
-                var normalData = await allTransQuery
+                latestNormal = allRows
                     .Where(j => j.trans_type != "M" && j.wc != "VERIFY")
-
-                    .ToListAsync();
-
-                latestNormal = normalData
                     .GroupBy(j => new { j.job, j.SerialNo, j.wc, j.oper_num })
-                    .Select(g => g.OrderByDescending(x => x.status) // 3 > 2 > 1
-.ThenByDescending(x => x.trans_date)
-.First())
+                    .Select(g => g.OrderByDescending(x => x.trans_num).First())
                     .ToList();
             }
 
             if (includeQC)
             {
-                var qcData = await allTransQuery
+                latestQC = allRows
                     .Where(j => j.trans_type == "M")
-                    .ToListAsync();
-
-                latestQC = qcData
                     .GroupBy(j => new { j.job, j.SerialNo, j.wc, j.oper_num })
-                    .Select(g => g.OrderByDescending(x => x.status) // 3 > 2 > 1
-.ThenByDescending(x => x.trans_date)
-.First())
+                    .Select(g => g.OrderByDescending(x => x.trans_num).First())
                     .ToList();
             }
 
-
-
             if (includeVerify)
             {
-                var verifyQuery = allTransQuery.Where(j => j.wc == "VERIFY");
-
-                if (todayOnly)
-                {
-                    verifyQuery = verifyQuery.Where(j =>
-                        j.trans_date.HasValue &&
-                        j.trans_date.Value.Date == today);
-                }
-
-                latestVerify = await verifyQuery
+                latestVerify = allRows
+                    .Where(j => j.wc == "VERIFY")
                     .GroupBy(j => j.job)
-                    .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault()!)
-                    .ToListAsync();
+                    .Select(g => g.OrderByDescending(x => x.trans_date).First())
+                    .ToList();
             }
-            // 🔹 Fetch Employee Name & WOMM ID
-            var empNumbers = latestNormal
-                .Concat(latestQC)
-                .Concat(latestVerify)
+
+            // ── Next Operation setup ──────────────────────────────────────
+
+            // All job+serial pairs
+            var allJobSerials = allRows
+                .Where(j => j.SerialNo != null)
+                .Select(j => new { j.job, j.SerialNo })
+                .Distinct()
+                .ToList();
+
+            // Max started oper_num per job+serial
+            var maxStartedOper = allRows
+                .Where(j => j.SerialNo != null && j.oper_num != null)
+                .GroupBy(x => new { x.job, x.SerialNo })
+                .ToDictionary(
+                    g => $"{g.Key.job}|{g.Key.SerialNo}",
+                    g => g.Max(x => x.oper_num)
+                );
+
+            // Load JobRouteMst for relevant jobs
+            var jobNumbers = allJobSerials.Select(x => x.job).Distinct().ToList();
+
+            var routeByJob = (await _context.JobRouteMst
+                .Where(r => jobNumbers.Contains(r.Job))
+                .OrderBy(r => r.Job)
+                .ThenBy(r => r.OperNum)
+                .ToListAsync())
+                .GroupBy(r => r.Job)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderBy(r => r.OperNum)
+                        .Select(r => new { r.OperNum, r.Wc })
+                        .ToList()
+                );
+
+            // Load QC WC codes for type classification
+            var qcWcSet = (await _context.WcMst
+                .Where(w => w.dept == "QA/ QC")
+                .Select(w => w.wc)
+                .ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Build one next op row per job+serial
+            var nextOpRows = allJobSerials
+                .Select(js =>
+                {
+                    var key     = $"{js.job}|{js.SerialNo}";
+                    var maxOper = maxStartedOper.ContainsKey(key)
+                        ? maxStartedOper[key]
+                        : (decimal?)null;
+
+                    if (maxOper == null) return null;
+                    if (!routeByJob.ContainsKey(js.job)) return null;
+
+                    var nextOp = routeByJob[js.job].FirstOrDefault(r => r.OperNum > maxOper);
+                    if (nextOp == null) return null;
+
+                    bool isQcWc = nextOp.Wc != null && qcWcSet.Contains(nextOp.Wc);
+
+                    return new
+                    {
+                        js.job,
+                        js.SerialNo,
+                        nextOper = nextOp.OperNum,
+                        nextWc   = nextOp.Wc,
+                        isQcWc
+                    };
+                })
+                .Where(x => x != null)
+                .ToList();
+
+            // ── Employee lookup ───────────────────────────────────────────
+            var empNumbers = latestNormal.Concat(latestQC).Concat(latestVerify)
                 .Select(x => x.emp_num)
                 .Where(x => !string.IsNullOrEmpty(x))
                 .Distinct()
@@ -4197,75 +4294,92 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                 .Where(e => empNumbers.Contains(e.emp_num))
                 .ToDictionaryAsync(e => e.emp_num);
 
-
-            // Merge both and format
-            var combined = latestNormal
-                 .Concat(latestQC)
-                 .Concat(latestVerify)
-                 .Select(j => new
-                 {
-                     Job = j.job,
-                     SerialNo = j.SerialNo,
-                     WC = j.wc,
-                     Operation = j.oper_num,
-                     EmployeeCode = j.emp_num,
-                     EmployeeName = empLookup.ContainsKey(j.emp_num ?? "")
-                     ? empLookup[j.emp_num!].name
-                    : null,
-
-                     WommId = empLookup.ContainsKey(j.emp_num ?? "")
-                    ? empLookup[j.emp_num!].womm_id
-                     : null,
-
-                     Machine = j.machine_id,
-                     Time = j.trans_date,
-                     Progress = j.status switch
-                     {
-                         "1" => "Running",
+            // ── Format existing transactions ──────────────────────────────
+            var existingRows = latestNormal.Concat(latestQC).Concat(latestVerify)
+                .Select(j =>
+                {
+                    string progress = j.status switch
+                    {
+                        "1" => "Running",
                         "2" => "Paused",
                         "3" => "Completed",
                         "4" => "Hold",
                         "5" => "Rejected",
-                         _ => "Unknown"
-                     },
-                     Type = j.wc == "VERIFY"
-                         ? "Verify"
-                         : j.trans_type == "M"
-                             ? "QC"
-                             : "Transaction",
-                     QcGroup = j.qcgroup
-                 })
-                 .OrderByDescending(j => j.Time)
-                 .ToList();
+                        _   => "Unknown"
+                    };
 
-            var totalRecords = combined.Count;
+                    string type = j.wc == "VERIFY"    ? "Verify"
+                                : j.trans_type == "M" ? "QC"
+                                : "Transaction";
 
-            // Apply Pagination
-            var pagedData = combined
+                    bool hasEmp = empLookup.ContainsKey(j.emp_num ?? "");
+
+                    return new
+                    {
+                        Job          = j.job,
+                        SerialNo     = j.SerialNo,
+                        WC           = j.wc,
+                        Operation    = j.oper_num,
+                        EmployeeCode = j.emp_num,
+                        EmployeeName = hasEmp ? empLookup[j.emp_num!].name    : null,
+                        WommId       = hasEmp ? empLookup[j.emp_num!].womm_id : (object?)null,
+                        Machine      = j.machine_id,
+                        Time         = j.trans_date,
+                        Progress     = progress,
+                        Type         = type,
+                        QcGroup      = j.qcgroup
+                    };
+                })
+                .OrderByDescending(j => j.Time)
+                .ToList();
+
+            // ── Format Next Operation rows ────────────────────────────────
+            var nextOpFormatted = nextOpRows
+                .Select(n => new
+                {
+                    Job          = n!.job,
+                    SerialNo     = n.SerialNo,
+                    WC           = n.nextWc,                                    // next op WC from JobRouteMst
+                    Operation    = n.nextOper,                                  // next op number
+                    EmployeeCode = (string?)null,
+                    EmployeeName = (string?)null,
+                    WommId       = (object?)null,
+                    Machine      = (string?)null,
+                    Time         = (DateTime?)null,
+                    Progress     = "Next Operation",
+                    Type         = n.isQcWc ? "QC" : "Transaction",            // correct type
+                    QcGroup      = (string?)null
+                })
+                .ToList();
+
+            // ── Merge: Next Operation rows first, then existing by time ───
+            var finalList = nextOpFormatted
+                .Cast<object>()
+                .Concat(existingRows.Cast<object>())
+                .ToList();
+
+            var totalRecords = finalList.Count;
+            var pagedData    = finalList
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
 
             return Ok(new
             {
-                success = true,
-                todayOnly,
-                includeTransaction,
-                includeQC,
-                totalRecords,
-                pageNumber,
-                pageSize,
-                totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize),
-                data = pagedData
+                success        = true,
+                todayOnly, includeTransaction, includeQC, includeVerify,
+                totalRecords, pageNumber, pageSize,
+                totalPages     = (int)Math.Ceiling(totalRecords / (double)pageSize),
+                data           = pagedData
             });
         }
         catch (Exception ex)
         {
             return StatusCode(500, new
             {
-                success = false,
-                message = "Error fetching transaction data.",
-                error = ex.Message,
+                success    = false,
+                message    = "Error fetching transaction data.",
+                error      = ex.Message,
                 innerError = ex.InnerException?.Message
             });
         }

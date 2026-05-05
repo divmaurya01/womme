@@ -24,7 +24,7 @@
           <div class="card p-1 mt-3 shadow-sm">
             <div class="card-body p-1">
               <p-table [value]="transactions" [lazy]="true" [paginator]="true" [rows]="5000"
-                [totalRecords]="totalRecords" (onLazyLoad)="loadJobs($event)" [loading]="isLoading"
+                [totalRecords]="totalRecords" (onLazyLoad)="loadJobs($event)" [loading]="isLoadingNewJobs"
                 [responsiveLayout]="'scroll'" [scrollable]="true" scrollHeight="400px"
                 [resizableColumns]="true" [autoLayout]="true" columnResizeMode="expand"
                 [showCurrentPageReport]="true"
@@ -82,7 +82,7 @@
             <div class="card-body p-1">
               <p-table [value]="ongoingJobs" [paginator]="true" [rows]="5000"
                 [totalRecords]="ongoingJobs.length" [responsiveLayout]="'scroll'"
-                [scrollable]="true" scrollHeight="400px" [resizableColumns]="true"
+                [scrollable]="true" scrollHeight="400px" [resizableColumns]="true" [loading]="isLoadingOngoing"
                 [autoLayout]="true" columnResizeMode="expand" [showCurrentPageReport]="true"
                 currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
                 dataKey="uniqueRowId">
@@ -165,7 +165,7 @@
           <div class="card p-1 mt-3 shadow-sm">
             <div class="card-body p-1">
               <p-table [value]="completedJobs" [paginator]="true" [rows]="5000"
-                [totalRecords]="completedJobs.length" [responsiveLayout]="'scroll'"
+                [totalRecords]="completedJobs.length" [responsiveLayout]="'scroll'" [loading]="isLoadingCompleted"
                 [scrollable]="true" scrollHeight="400px" [resizableColumns]="true"
                 [autoLayout]="true" columnResizeMode="expand" [showCurrentPageReport]="true"
                 currentPageReportTemplate="Showing {first}-{last} of {totalRecords}"
