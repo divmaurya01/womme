@@ -4021,19 +4021,16 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                     j.start_time.HasValue &&
                     (now - j.start_time.Value).TotalHours > 8);
 
-            int CountHold(List<JobTranMst> list)  => list.Count(j => j.status == "4");
-            int CountReject(List<JobTranMst> list) => list.Count(j => j.status == "5");
+            int CountHold(List<JobTranMst> list)   => list.Count(j => j.status == "4");
+            int CountReject(List<JobTranMst> list)  => list.Count(j => j.status == "5");
 
-            // ── Next Operation setup ──────────────────────────────────────
-
-            // All job+serial pairs in dataset
+            // ── Next Operation setup (mirrors GetTransactionData exactly) ─
             var allJobSerials = allRows
                 .Where(j => j.SerialNo != null)
                 .Select(j => new { j.job, j.SerialNo })
                 .Distinct()
                 .ToList();
 
-            // Max started oper_num per job+serial
             var maxStartedOper = allRows
                 .Where(j => j.SerialNo != null && j.oper_num != null)
                 .GroupBy(x => new { x.job, x.SerialNo })
@@ -4042,7 +4039,6 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                     g => g.Max(x => x.oper_num)
                 );
 
-            // Load JobRouteMst for relevant jobs
             var jobNumbers = allJobSerials.Select(x => x.job).Distinct().ToList();
 
             var routeByJob = (await _context.JobRouteMst
@@ -4058,14 +4054,13 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                         .ToList()
                 );
 
-            // Load QC WC codes for type classification
             var qcWcSet = (await _context.WcMst
                 .Where(w => w.dept == "QA/ QC")
                 .Select(w => w.wc)
                 .ToListAsync())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            // Build next op info per job+serial
+            // Build next op info — same logic as GetTransactionData's nextOpRows
             var nextOpInfos = allJobSerials
                 .Select(js =>
                 {
@@ -4094,20 +4089,10 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                 .Where(x => x != null)
                 .ToList();
 
-            // CountNextOperation — split by QC vs Transaction
-            // forQC=true  → count next ops where next WC is a QC dept WC
-            // forQC=false → count next ops where next WC is NOT a QC dept WC
-            int CountNextOperation(List<JobTranMst> list, bool forQC)
-            {
-                var listJobSerials = list
-                    .Select(j => $"{j.job}|{j.SerialNo}")
-                    .ToHashSet();
-
-                return nextOpInfos.Count(n =>
-                    listJobSerials.Contains($"{n!.job}|{n.SerialNo}") &&
-                    (forQC ? n.isQcWc : !n.isQcWc)
-                );
-            }
+            // Count next ops by type — forQC=true → next WC is QC dept, false → not QC
+            // Mirrors GetTransactionData: Type = n.isQcWc ? "QC" : "Transaction"
+            int CountNextOperation(bool forQC) =>
+                nextOpInfos.Count(n => forQC ? n!.isQcWc : !n!.isQcWc);
 
             // ── Build overviews ───────────────────────────────────────────
             var transactionOverview = includeTransaction ? new
@@ -4117,7 +4102,7 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                 ExtendedJobs        = CountExtended(normalJobs),
                 NormalCompletedJobs = CountNormalCompleted(normalJobs),
                 OngoingCriticalJobs = CountOngoingCritical(normalJobs),
-                NextOperationJobs   = CountNextOperation(normalJobs, forQC: false)
+                NextOperationJobs   = CountNextOperation(forQC: false)
             } : (object?)null;
 
             var qcOverview = includeQC ? new
@@ -4129,7 +4114,7 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                 OngoingCriticalQCJobs = CountOngoingCritical(qcJobs),
                 HoldQCJobs            = CountHold(qcJobs),
                 RejectedQCJobs        = CountReject(qcJobs),
-                NextOperationQCJobs   = CountNextOperation(qcJobs, forQC: true)
+                NextOperationQCJobs   = CountNextOperation(forQC: true)
             } : (object?)null;
 
             var verifyOverview = includeVerify ? new
@@ -4346,7 +4331,7 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                     WommId       = (object?)null,
                     Machine      = (string?)null,
                     Time         = (DateTime?)null,
-                    Progress     = "Next Operation",
+                    Progress     = "In Queue",
                     Type         = n.isQcWc ? "QC" : "Transaction",            // correct type
                     QcGroup      = (string?)null
                 })

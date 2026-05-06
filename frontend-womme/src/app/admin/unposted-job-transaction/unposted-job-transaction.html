@@ -80,7 +80,8 @@
                     Machines
                     <p-sortIcon field="machine_id"></p-sortIcon>
                   </th>
-
+                  <!-- Add this <th> after the Timer column, before Action -->
+                  <th style="background-color:#ECC391;">Status</th>
                   <th pSortableColumn="elapsedSeconds" style="background-color:#ECC391;">
                     Timer
                     <p-sortIcon field="elapsedSeconds"></p-sortIcon>
@@ -100,10 +101,53 @@
                 <td>{{ job.wcCode }} ( {{ job.wcDescription }} )</td>               
                 <td>{{ job.emp_name }}</td>
                 <td>{{ job.machine_id }}</td>
+                <td>
+                  <span 
+                    *ngIf="job.isNextJob && !job.status" 
+                    style="
+                      background-color: #cce5ff;
+                      color: #004085;
+                      border: 1px solid #b8daff;
+                      border-radius: 20px;
+                      padding: 3px 12px;
+                      font-size: 0.78rem;
+                      font-weight: 600;
+                      white-space: nowrap;
+                    ">
+                    In Queue
+                  </span>
+                  <span 
+                    *ngIf="job.status === '1'" 
+                    style="
+                      background-color: #d4edda;
+                      color: #155724;
+                      border: 1px solid #c3e6cb;
+                      border-radius: 20px;
+                      padding: 3px 12px;
+                      font-size: 0.78rem;
+                      font-weight: 600;
+                    ">
+                    Running
+                  </span>
+                  <span 
+                    *ngIf="job.status === '2'" 
+                    style="
+                      background-color: #fff3cd;
+                      color: #856404;
+                      border: 1px solid #ffeeba;
+                      border-radius: 20px;
+                      padding: 3px 12px;
+                      font-size: 0.78rem;
+                      font-weight: 600;
+                    ">
+                    Paused
+                  </span>
+                </td>
                 <td><span class="job-timer-card">
                   {{ formatTime(job.elapsedSeconds) }}
                 </span>
                 </td>
+
                 <td class="action-cell">
                   <!-- Job not started / no status -->
                   <i *ngIf="!job.status" 

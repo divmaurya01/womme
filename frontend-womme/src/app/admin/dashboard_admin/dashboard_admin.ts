@@ -233,7 +233,7 @@ getStatusBadgeClass(status: string): string {
     case 'Completed':        return 'badge badge-success';
     case 'Hold':             return 'badge badge-info';
     case 'Rejected':         return 'badge badge-danger';
-    case 'Next Operation':   return 'badge badge-primary';  // ← add
+    case 'In Queue':   return 'badge badge-primary';  // ← add
     default:                 return 'badge badge-secondary';
   }
 }

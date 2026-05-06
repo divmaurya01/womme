@@ -131,14 +131,15 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
     forkJoin({
       active: this.jobService.GetActiveQCJobs(),
       qc:     this.jobService.GetQC(page, size, this.searchTerm),
-      next:   this.jobService.getIsNextJobActive()
+      next:   this.jobService.getIsNextJobActive(),
+      completed: this.jobService.GetCompletedQCJobs() 
     })
     .pipe(finalize(() => this.loader.hide()))
     .subscribe({
-      next: ({ active, qc, next }: any) => {
+      next: ({ active, qc, next, completed }: any) => {
         const activeJobs = active?.data ?? [];
         const qcJobs     = qc?.data     ?? [];
-
+        const completedJobs = completed?.data ?? [];
         // Build nextOp map
         const nextOpMap = new Map<string, number[]>();
         (next?.data ?? []).forEach((x: any) => {
@@ -155,15 +156,21 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
           )
         );
 
-        // Filter out active jobs — match by job+serial+oper+wc (item excluded, can differ)
+        // ── NEW: build completed jobs set (job+serial+oper+wc) ──
+        const completedSet = new Set<string>(
+          completedJobs.map((c: any) =>
+            `${(c.jobNumber ?? '').toLowerCase().trim()}|${(c.serialNo ?? '').toLowerCase().trim()}|${+(c.operationNumber ?? c.operNum ?? 0)}|${(c.wcCode ?? c.wc ?? '').toLowerCase().trim()}`
+          )
+        );
+
+        // Filter — now excludes BOTH active AND completed jobs
         const finalJobs = qcJobs.filter((job: any) => {
           const key = `${(job.job ?? '').toLowerCase().trim()}|${(job.serialNo ?? '').toLowerCase().trim()}|${+job.operNum}|${(job.wcCode ?? '').toLowerCase().trim()}`;
 
-          // ✅ Also exclude recently started jobs (guards against stale active API)
           const stableKey = `${(job.job ?? '').trim()}|${(job.serialNo ?? '').trim()}|${+job.operNum}|${(job.wcCode ?? '').trim()}`;
           if (this.recentlyStartedKeys.has(stableKey)) return false;
 
-          return !activeSet.has(key);
+          return !activeSet.has(key) && !completedSet.has(key);   // ← ADD completedSet check
         });
 
         // Map to view model
@@ -182,8 +189,15 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
           status:          x.status,
           isActive:        x.isActive,
           // ✅ Reopen logic: show if status=4 (hold) with reopen_flag
-          reopenFlag:      x.reopen_flag ?? false
+          reopenFlag:      x.reopen_flag ?? false,
+          isNextJob: (() => {
+              const key     = `${(x.job ?? '').trim()}|${(x.serialNo ?? '').trim()}`;
+              const nextOps = nextOpMap.get(key) ?? [];
+              return nextOps.includes(Number(x.operNum));
+            })()
         }));
+
+        this.transactions.sort((a: any, b: any) => (b.isNextJob ? 1 : 0) - (a.isNextJob ? 1 : 0));
 
         // Role 5: next-job gate + emp assignment filter
         if (roleId === 5) {

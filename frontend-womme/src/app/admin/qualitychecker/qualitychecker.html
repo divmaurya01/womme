@@ -41,6 +41,7 @@
                     <th pSortableColumn="wcCode" style="background-color:#ECC391; padding:10px;">WC <p-sortIcon field="wcCode"></p-sortIcon></th>
                     <th pSortableColumn="item" style="background-color:#ECC391; padding:10px;">Item <p-sortIcon field="item"></p-sortIcon></th>
                     <th pSortableColumn="qtyReleased" style="background-color:#ECC391; padding:10px;">Qty <p-sortIcon field="qtyReleased"></p-sortIcon></th>
+                    <th style="background-color:#ECC391; padding:10px;">Status</th>
                     <th style="background-color:#ECC391; padding:10px;">Action</th>
                     <th style="background-color:#ECC391; padding:10px;">Report</th>
                   </tr>
@@ -56,6 +57,22 @@
                     <td>{{ job.wcCode }} ({{ job.wcDescription }})</td>
                     <td>{{ job.item }}</td>
                     <td>{{ job.qtyReleased }}</td>
+                    <td>
+                      <span
+                        *ngIf="job.isNextJob"
+                        style="
+                          background-color: #cce5ff;
+                          color: #004085;
+                          border: 1px solid #b8daff;
+                          border-radius: 20px;
+                          padding: 3px 12px;
+                          font-size: 0.78rem;
+                          font-weight: 600;
+                          white-space: nowrap;
+                        ">
+                        In Queue
+                      </span>
+                    </td>
                     <td>
                       <i class="pi pi-play action-circle" title="Start" style="
                         cursor:pointer; color:rgb(28,83,32); border:2px solid rgb(43,107,47);

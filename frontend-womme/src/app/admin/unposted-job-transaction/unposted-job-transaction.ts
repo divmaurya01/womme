@@ -129,9 +129,16 @@ export class UnpostedJobTransaction implements OnInit {
                 wcDescription:   (x.wcDescription ?? '').toString().trim(),
                 emp_num:         '',
                 machine_id:      '',
-                a_hrs:           0
+                a_hrs:           0,
+                // ── NEW: flag if this job+serial+oper is a next-job ──
+                isNextJob: (() => {
+                  const key = `${(x.job ?? '').toString().trim()}|${(x.serialNo ?? '').toString().trim()}`;
+                  const nextOps = nextOpMap.get(key) ?? [];
+                  return nextOps.includes(Number(x.operNum ?? x.operationNumber));
+                })()
               }));
 
+              filteredJobs.sort((a: any, b: any) => (b.isNextJob ? 1 : 0) - (a.isNextJob ? 1 : 0));
               // Apply next-job filter for role 4 and 2
               if (this.role_id === 4 || this.role_id === 2) {
                 filteredJobs = filteredJobs.filter((job: any) => {
