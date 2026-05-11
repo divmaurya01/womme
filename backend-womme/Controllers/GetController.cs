@@ -2731,40 +2731,41 @@ public IActionResult GetActiveQCJobs()
     }
 
 
-
    [HttpGet]
     public async Task<IActionResult> GetHoldQCJobs()
     {
         try
         {
-            var holdJobs = await _context.JobTranMst
+            var holdKeys = await _context.JobTranMst
                 .Where(j => j.status == "4")
+                .Select(j => new { j.job, j.SerialNo, j.oper_num, j.qcgroup })
+                .Distinct()
                 .ToListAsync();
 
-            var grouped = holdJobs
-                .GroupBy(j => new { j.job, j.oper_num, j.SerialNo, j.qcgroup });
+            if (!holdKeys.Any())
+                return Ok(new { data = new List<object>(), totalRecords = 0 });
 
-            // Fetch ALL statuses for these serials to sum only status=1 hours
-            var allSerials = holdJobs.Select(j => j.SerialNo).Distinct().ToList();
+            var jobNos    = holdKeys.Select(k => k.job).Distinct().ToList();
+            var serialNos = holdKeys.Select(k => k.SerialNo).Distinct().ToList();
+
             var allRows = await _context.JobTranMst
-                .Where(j => allSerials.Contains(j.SerialNo))
+                .Where(j => jobNos.Contains(j.job) && serialNos.Contains(j.SerialNo))
                 .ToListAsync();
+
+            var grouped = allRows
+                .GroupBy(j => new { j.job, j.oper_num, j.SerialNo, j.qcgroup });
 
             var result = new List<object>();
 
             foreach (var g in grouped)
             {
-                var latest = g.OrderByDescending(x => x.trans_date).First();
+                var latest = g.OrderByDescending(x => x.trans_date)
+                            .ThenByDescending(x => x.trans_num)
+                            .First();
 
-                // Sum ONLY status=1 (active/running) rows for true worked hours
-                var totalHours = allRows
-                    .Where(x =>
-                        x.job == latest.job &&
-                        x.SerialNo == latest.SerialNo &&
-                        x.oper_num == latest.oper_num &&
-                        x.qcgroup == latest.qcgroup &&
-                        x.status == "1")
-                    .Sum(x => x.a_hrs ?? 0);
+                if (latest.status != "4") continue;
+
+                var totalHours = g.Where(x => x.status == "1").Sum(x => x.a_hrs ?? 0);
 
                 var jobMaster = await _context.JobMst
                     .FirstOrDefaultAsync(jm => jm.job == latest.job);
@@ -2777,6 +2778,7 @@ public IActionResult GetActiveQCJobs()
                     operationNumber = latest.oper_num,
                     wcCode          = latest.wc,
                     empNum          = latest.emp_num,
+                    status          = latest.status,
                     emp_name        = _context.EmployeeMst
                                         .Where(e => e.emp_num == latest.emp_num)
                                         .Select(e => e.name)
@@ -2801,40 +2803,46 @@ public IActionResult GetActiveQCJobs()
         }
     }
 
-
     [HttpGet]
     public async Task<IActionResult> GetRejectedQCJobs()
     {
         try
         {
-            var rejectedJobs = await _context.JobTranMst
+            // 1. Find all (job, serial, oper, qcgroup) combos that have any status=5 row
+            var rejectedKeys = await _context.JobTranMst
                 .Where(j => j.status == "5")
+                .Select(j => new { j.job, j.SerialNo, j.oper_num, j.qcgroup })
+                .Distinct()
                 .ToListAsync();
 
-            var grouped = rejectedJobs
-                .GroupBy(j => new { j.job, j.oper_num, j.SerialNo, j.qcgroup });
+            if (!rejectedKeys.Any())
+                return Ok(new { data = new List<object>(), totalRecords = 0 });
 
-            // Fetch ALL statuses for these serials to sum only status=1 hours
-            var allSerials = rejectedJobs.Select(j => j.SerialNo).Distinct().ToList();
+            // 2. Pull ALL rows for those combos (so we can find the latest)
+            var jobNos    = rejectedKeys.Select(k => k.job).Distinct().ToList();
+            var serialNos = rejectedKeys.Select(k => k.SerialNo).Distinct().ToList();
+
             var allRows = await _context.JobTranMst
-                .Where(j => allSerials.Contains(j.SerialNo))
+                .Where(j => jobNos.Contains(j.job) && serialNos.Contains(j.SerialNo))
                 .ToListAsync();
+
+            // 3. Group by (job, serial, oper, qcgroup) and keep only groups
+            //    whose LATEST row is still status=5
+            var grouped = allRows
+                .GroupBy(j => new { j.job, j.oper_num, j.SerialNo, j.qcgroup });
 
             var result = new List<object>();
 
             foreach (var g in grouped)
             {
-                var latest = g.OrderByDescending(x => x.trans_date).First();
+                var latest = g.OrderByDescending(x => x.trans_date)
+                            .ThenByDescending(x => x.trans_num)
+                            .First();
 
-                // Sum ONLY status=1 (active/running) rows for true worked hours
-                var totalHours = allRows
-                    .Where(x =>
-                        x.job == latest.job &&
-                        x.SerialNo == latest.SerialNo &&
-                        x.oper_num == latest.oper_num &&
-                        x.qcgroup == latest.qcgroup &&
-                        x.status == "1")
-                    .Sum(x => x.a_hrs ?? 0);
+                // skip if latest is no longer rejected (i.e., job was reopened)
+                if (latest.status != "5") continue;
+
+                var totalHours = g.Where(x => x.status == "1").Sum(x => x.a_hrs ?? 0);
 
                 var jobMaster = await _context.JobMst
                     .FirstOrDefaultAsync(jm => jm.job == latest.job);
@@ -2847,6 +2855,7 @@ public IActionResult GetActiveQCJobs()
                     operationNumber = latest.oper_num,
                     wcCode          = latest.wc,
                     empNum          = latest.emp_num,
+                    status          = latest.status,
                     emp_name        = _context.EmployeeMst
                                         .Where(e => e.emp_num == latest.emp_num)
                                         .Select(e => e.name)

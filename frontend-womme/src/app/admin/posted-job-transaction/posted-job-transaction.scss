@@ -110,6 +110,43 @@
   cursor: pointer;
 }
 
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  min-width: 80px;
+}
+
+/* Started */
+.status-started {
+  background-color: #0d6efd;
+}
+
+/* Idle */
+.status-idle {
+  background-color: #6c757d;
+}
+
+/* Complete */
+.status-complete {
+  background-color: #198754;
+}
+
+/* Hold */
+.status-hold {
+  background-color: #ffc107;
+  color: #000;
+}
+
+/* Rejected */
+.status-rejected {
+  background-color: #dc3545;
+}
+
 
 
 tr {

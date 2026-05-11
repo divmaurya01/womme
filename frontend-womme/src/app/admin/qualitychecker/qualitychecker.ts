@@ -507,45 +507,129 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
     return { JobNumber: job.jobNumber, SerialNo: job.serialNo, OperationNumber: job.operationNumber, Wc: job.wcCode, Item: job.item, EmpNum: emp, loginuser: emp, startTime: this.localNow(), remark };
   }
 
-  holdJob(job: any) {
-    Swal.fire({
-      title: 'Hold Job', input: 'textarea', inputLabel: 'Enter Hold Comment',
-      inputPlaceholder: 'Comment is required', showCancelButton: true, confirmButtonText: 'Submit',
-      preConfirm: (v) => { if (!v?.trim()) { Swal.showValidationMessage('Comment is required'); } return v; }
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      this.loader.show();
-      this.jobService.holdQCJob(this.buildJobPayload(job, result.value))
+  // ── Shared helper: silently pause (if running) then run the action ────
+// ── Shared helper: silently pause (if running) then run the action ────
+private pauseThenAction(
+  job: any,
+  remark: string,
+  actionFn: (payload: any) => any,
+  successOpts: { icon: 'info' | 'warning'; title: string; text: string }
+) {
+  const emp = this.userDetails().employeeCode || '';
+  const basePayload = {
+    JobNumber:       job.jobNumber,
+    SerialNo:        job.serialNo,
+    OperationNumber: job.operationNumber,
+    Wc:              job.wcCode,
+    Item:            job.item,
+    EmpNum:          emp,
+    loginuser:       emp,
+    startTime:       this.localNow()
+  };
+
+  this.loader.show();
+
+  // ── CASE 1: Already paused → skip pause, go straight to action (original behavior) ──
+  if (job.isPaused) {
+    actionFn.call(this.jobService, { ...basePayload, remark })
       .pipe(finalize(() => this.loader.hide()))
       .subscribe({
         next: () => {
-          Swal.fire({ icon: 'info', title: 'On Hold', text: 'Job moved to Hold.', timer: 2000, showConfirmButton: false })
-            .then(() => { this.loadJobs(); this.loadOngoingJobs(); this.loadCompletedJobs(); });
+          Swal.fire({
+            ...successOpts,
+            timer: 2000,
+            showConfirmButton: false
+          }).then(() => {
+            this.loadJobs();
+            this.loadOngoingJobs();
+            this.loadCompletedJobs();
+          });
         },
-        error: (err) => Swal.fire('Error', err.error?.message || 'Failed to hold job', 'error')
+        error: (err: any) => Swal.fire('Error', err?.error?.message || 'Operation failed', 'error')
       });
-    });
+    return;
   }
 
-  rejectJob(job: any) {
-    Swal.fire({
-      title: 'Reject Job', input: 'textarea', inputLabel: 'Enter Reject Comment',
-      inputPlaceholder: 'Comment is required', showCancelButton: true, confirmButtonText: 'Submit',
-      preConfirm: (v) => { if (!v?.trim()) { Swal.showValidationMessage('Comment is required'); } return v; }
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      this.loader.show();
-      this.jobService.rejectQCJob(this.buildJobPayload(job, result.value))
-      .pipe(finalize(() => this.loader.hide()))
-      .subscribe({
-        next: () => {
-          Swal.fire({ icon: 'warning', title: 'Rejected', text: 'Job has been rejected.', timer: 2000, showConfirmButton: false })
-            .then(() => { this.loadJobs(); this.loadOngoingJobs(); this.loadCompletedJobs(); });
-        },
-        error: (err) => Swal.fire('Error', err.error?.message || 'Failed to reject job', 'error')
+  // ── CASE 2: Currently running → pause first, then action ──
+  this.jobService.pauseSingleQCJob(basePayload).toPromise()
+    .then(() => {
+      // Stop local timer silently
+      job.isPaused = true;
+      if (job.timerInterval) {
+        clearInterval(job.timerInterval);
+        delete this.jobTimers[job.uniqueRowId];
+      }
+      // Now run the actual action
+      return actionFn.call(this.jobService, { ...basePayload, remark }).toPromise();
+    })
+    .then(() => {
+      this.loader.hide();
+      Swal.fire({
+        ...successOpts,
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        this.loadJobs();
+        this.loadOngoingJobs();
+        this.loadCompletedJobs();
       });
+    })
+    .catch((err: any) => {
+      this.loader.hide();
+      Swal.fire('Error', err?.error?.message || 'Operation failed', 'error');
     });
-  }
+}
+
+
+// ── Hold ──────────────────────────────────────────────────────────────
+holdJob(job: any) {
+  Swal.fire({
+    title: 'Hold Job',
+    input: 'textarea',
+    inputLabel: 'Enter Hold Comment',
+    inputPlaceholder: 'Comment is required',
+    showCancelButton: true,
+    confirmButtonText: 'Submit',
+    preConfirm: (v) => {
+      if (!v?.trim()) { Swal.showValidationMessage('Comment is required'); }
+      return v;
+    }
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    this.pauseThenAction(
+      job,
+      result.value,
+      this.jobService.holdQCJob,
+      { icon: 'info', title: 'On Hold', text: 'Job moved to Hold.' }
+    );
+  });
+}
+
+// ── Reject ────────────────────────────────────────────────────────────
+rejectJob(job: any) {
+  Swal.fire({
+    title: 'Reject Job',
+    input: 'textarea',
+    inputLabel: 'Enter Reject Comment',
+    inputPlaceholder: 'Comment is required',
+    showCancelButton: true,
+    confirmButtonText: 'Submit',
+    preConfirm: (v) => {
+      if (!v?.trim()) { Swal.showValidationMessage('Comment is required'); }
+      return v;
+    }
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    this.pauseThenAction(
+      job,
+      result.value,
+      this.jobService.rejectQCJob,
+      { icon: 'warning', title: 'Rejected', text: 'Job has been rejected.' }
+    );
+  });
+}
 
   // ── Tab 3: Completed Jobs ─────────────────────────────────────────────
 

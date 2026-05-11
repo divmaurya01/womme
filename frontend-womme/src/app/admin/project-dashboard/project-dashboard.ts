@@ -191,7 +191,7 @@ export class ProjectDashboardComponent implements OnInit, AfterViewInit, OnDestr
       .pipe(finalize(() => { this.isLoading = false; this.loader.hide(); }))
       .subscribe({
         next: (res: any) => {
-          this.holdJobs = this.groupJobs(this.applyRoleFilter(res.data ?? []));
+          this.holdJobs = this.applyRoleFilter(res.data ?? []);
         },
         error: (err) => console.error('Error fetching hold jobs:', err)
       });
@@ -204,7 +204,7 @@ export class ProjectDashboardComponent implements OnInit, AfterViewInit, OnDestr
       .pipe(finalize(() => { this.isLoading = false; this.loader.hide(); }))
       .subscribe({
         next: (res: any) => {
-          this.rejectedJobs = this.groupJobs(this.applyRoleFilter(res.data ?? []));
+          this.rejectedJobs = this.applyRoleFilter(res.data ?? []);
         },
         error: (err) => console.error('Error fetching rejected jobs:', err)
       });

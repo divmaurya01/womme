@@ -145,15 +145,26 @@
               <tr>
                 <td>{{ formatDateFromString(log.trans_date) }}</td>
                 <td>
-                {{
-                  log.status?.toString() === '3' ? 'Complete' :
-                  log.status?.toString() === '4' ? 'Hold' :
-                  log.status?.toString() === '5' ? 'Rejected' :
-                  log.status?.toString() === '2' ? 'Idle' :
-                  log.status?.toString() === '1' ? 'Started' :
-                  log.status
-                }}
-              </td>
+                  <span
+                    class="status-badge"
+                    [ngClass]="{
+                      'status-started': log.status?.toString() === '1',
+                      'status-idle': log.status?.toString() === '2',
+                      'status-complete': log.status?.toString() === '3',
+                      'status-hold': log.status?.toString() === '4',
+                      'status-rejected': log.status?.toString() === '5'
+                    }"
+                  >
+                    {{
+                      log.status?.toString() === '1' ? 'Started' :
+                      log.status?.toString() === '2' ? 'Idle' :
+                      log.status?.toString() === '3' ? 'Complete' :
+                      log.status?.toString() === '4' ? 'Hold' :
+                      log.status?.toString() === '5' ? 'Rejected' :
+                      log.status
+                    }}
+                  </span>
+                </td>
 
                 <!-- Start Time -->
                 <td>
