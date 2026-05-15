@@ -2603,57 +2603,57 @@ public IActionResult GetActiveJobTransactions()
 
 
     [HttpGet]
-public IActionResult GetActiveQCJobs()
-{
-    var latestByJob = _context.JobTranMst
-        .Where(j => j.trans_type == "M") // ✅ NO reopen filter here
-        .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
-        .Select(g => new
-        {
-            Latest = g
-                .OrderByDescending(x => x.trans_date)
-                .ThenByDescending(x => x.trans_num) // 🔥 IMPORTANT FIX
-                .FirstOrDefault(),
-
-            TotalHours = g
-                .Where(x => x.status == "1")
-                .Sum(x => x.a_hrs ?? 0)
-        })
-        .ToList();
-
-    var activeJobs = latestByJob
-        .Where(x =>
-            x.Latest != null &&
-            (
-                x.Latest.status == "1" || 
+    public IActionResult GetActiveQCJobs()
+    {
+        var latestByJob = _context.JobTranMst
+            .Where(j => j.trans_type == "M")           // QC transactions only
+            .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
+            .Select(g => new
+            {
+                Latest = g
+                    .OrderByDescending(x => x.trans_date)
+                    .ThenByDescending(x => x.trans_num)   // tie-break by trans_num
+                    .FirstOrDefault(),
+    
+                TotalHours = g
+                    .Where(x => x.status == "1")
+                    .Sum(x => x.a_hrs ?? 0)
+            })
+            .ToList();
+    
+        var activeJobs = latestByJob
+            .Where(x =>
+                x.Latest != null &&
                 (
-                    x.Latest.status == "2" &&
-                    (x.Latest.reopen_flag == null || x.Latest.reopen_flag == false)
+                    x.Latest.status == "1" ||   // Running  — always include
+                    x.Latest.status == "2"      // Paused   — ALWAYS include (reopen_flag ignored)
                 )
             )
-        )
-        .Select(x => new
-        {
-            x.Latest.trans_num,
-            x.Latest!.job,
-            x.Latest.SerialNo,
-            x.Latest.oper_num,
-            x.Latest.wc,
-            x.Latest.start_time,
-            x.Latest.end_time,
-            x.Latest.status,
-            x.Latest.emp_num,
-            emp_name = _context.EmployeeMst
-                        .Where(e => e.emp_num == x.Latest.emp_num)
-                        .Select(e => e.name)
-                        .FirstOrDefault(),
-            x.Latest.machine_id,
-            total_a_hrs = x.TotalHours
-        })
-        .ToList();
-
-    return Ok(new { data = activeJobs, total = activeJobs.Count });
-}
+            .Select(x => new
+            {
+                x.Latest!.trans_num,
+                x.Latest.job,
+                x.Latest.SerialNo,
+                x.Latest.oper_num,
+                x.Latest.wc,
+                x.Latest.start_time,
+                x.Latest.end_time,
+                x.Latest.status,
+                x.Latest.emp_num,
+                emp_name = _context.EmployeeMst
+                            .Where(e => e.emp_num == x.Latest.emp_num)
+                            .Select(e => e.name)
+                            .FirstOrDefault(),
+                x.Latest.machine_id,
+                x.Latest.ongoing_comment,
+                x.Latest.qcgroup,
+                x.Latest.reopen_flag,
+                total_a_hrs = x.TotalHours
+            })
+            .ToList();
+    
+        return Ok(new { data = activeJobs, total = activeJobs.Count });
+    }
     
 
     [HttpGet]
@@ -3003,301 +3003,257 @@ public IActionResult GetActiveQCJobs()
         }
     }
 
+   
+
     [HttpGet]
-
     public async Task<IActionResult> getJobProgress()
-
     {
-        // ===================== DATE FILTER =====================
-
+        // ── Date filter ───────────────────────────────────────────
         DateTime cutoffDate = new DateTime(2025, 12, 07);
 
-        // ===================== JOB MASTER =====================
-
+        // ── Job master ────────────────────────────────────────────
         var jobs = await _context.JobMst
-
             .Where(j => j.RecordDate > cutoffDate)
-
             .Select(j => new JobDtos
-
             {
-
-                JobNo = j.job,
-
-                Item = j.item,
-
+                JobNo       = j.job,
+                Item        = j.item,
                 Description = j.description,
-
-                Qty = j.qty_released,
-                JobDate = j.job_date,
-
-                Serials = new List<JobSerialDto>()
-
+                Qty         = j.qty_released,
+                JobDate     = j.job_date,
+                Serials     = new List<JobSerialDto>()
             })
-
             .AsNoTracking()
-
             .ToListAsync();
 
         if (!jobs.Any())
-
             return Ok(jobs);
 
         var jobNos = jobs.Select(j => j.JobNo).ToList();
 
-        // ===================== JOB ROUTES =====================
-
-        var jobRoutes = await _context.JobRouteMst
-
+        // ── Job routes — use a named struct to avoid anonymous type issues ────
+        var jobRouteRaw = await _context.JobRouteMst
             .Where(r => jobNos.Contains(r.Job))
-
-            .GroupBy(r => r.Job)
-
-            .Select(g => new
-
-            {
-
-                JobNo = g.Key,
-
-                TotalOperations = g.Count(),
-
-                Operations = g.Select(x => new
-                {
-                    OperNum = x.OperNum,
-                    WC = x.Wc   // ⭐ ADD THIS (your WOMMID)
-                }).ToList()
-
-
-            })
-
+            .Select(r => new RouteOpEntry { Job = r.Job, OperNum = r.OperNum, Wc = r.Wc })
             .AsNoTracking()
-
             .ToListAsync();
 
-        var routeDict = jobRoutes.ToDictionary(r => r.JobNo);
+        var routeDict = jobRouteRaw
+            .GroupBy(r => r.Job ?? "")
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(x => x.OperNum).ToList()
+            );
 
-        // ===================== JOB TRANSACTIONS =====================
-
+        // ── Job transactions ──────────────────────────────────────
         var jobTrans = await _context.JobTranMst
-
             .Where(t => jobNos.Contains(t.job))
-
-            .Select(t => new
-
+            .Select(t => new TranEntry
             {
-
-                t.job,
-
-                t.SerialNo,
-
-                t.oper_num,
-
-                t.emp_num,
-
-                t.start_time,
-
-                t.end_time,
-
-                t.a_hrs,
-
-                t.status,
-
-                t.RecordDate,
-                t.trans_date
-
+                Job        = t.job,
+                SerialNo   = t.SerialNo,
+                OperNum    = t.oper_num,
+                EmpNum     = t.emp_num,
+                StartTime  = t.start_time,
+                EndTime    = t.end_time,
+                AHrs       = t.a_hrs,
+                Status     = t.status,
+                TransNum   = t.trans_num,
+                TransDate  = t.trans_date
             })
-
             .AsNoTracking()
-
             .ToListAsync();
 
-        // ===================== EMPLOYEE MASTER =====================
-
+        // ── Employee master ───────────────────────────────────────
         var empNums = jobTrans
-
-            .Where(t => t.emp_num != null)
-
-            .Select(t => t.emp_num)
-
+            .Where(t => t.EmpNum != null)
+            .Select(t => t.EmpNum!)
             .Distinct()
-
             .ToList();
 
         var empDict = await _context.EmployeeMst
-
             .Where(e => empNums.Contains(e.emp_num))
-
-            .Select(e => new
-
-            {
-
-                e.emp_num,
-
-                e.name
-
-            })
-
+            .Select(e => new { e.emp_num, e.name })
             .AsNoTracking()
+            .ToDictionaryAsync(
+                e => e.emp_num!,
+                e => e.name ?? e.emp_num ?? ""
+            );
 
-            .ToDictionaryAsync(e => e.emp_num, e => e.name);
+        // ── Serial → transactions lookup ──────────────────────────
+        var tranLookup = jobTrans.ToLookup(t => t.SerialNo ?? "");
 
-        // ===================== LOOKUP =====================
-
-        var tranLookup = jobTrans.ToLookup(t => t.SerialNo);
-
-        // ===================== BUILD TREE =====================
-
+        // ── Build tree ────────────────────────────────────────────
         foreach (var job in jobs)
-
         {
+            routeDict.TryGetValue(job.JobNo ?? "", out var routeOps);
+            routeOps ??= new List<RouteOpEntry>();
 
-            routeDict.TryGetValue(job.JobNo, out var route);
+            int qty = (int)(job.Qty > 0 ? job.Qty : 0);
 
-            for (int i = 1; i <= job.Qty; i++)
-
+            for (int i = 1; i <= qty; i++)
             {
+                string serialNo    = $"{job.JobNo}-{i}";
+                var    serialTrans = tranLookup[serialNo].ToList();
 
-                string serialNo = $"{job.JobNo}-{i}";
+                // ── FIX 2: Gate — get latest trans status for this serial ──
+                var latestForSerial = serialTrans
+                    .OrderByDescending(t => t.TransNum)
+                    .FirstOrDefault();
 
-                var serialTrans = tranLookup[serialNo];
+                string gateStatus = latestForSerial?.Status ?? "";
+
+                // Max completed oper_num (for queue next-op logic)
+                int maxCompletedOper = serialTrans
+                    .Where(t => t.Status == "3" && t.OperNum.HasValue)
+                    .Select(t => t.OperNum!.Value)
+                    .DefaultIfEmpty(0)
+                    .Max();
+
+                bool queueAssigned = false;
 
                 var serial = new JobSerialDto
-
                 {
-
-                    SerialNo = serialNo,
-
-                    TotalOperations = route?.TotalOperations ?? 0,
-
+                    SerialNo            = serialNo,
+                    TotalOperations     = routeOps.Count,
                     CompletedOperations = 0,
-
-                    RunningOperations = 0,
-
-                    HoldOperations = 0,
-
-                    // ✅ SERIAL TOTAL HOURS (STATUS = 3)
-
-                    TotalHours = serialTrans
-
-                        .Where(t => t.status == "3")
-
-                        .Sum(t => t.a_hrs),
-
+                    RunningOperations   = 0,
+                    HoldOperations      = 0,
+                    // FIX 3: decimal cast — sum completed-op hours
+                    TotalHours = (decimal)serialTrans
+                        .Where(t => t.Status == "3")
+                        .Sum(t => (double)(t.AHrs ?? 0m)),
                     Operations = new List<JobOperationDtos>()
-
                 };
 
-                foreach (var op in route?.Operations ?? Enumerable.Empty<dynamic>())
-
-
+                foreach (var op in routeOps)
                 {
-
                     var opTrans = serialTrans
-    .Where(t => t.oper_num == op.OperNum)
-    .ToList();
+                        .Where(t => t.OperNum == op.OperNum)
+                        .ToList();
 
-
-                    JobOperationDtos opDto = new JobOperationDtos
-
+                    var opDto = new JobOperationDtos
                     {
-
                         Operation = op.OperNum,
-                        WC = op.WC
-
-
+                        WC        = op.Wc
                     };
 
                     if (opTrans.Any())
-
                     {
-
                         var latestTran = opTrans
-
-                           .OrderByDescending(t => t.trans_date)
-
+                            .OrderByDescending(t => t.TransNum)
                             .First();
 
-                        opDto.Employee = latestTran.emp_num != null && empDict.ContainsKey(latestTran.emp_num)
+                        // ── FIX 1: All employees for this op ──────────────
+                        // Group by emp_num, sum hours, join names with " | "
+                        // Frontend splits " | " to show each name on new line
+                        var empGroups = opTrans
+                            .Where(t => t.EmpNum != null)
+                            .GroupBy(t => t.EmpNum!)
+                            .Select(g => new
+                            {
+                                Name = empDict.ContainsKey(g.Key) ? empDict[g.Key] : g.Key,
+                                Hrs  = g.Sum(x => (double)(x.AHrs ?? 0m))
+                            })
+                            .ToList();
 
-                            ? empDict[latestTran.emp_num]
+                        opDto.EmployeeName  = string.Join(" | ", empGroups.Select(e => e.Name));
+                        opDto.Employee      = opDto.EmployeeName;
+                        opDto.StartTime     = latestTran.StartTime?.ToString("HH:mm") ?? "-";
+                        opDto.EndTime       = latestTran.EndTime?.ToString("HH:mm")   ?? "-";
 
-                            : null;
+                        // FIX 3: total hours for this op = sum across all employees
+                        opDto.HoursConsumed = (decimal)empGroups.Sum(e => e.Hrs);
 
-                        opDto.StartTime = latestTran.start_time?.ToString("HH:mm") ?? "-";
-
-                        opDto.EndTime = latestTran.end_time?.ToString("HH:mm") ?? "-";
-
-                        opDto.HoursConsumed = latestTran.a_hrs;
-
-                        switch (latestTran.status)
-
+                        // ── Status mapping (FIX 4: Hold + Reject) ─────────
+                        switch (latestTran.Status)
                         {
-
                             case "1":
-
                                 serial.RunningOperations++;
-
                                 opDto.Status = "Running";
-
                                 break;
-
                             case "2":
                                 serial.RunningOperations++;
-                                serial.HoldOperations++;
-
-                                opDto.Status = "Pause";
-
+                                opDto.Status = "Paused";
                                 break;
-
                             case "3":
-
                                 serial.CompletedOperations++;
-
                                 opDto.Status = "Completed";
-
                                 break;
-
+                            case "4":
+                                serial.HoldOperations++;
+                                opDto.Status = "Hold";
+                                break;
+                            case "5":
+                                opDto.Status = "Rejected";
+                                break;
                             default:
-
                                 opDto.Status = "Unknown";
-
                                 break;
-
+                        }
+                    }
+                    else
+                    {
+                        // ── FIX 2: Queue gate ──────────────────────────────
+                        // Only the first unstarted op after completed ops
+                        // gets "In Queue" — ONLY when gateStatus = "3"
+                        if (!queueAssigned
+                            && gateStatus == "3"
+                            && op.OperNum > maxCompletedOper)
+                        {
+                            opDto.Status  = "In Queue";
+                            queueAssigned = true;
+                        }
+                        else
+                        {
+                            opDto.Status = "No Transaction Yet";
                         }
 
-                    }
-
-                    else
-
-                    {
-
-                        opDto.Status = "No Transaction Yet";
-
+                        opDto.Employee      = null;
+                        opDto.EmployeeName  = "";
+                        opDto.StartTime     = "-";
+                        opDto.EndTime       = "-";
                         opDto.HoursConsumed = 0;
-
-                        opDto.StartTime = "-";
-
-                        opDto.EndTime = "-";
-
                     }
 
                     serial.Operations.Add(opDto);
-
                 }
 
                 job.Serials.Add(serial);
-
             }
 
-            // ===================== JOB TOTAL HOURS =====================
-
+            // Job-level total hours = sum of all serial hours
             job.TotalHours = job.Serials.Sum(s => s.TotalHours ?? 0);
-
         }
 
         return Ok(jobs);
-
     }
+
+
+// ── Private helper classes (inside the controller class, not public) ──────────
+// These replace anonymous types to avoid compiler errors with GroupBy/Dictionary
+
+private class RouteOpEntry
+{
+    public string? Job    { get; set; }
+    public int     OperNum { get; set; }
+    public string? Wc     { get; set; }
+}
+
+private class TranEntry
+{
+    public string?   Job       { get; set; }
+    public string?   SerialNo  { get; set; }
+    public int?      OperNum   { get; set; }
+    public string?   EmpNum    { get; set; }
+    public DateTime? StartTime { get; set; }
+    public DateTime? EndTime   { get; set; }
+    public decimal?  AHrs      { get; set; }
+    public string?   Status    { get; set; }
+    public decimal   TransNum  { get; set; }
+    public DateTime? TransDate { get; set; }
+}
+    
 
 
     [HttpGet]

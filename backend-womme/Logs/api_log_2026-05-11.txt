@@ -102,3 +102,9 @@
 [2026-05-11 05:14:28] API: POST /api/Post/SubmitReopenHoldJob Status: 200
 [2026-05-11 05:14:30] API: GET /api/Get/GetHoldSubmittedJobs Status: 200
 [2026-05-11 05:14:30] API: GET /api/Get/GetHoldQCJobs Status: 200
+[2026-05-11 06:02:10] API: POST /api/Auth/login Status: 200
+[2026-05-11 06:02:18] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-05-11 06:02:18] API: GET /api/Get/RolePageMappings?roleID=1 Status: 200
+[2026-05-11 06:02:18] API: GET /api/Get/GetEmployeeAndMachineStats Status: 200
+[2026-05-11 06:02:18] API: POST /api/Post/GetTransactionOverview Status: 200
+[2026-05-11 06:02:18] API: POST /api/Post/GetTransactionData Status: 200

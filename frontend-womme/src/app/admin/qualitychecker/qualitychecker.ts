@@ -121,61 +121,75 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
   loadJobs(pageEvent?: any) {
     this.isLoadingNewJobs = true;
     this.loader.show();
-
+  
     const ud      = this.userDetails();
     const roleId  = Number(ud.roleID);
     const empCode = (ud.employeeCode || '').trim();
     const page    = pageEvent?.first ? pageEvent.first / pageEvent.rows : this.page;
     const size    = pageEvent?.rows ?? this.size;
-
+  
     forkJoin({
-      active: this.jobService.GetActiveQCJobs(),
-      qc:     this.jobService.GetQC(page, size, this.searchTerm),
-      next:   this.jobService.getIsNextJobActive(),
-      completed: this.jobService.GetCompletedQCJobs() 
+      active:    this.jobService.GetActiveQCJobs(),
+      qc:        this.jobService.GetQC(page, size, this.searchTerm),
+      next:      this.jobService.getIsNextJobActive(),
+      completed: this.jobService.GetCompletedQCJobs()
     })
     .pipe(finalize(() => this.loader.hide()))
     .subscribe({
       next: ({ active, qc, next, completed }: any) => {
-        const activeJobs = active?.data ?? [];
-        const qcJobs     = qc?.data     ?? [];
+        const activeJobs    = active?.data    ?? [];
+        const qcJobs        = qc?.data        ?? [];
         const completedJobs = completed?.data ?? [];
-        // Build nextOp map
+  
+        // ── nextOp map ───────────────────────────────────────────────────
         const nextOpMap = new Map<string, number[]>();
         (next?.data ?? []).forEach((x: any) => {
           const key = `${x.job}|${x.serialNo}`;
           if (!nextOpMap.has(key)) nextOpMap.set(key, []);
           nextOpMap.get(key)!.push(Number(x.nextOper));
         });
-
-        // Build active jobs set for O(1) lookup
-        // Active jobs API returns: job, SerialNo, oper_num, wc, item
+  
+        // ── FIX: Build activeSet from LATEST status per job+serial+oper+wc ──
+        // GetActiveQCJobs returns multiple rows per op (start, pause, resume rows).
+        // We must pick the highest trans_num per group to get the TRUE current status.
+        // Then include in activeSet if that status is 1 (Running) OR 2 (Paused).
+        // This prevents paused ops from leaking into New Jobs tab.
+        const activeGroupMap = new Map<string, any>();
+        activeJobs.forEach((a: any) => {
+          const key = `${(a.job ?? '').toLowerCase().trim()}|${(a.SerialNo ?? a.serialNo ?? '').toLowerCase().trim()}|${+a.oper_num}|${(a.wc ?? '').toLowerCase().trim()}`;
+          const existing   = activeGroupMap.get(key);
+          const currTransNum = Number(a.trans_num ?? 0);
+          if (!existing || currTransNum > Number(existing.trans_num ?? 0)) {
+            activeGroupMap.set(key, a);
+          }
+        });
+  
+        // activeSet = only keys whose latest status is "1" or "2"
         const activeSet = new Set<string>(
-          activeJobs.map((a: any) =>
-            `${(a.job ?? '').toLowerCase().trim()}|${(a.SerialNo ?? a.serialNo ?? '').toLowerCase().trim()}|${+a.oper_num}|${(a.wc ?? '').toLowerCase().trim()}`
-          )
+          Array.from(activeGroupMap.entries())
+            .filter(([, a]) => a.status === '1' || a.status === '2')
+            .map(([key]) => key)
         );
-
-        // ── NEW: build completed jobs set (job+serial+oper+wc) ──
+  
+        // ── Completed set (job+serial+oper+wc) ───────────────────────────
         const completedSet = new Set<string>(
           completedJobs.map((c: any) =>
             `${(c.jobNumber ?? '').toLowerCase().trim()}|${(c.serialNo ?? '').toLowerCase().trim()}|${+(c.operationNumber ?? c.operNum ?? 0)}|${(c.wcCode ?? c.wc ?? '').toLowerCase().trim()}`
           )
         );
-
-        // Filter — now excludes BOTH active AND completed jobs
+  
+        // ── Filter New Jobs — exclude active (running/paused) and completed ──
         const finalJobs = qcJobs.filter((job: any) => {
           const key = `${(job.job ?? '').toLowerCase().trim()}|${(job.serialNo ?? '').toLowerCase().trim()}|${+job.operNum}|${(job.wcCode ?? '').toLowerCase().trim()}`;
-
+  
           const stableKey = `${(job.job ?? '').trim()}|${(job.serialNo ?? '').trim()}|${+job.operNum}|${(job.wcCode ?? '').trim()}`;
           if (this.recentlyStartedKeys.has(stableKey)) return false;
-
-          return !activeSet.has(key) && !completedSet.has(key);   // ← ADD completedSet check
+  
+          return !activeSet.has(key) && !completedSet.has(key);
         });
-
-        // Map to view model
+  
+        // ── Map to view model ─────────────────────────────────────────────
         this.transactions = finalJobs.map((x: any) => ({
-          // stable key: job+serial+oper+wc — no index so it's consistent across reloads
           uniqueRowId:     `${(x.job ?? '').trim()}|${(x.serialNo ?? '').trim()}|${+x.operNum}|${(x.wcCode ?? '').trim()}`,
           serialNo:        x.serialNo.trim(),
           jobNumber:       x.job.trim(),
@@ -185,20 +199,19 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
           operationNumber: Number(x.operNum),
           wcCode:          x.wcCode.trim(),
           wcDescription:   x.wcDescription.trim(),
-          empNum:          x.empNum,   // camelCase from GetQC API
+          empNum:          x.empNum,
           status:          x.status,
           isActive:        x.isActive,
-          // ✅ Reopen logic: show if status=4 (hold) with reopen_flag
           reopenFlag:      x.reopen_flag ?? false,
           isNextJob: (() => {
-              const key     = `${(x.job ?? '').trim()}|${(x.serialNo ?? '').trim()}`;
-              const nextOps = nextOpMap.get(key) ?? [];
-              return nextOps.includes(Number(x.operNum));
-            })()
+            const key     = `${(x.job ?? '').trim()}|${(x.serialNo ?? '').trim()}`;
+            const nextOps = nextOpMap.get(key) ?? [];
+            return nextOps.includes(Number(x.operNum));
+          })()
         }));
-
+  
         this.transactions.sort((a: any, b: any) => (b.isNextJob ? 1 : 0) - (a.isNextJob ? 1 : 0));
-
+  
         // Role 5: next-job gate + emp assignment filter
         if (roleId === 5) {
           this.transactions = this.transactions.filter((job: any) => {
@@ -210,7 +223,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
             return isNext && isAssigned;
           });
         }
-
+  
         this.totalRecords     = this.transactions.length;
         this.isLoadingNewJobs = false;
       },
@@ -220,7 +233,6 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
       }
     });
   }
-
   // ── Start Single QC Job ───────────────────────────────────────────────
 
   startQCJob(job: any) {
@@ -370,9 +382,19 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
           const startTime = new Date(x.start_time);
           const now       = new Date();
 
-          let elapsedSeconds = x.status === '1'
-            ? Math.floor((now.getTime() - startTime.getTime()) / 1000) + Math.floor((x.total_a_hrs || 0) * 3600)
-            : Math.floor((x.total_a_hrs || 0) * 3600);
+          let elapsedSeconds: number;
+
+          if (x.reopen_flag === true || x.reopen_flag === 1) {
+            // Reopened job — timer always starts fresh from 00:00:00
+            elapsedSeconds = 0;
+          } else if (x.status === '1') {
+            // Running — calculate elapsed from start_time + any previously logged hours
+            elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000)
+                          + Math.floor((x.total_a_hrs || 0) * 3600);
+          } else {
+            // Paused normally — show previously logged hours only
+            elapsedSeconds = Math.floor((x.total_a_hrs || 0) * 3600);
+          }
           if (elapsedSeconds < 0) elapsedSeconds = 0;
 
           const jobObj: any = {

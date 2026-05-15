@@ -3941,7 +3941,7 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
 }
 
 
-   [HttpPost("GetTransactionOverview")]
+    [HttpPost("GetTransactionOverview")]
     public async Task<IActionResult> GetTransactionOverview([FromBody] TransactionOverviewRequest request)
     {
         try
@@ -4024,19 +4024,29 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
             int CountHold(List<JobTranMst> list)   => list.Count(j => j.status == "4");
             int CountReject(List<JobTranMst> list)  => list.Count(j => j.status == "5");
 
-            // ── Next Operation setup (mirrors GetTransactionData exactly) ─
+            // ── Next Operation setup ──────────────────────────────────────
             var allJobSerials = allRows
                 .Where(j => j.SerialNo != null)
                 .Select(j => new { j.job, j.SerialNo })
                 .Distinct()
                 .ToList();
 
-            var maxStartedOper = allRows
-                .Where(j => j.SerialNo != null && j.oper_num != null)
+            // Max completed oper_num per job+serial
+            var maxCompletedOper = allRows
+                .Where(j => j.SerialNo != null && j.oper_num != null && j.status == "3")
                 .GroupBy(x => new { x.job, x.SerialNo })
                 .ToDictionary(
                     g => $"{g.Key.job}|{g.Key.SerialNo}",
                     g => g.Max(x => x.oper_num)
+                );
+
+            // FIX: latest status per job+serial+oper (per operation, not global per serial)
+            var latestStatusPerOper = allRows
+                .Where(j => j.SerialNo != null && j.oper_num != null)
+                .GroupBy(x => new { x.job, x.SerialNo, x.oper_num })
+                .ToDictionary(
+                    g => $"{g.Key.job}|{g.Key.SerialNo}|{g.Key.oper_num}",
+                    g => g.OrderByDescending(x => x.trans_num).First()
                 );
 
             var jobNumbers = allJobSerials.Select(x => x.job).Distinct().ToList();
@@ -4060,20 +4070,39 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                 .ToListAsync())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            // Build next op info — same logic as GetTransactionData's nextOpRows
+            // FIX: gate per-operation — not by global serial latest
             var nextOpInfos = allJobSerials
                 .Select(js =>
                 {
-                    var key     = $"{js.job}|{js.SerialNo}";
-                    var maxOper = maxStartedOper.ContainsKey(key)
-                        ? maxStartedOper[key]
-                        : (decimal?)null;
+                    var key = $"{js.job}|{js.SerialNo}";
+
+                    var maxOper = maxCompletedOper.ContainsKey(key)
+                        ? maxCompletedOper[key]
+                        : (int?)null;
 
                     if (maxOper == null) return null;
                     if (!routeByJob.ContainsKey(js.job)) return null;
 
                     var nextOp = routeByJob[js.job].FirstOrDefault(r => r.OperNum > maxOper);
                     if (nextOp == null) return null;
+
+                    // FIX: if the next op already has its own transaction (running/paused/hold/rejected)
+                    // it is NOT "In Queue" — it is already active in some state
+                    var nextOpKey = $"{js.job}|{js.SerialNo}|{nextOp.OperNum}";
+                    if (latestStatusPerOper.ContainsKey(nextOpKey))
+                    {
+                        var nextOpLatest = latestStatusPerOper[nextOpKey];
+                        if (nextOpLatest.status != "3") return null; // already has active transaction
+                    }
+
+                    // FIX: also skip if any op between maxCompleted and nextOp is still active
+                    bool anyActiveInBetween = latestStatusPerOper.Any(kvp =>
+                        kvp.Key.StartsWith($"{js.job}|{js.SerialNo}|") &&
+                        kvp.Value.oper_num > maxOper &&
+                        kvp.Value.oper_num < nextOp.OperNum &&
+                        (kvp.Value.status == "1" || kvp.Value.status == "2" || kvp.Value.status == "4"));
+
+                    if (anyActiveInBetween) return null;
 
                     bool isQcWc = nextOp.Wc != null && qcWcSet.Contains(nextOp.Wc);
 
@@ -4089,8 +4118,7 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                 .Where(x => x != null)
                 .ToList();
 
-            // Count next ops by type — forQC=true → next WC is QC dept, false → not QC
-            // Mirrors GetTransactionData: Type = n.isQcWc ? "QC" : "Transaction"
+            // Count next ops by type
             int CountNextOperation(bool forQC) =>
                 nextOpInfos.Count(n => forQC ? n!.isQcWc : !n!.isQcWc);
 
@@ -4199,24 +4227,30 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
             }
 
             // ── Next Operation setup ──────────────────────────────────────
-
-            // All job+serial pairs
             var allJobSerials = allRows
                 .Where(j => j.SerialNo != null)
                 .Select(j => new { j.job, j.SerialNo })
                 .Distinct()
                 .ToList();
 
-            // Max started oper_num per job+serial
-            var maxStartedOper = allRows
-                .Where(j => j.SerialNo != null && j.oper_num != null)
+            // Max completed oper_num per job+serial
+            var maxCompletedOper = allRows
+                .Where(j => j.SerialNo != null && j.oper_num != null && j.status == "3")
                 .GroupBy(x => new { x.job, x.SerialNo })
                 .ToDictionary(
                     g => $"{g.Key.job}|{g.Key.SerialNo}",
                     g => g.Max(x => x.oper_num)
                 );
 
-            // Load JobRouteMst for relevant jobs
+            // FIX: latest status per job+serial+oper (per operation, not global per serial)
+            var latestStatusPerOper = allRows
+                .Where(j => j.SerialNo != null && j.oper_num != null)
+                .GroupBy(x => new { x.job, x.SerialNo, x.oper_num })
+                .ToDictionary(
+                    g => $"{g.Key.job}|{g.Key.SerialNo}|{g.Key.oper_num}",
+                    g => g.OrderByDescending(x => x.trans_num).First()
+                );
+
             var jobNumbers = allJobSerials.Select(x => x.job).Distinct().ToList();
 
             var routeByJob = (await _context.JobRouteMst
@@ -4232,27 +4266,45 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                         .ToList()
                 );
 
-            // Load QC WC codes for type classification
             var qcWcSet = (await _context.WcMst
                 .Where(w => w.dept == "QA/ QC")
                 .Select(w => w.wc)
                 .ToListAsync())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            // Build one next op row per job+serial
+            // FIX: gate per-operation — not by global serial latest
             var nextOpRows = allJobSerials
                 .Select(js =>
                 {
-                    var key     = $"{js.job}|{js.SerialNo}";
-                    var maxOper = maxStartedOper.ContainsKey(key)
-                        ? maxStartedOper[key]
-                        : (decimal?)null;
+                    var key = $"{js.job}|{js.SerialNo}";
+
+                    var maxOper = maxCompletedOper.ContainsKey(key)
+                        ? maxCompletedOper[key]
+                        : (int?)null;
 
                     if (maxOper == null) return null;
                     if (!routeByJob.ContainsKey(js.job)) return null;
 
                     var nextOp = routeByJob[js.job].FirstOrDefault(r => r.OperNum > maxOper);
                     if (nextOp == null) return null;
+
+                    // FIX: if the next op already has its own transaction (running/paused/hold/rejected)
+                    // it is NOT "In Queue" — it is already active in some state
+                    var nextOpKey = $"{js.job}|{js.SerialNo}|{nextOp.OperNum}";
+                    if (latestStatusPerOper.ContainsKey(nextOpKey))
+                    {
+                        var nextOpLatest = latestStatusPerOper[nextOpKey];
+                        if (nextOpLatest.status != "3") return null; // already has active transaction
+                    }
+
+                    // FIX: also skip if any op between maxCompleted and nextOp is still active
+                    bool anyActiveInBetween = latestStatusPerOper.Any(kvp =>
+                        kvp.Key.StartsWith($"{js.job}|{js.SerialNo}|") &&
+                        kvp.Value.oper_num > maxOper &&
+                        kvp.Value.oper_num < nextOp.OperNum &&
+                        (kvp.Value.status == "1" || kvp.Value.status == "2" || kvp.Value.status == "4"));
+
+                    if (anyActiveInBetween) return null;
 
                     bool isQcWc = nextOp.Wc != null && qcWcSet.Contains(nextOp.Wc);
 
@@ -4324,15 +4376,15 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
                 {
                     Job          = n!.job,
                     SerialNo     = n.SerialNo,
-                    WC           = n.nextWc,                                    // next op WC from JobRouteMst
-                    Operation    = n.nextOper,                                  // next op number
+                    WC           = n.nextWc,
+                    Operation    = n.nextOper,
                     EmployeeCode = (string?)null,
                     EmployeeName = (string?)null,
                     WommId       = (object?)null,
                     Machine      = (string?)null,
                     Time         = (DateTime?)null,
                     Progress     = "In Queue",
-                    Type         = n.isQcWc ? "QC" : "Transaction",            // correct type
+                    Type         = n.isQcWc ? "QC" : "Transaction",
                     QcGroup      = (string?)null
                 })
                 .ToList();
@@ -4369,6 +4421,8 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
             });
         }
     }
+
+
 
 
 

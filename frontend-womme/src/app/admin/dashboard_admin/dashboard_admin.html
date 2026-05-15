@@ -3,312 +3,334 @@
 
 <!-- PAGE LAYOUT -->
 <div class="dashboard-wrapper" [class.sidebar-hidden]="isSidebarHidden">
-  
-  <!-- SIDEBAR -->
   <app-sidenav [isSidebarHidden]="isSidebarHidden"></app-sidenav>
-  
-  <!-- MAIN CONTENT -->
+
   <main class="main-content">
     <div class="container-fluid mt-4">
 
-        <!-- Real-Time Production Overview -->
-         
-       <section class="section" *ngIf="roleId === 4 || (roleId !== 4 && roleId !== 5)">
-          <h3 class="section-title">Transaction Overview</h3>
-          <div class="cards-grid">
-            <div class="card green" (click)="goToTransaction('running')">
-              <div class="card-header">
-                <span>RUNNING</span>
-                <i class="bi bi-lightning-charge"></i>
-              </div>
-              <h1>{{ transaction.runningJobs }}</h1>
-            </div>
-            <div class="card blue-card" (click)="goToTransaction('nextop')">
-              <div class="card-header">
-                <span>IN QUEUE</span>
-                <i class="bi bi-arrow-right-circle"></i>
-              </div>
-              <h1>{{ transaction.nextOperationJobs }}</h1>
-            </div>
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- TRANSACTION OVERVIEW                                    -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <section class="section" *ngIf="roleId === 4 || (roleId !== 4 && roleId !== 5)">
+        <h3 class="section-title">Transaction Overview</h3>
+        <div class="cards-grid">
 
-            <div class="card yellow" (click)="goToTransaction('paused')">
-              <div class="card-header">
-                <span>PAUSED</span>
-                <i class="bi bi-pause-circle"></i>
-              </div>
-              <h1>{{ transaction.pausedJobs }}</h1>
-            </div>
-
-            <div class="card red" (click)="goToTransaction('critical')">
-              <div class="card-header">
-                <span>ONGOING CRITICAL</span>
-                <i class="bi bi-exclamation-triangle"></i>
-              </div>
-              <h1>{{ transaction.ongoingCriticalJobs }}</h1>
-            </div>
-
-            <div class="card orange" (click)="goToTransaction('extended')">
-              <div class="card-header">
-                <span>EXTENDED</span>
-                <i class="bi bi-clock-history"></i>
-              </div>
-              <h1>{{ transaction.extendedJobs }}</h1>
-            </div>
-
-            <div class="card gray" (click)="goToTransaction('completed')">
-              <div class="card-header">
-                <span>NORMAL COMPLETED</span>
-                <i class="bi bi-check2-circle"></i>
-              </div>
-              <h1>{{ transaction.normalCompletedJobs }}</h1>
-            </div>
+          <div class="card green" (click)="goToTransaction('running')">
+            <div class="card-header"><span>RUNNING</span><i class="bi bi-lightning-charge"></i></div>
+            <h1>{{ transaction.runningJobs }}</h1>
           </div>
 
-        </section>
-
-        <!-- Real-Time Production Overview -->
-        <section class="section" *ngIf="roleId === 5 || (roleId !== 4 && roleId !== 5)">
-          <h3 class="section-title">QC Overview</h3>
-          <div class="cards-grid">
-            <div class="card green" (click)="goToQC('running')">
-              <div class="card-header">
-                <span>RUNNING</span>
-                <i class="bi bi-lightning-charge"></i>
-              </div>
-              <h1>{{ qc.runningQCJobs }}</h1>
-            </div>
-            <div class="card blue-card" (click)="goToQC('nextop')">
-              <div class="card-header">
-                <span>IN QUEUE</span>
-                <i class="bi bi-arrow-right-circle"></i>
-              </div>
-              <h1>{{ qc.nextOperationQCJobs }}</h1>
-            </div>
-
-            <div class="card yellow" (click)="goToQC('paused')">
-              <div class="card-header">
-                <span>PAUSED</span>
-                <i class="bi bi-pause-circle"></i>
-              </div>
-              <h1>{{ qc.pausedQCJobs }}</h1>
-            </div>
-
-            <div class="card red" (click)="goToQC('critical')">
-              <div class="card-header">
-                <span>ONGOING CRITICAL</span>
-                <i class="bi bi-exclamation-triangle"></i>
-              </div>
-              <h1>{{ qc.ongoingCriticalQCJobs }}</h1>
-            </div>
-
-            <div class="card orange" (click)="goToQC('extended')">
-              <div class="card-header">
-                <span>EXTENDED</span>
-                <i class="bi bi-clock-history"></i>
-              </div>
-              <h1>{{ qc.extendedQCJobs }}</h1>
-            </div>
-
-            <div class="card gray" (click)="goToQC('completed')">
-              <div class="card-header">
-                <span>NORMAL COMPLETED</span>
-                <i class="bi bi-check2-circle"></i>
-              </div>
-              <h1>{{ qc.normalCompletedQCJobs }}</h1>
-            </div>
-            <div class="card purple" (click)="goToQC('hold')">
-              <div class="card-header">
-                <span>HOLD</span>
-                <i class="bi bi-pause-fill"></i>
-              </div>
-              <h1>{{ qc.holdQCJobs }}</h1>
-            </div>
-            <div class="card darkred" (click)="goToQC('reject')">
-              <div class="card-header">
-                <span>REJECTED</span>
-                <i class="bi bi-x-circle"></i>
-              </div>
-              <h1>{{ qc.rejectedQCJobs }}</h1>
-            </div>
-          </div>
-        </section>
-
-      <!-- Real-Time Production Overview -->
-       <section class="section" *ngIf="roleId !== 4 && roleId !== 5">
-          <h3 class="section-title">VERIFY OPERATIONS OVERVIEW</h3>
-          <div class="cards-grid">
-            <div class="card green" (click)="goToVerify('running')">
-              <div class="card-header">
-                <span>RUNNING</span>
-                <i class="bi bi-lightning-charge"></i>
-              </div>
-              <h1>{{ verify.runningVerifyJobs }}</h1>
-            </div>
-
-            <div class="card yellow" (click)="goToVerify('paused')">
-              <div class="card-header">
-                <span>PAUSED</span>
-                <i class="bi bi-pause-circle"></i>
-              </div>
-              <h1>{{ verify.pausedVerifyJobs }}</h1>
-            </div>
-
-            <div class="card red" (click)="goToVerify('critical')">
-              <div class="card-header">
-                <span>ONGOING CRITICAL</span>
-                <i class="bi bi-exclamation-triangle"></i>
-              </div>
-              <h1>{{ verify.ongoingCriticalVerifyJobs }}</h1>
-            </div>
-
-            <div class="card orange" (click)="goToVerify('extended')">
-              <div class="card-header">
-                <span>EXTENDED</span>
-                <i class="bi bi-clock-history"></i>
-              </div>
-              <h1>{{ verify.extendedVerifyJobs }}</h1>
-            </div>
-
-            <div class="card gray" (click)="goToVerify('completed')">
-              <div class="card-header">
-                <span>NORMAL COMPLETED</span>
-                <i class="bi bi-check2-circle"></i>
-              </div>
-              <h1>{{ verify.normalCompletedVerifyJobs }}</h1>
-            </div>
-          </div>
-        </section>
-
-      <!-- Idle Resource Monitor -->
-    <section class="section">
-      <h3 class="section-title">Idle Resource Monitor</h3>
-      <div class="cards-grid two">
-        <!-- Idle Employees -->
-        <div class="card white bordered blue-border" style="padding: 15px; margin-bottom: 15px; border-radius: 10px;">
-          <div class="card-header" style="font-weight: bold; margin-bottom: 10px;">
-            <span>Idle Employees</span>                
+          <div class="card blue-card" (click)="goToTransaction('nextop')">
+            <div class="card-header"><span>IN QUEUE</span><i class="bi bi-arrow-right-circle"></i></div>
+            <h1>{{ transaction.nextOperationJobs }}</h1>
           </div>
 
-          <h2 style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 0; font-size: 24px;">
-            <span style="flex: 1; text-align: center; color: blue;">
-          {{ (utilization.totalEmployees || 0) - (utilization.activeEmployees || 0) }}
-          {{ utilization.totalEmployees || 0 }}
-            </span>
-          <small style="text-align: right; font-size: 16px; color: #333;">
-              {{ getIdlePercentageEmployee() }}%
-            </small>
-          </h2>
-        </div>
-
-        <!-- Idle Machines -->
-        <div class="card white bordered blue-border" style="padding: 15px; margin-bottom: 15px; border-radius: 10px;">
-          <div class="card-header" style="font-weight: bold; margin-bottom: 10px;">
-            <span>Idle Machines</span>                
+          <div class="card yellow" (click)="goToTransaction('paused')">
+            <div class="card-header"><span>PAUSED</span><i class="bi bi-pause-circle"></i></div>
+            <h1>{{ transaction.pausedJobs }}</h1>
           </div>
 
-          <h2 style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 0; font-size: 24px;">
-            <span style="flex: 1; text-align: center; color: blue;">
-              {{ (utilization.totalMachines || 0) - (utilization.activeMachines || 0) }} /
-              {{ utilization.totalMachines || 0 }}
-            </span>
-            <small style="text-align: right; font-size: 16px; color: #333;">
-              {{ getIdlePercentageMachine() }}%
-            </small>
-          </h2>
-        </div>
-      </div>
-    </section>
+          <div class="card red" (click)="goToTransaction('critical')">
+            <div class="card-header"><span>ONGOING CRITICAL</span><i class="bi bi-exclamation-triangle"></i></div>
+            <h1>{{ transaction.ongoingCriticalJobs }}</h1>
+          </div>
 
+          <div class="card orange" (click)="goToTransaction('extended')">
+            <div class="card-header"><span>EXTENDED</span><i class="bi bi-clock-history"></i></div>
+            <h1>{{ transaction.extendedJobs }}</h1>
+          </div>
 
-    <section style="padding: 20px; margin-bottom: 20px; background: #f9f9f9; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-      <h3 style="margin-bottom: 15px; font-size: 20px; color: #333; border-bottom: 2px solid #007bff; display: inline-block; padding-bottom: 5px;">
-        Currently Jobs Status
-      </h3>
-
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
-          <thead style="background: #007bff; color: white;">
-            <tr>
-              <th style="padding: 10px;">S.No</th>
-              <th style="padding: 10px;">Job</th>
-              <th style="padding: 10px;">Serial No</th>
-              <th style="padding: 10px;">Operation</th>
-              <th style="padding: 10px;">Work Center</th>
-              <th style="padding: 10px;">Login Id</th>
-              <th style="padding: 10px;">Employee Name</th>
-              <th style="padding: 10px;">Machine</th>
-              <th style="padding: 10px;">Status</th>
-              <th style="padding: 10px;">Type</th>
-              <th style="padding: 10px;">Trans Date & Time</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr *ngFor="let item of jobData; let i = index" 
-                [ngStyle]="{
-                  'background-color': hoveredRow === i ? '#f1f9ff' : (i % 2 === 0 ? '#fff' : '#f9f9f9'),
-                  'border-bottom': '1px solid #ddd',
-                  'transition': 'background 0.3s'
-                }"
-                (mouseenter)="hoveredRow = i"
-                (mouseleave)="hoveredRow = -1">
-
-              <td style="padding: 10px;">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
-              <td style="padding: 10px;">{{ item.job }}</td>
-              <td style="padding: 10px;">{{ item.serialNo || '-' }}</td>
-              <td style="padding: 10px;">{{ item.operation }}</td>
-              <td style="padding: 10px;">{{ item.wc }}</td>
-              <td style="padding: 10px;">{{ 'WME00' + (item.wommId || '') }}</td>
-              <td style="padding: 10px;">{{ item.employeeName }}</td>
-
-              <td style="padding: 10px;">{{ item.machine || '-' }}</td>
-              <td style="padding: 10px;">
-                <span
-                  class="status-badge"
-                  [ngClass]="getStatusBadgeClass(item.progress)">
-                  {{ item.progress }}
-                </span>
-              </td>
-
-              <td style="padding: 10px;">{{ item.type }}</td>
-              <td style="padding: 10px;">{{ item.time | date:'short' }}</td>
-            </tr>
-
-            <tr *ngIf="jobData.length === 0">
-              <td colspan="11" style="text-align: center; padding: 15px; color: gray;">No records found.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
- <div class="pagination-controls" style="text-align: center; margin-top: 15px;">
-  <button
-    (click)="prevPage()"
-    [disabled]="currentPage === 1"
-    style="margin-right: 10px; padding: 5px 10px;"
-  >
-    Prev
-  </button>
-
-  <span>Page {{ currentPage }} of {{ totalPages }}</span>
-
-  <button
-    (click)="nextPage()"
-    [disabled]="currentPage === totalPages"
-    style="margin-left: 10px; padding: 5px 10px;"
-  >
-    Next
-  </button>
-</div>
-
-</section>
-
-
-
+          <div class="card gray" (click)="goToTransaction('completed')">
+            <div class="card-header"><span>NORMAL COMPLETED</span><i class="bi bi-check2-circle"></i></div>
+            <h1>{{ transaction.normalCompletedJobs }}</h1>
+          </div>
 
         </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- QC OVERVIEW                                             -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <section class="section" *ngIf="roleId === 5 || (roleId !== 4 && roleId !== 5)">
+        <h3 class="section-title">QC Overview</h3>
+        <div class="cards-grid">
+
+          <div class="card green" (click)="goToQC('running')">
+            <div class="card-header"><span>RUNNING</span><i class="bi bi-lightning-charge"></i></div>
+            <h1>{{ qc.runningQCJobs }}</h1>
+          </div>
+
+          <div class="card blue-card" (click)="goToQC('nextop')">
+            <div class="card-header"><span>IN QUEUE</span><i class="bi bi-arrow-right-circle"></i></div>
+            <h1>{{ qc.nextOperationQCJobs }}</h1>
+          </div>
+
+          <div class="card yellow" (click)="goToQC('paused')">
+            <div class="card-header"><span>PAUSED</span><i class="bi bi-pause-circle"></i></div>
+            <h1>{{ qc.pausedQCJobs }}</h1>
+          </div>
+
+          <div class="card red" (click)="goToQC('critical')">
+            <div class="card-header"><span>ONGOING CRITICAL</span><i class="bi bi-exclamation-triangle"></i></div>
+            <h1>{{ qc.ongoingCriticalQCJobs }}</h1>
+          </div>
+
+          <div class="card orange" (click)="goToQC('extended')">
+            <div class="card-header"><span>EXTENDED</span><i class="bi bi-clock-history"></i></div>
+            <h1>{{ qc.extendedQCJobs }}</h1>
+          </div>
+
+          <div class="card gray" (click)="goToQC('completed')">
+            <div class="card-header"><span>NORMAL COMPLETED</span><i class="bi bi-check2-circle"></i></div>
+            <h1>{{ qc.normalCompletedQCJobs }}</h1>
+          </div>
+
+          <div class="card purple" (click)="goToQC('hold')">
+            <div class="card-header"><span>HOLD</span><i class="bi bi-pause-fill"></i></div>
+            <h1>{{ qc.holdQCJobs }}</h1>
+          </div>
+
+          <div class="card darkred" (click)="goToQC('reject')">
+            <div class="card-header"><span>REJECTED</span><i class="bi bi-x-circle"></i></div>
+            <h1>{{ qc.rejectedQCJobs }}</h1>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- VERIFY OPERATIONS OVERVIEW                              -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <section class="section" *ngIf="roleId !== 4 && roleId !== 5">
+        <h3 class="section-title">Verify Operations Overview</h3>
+        <div class="cards-grid">
+
+          <div class="card green" (click)="goToVerify('running')">
+            <div class="card-header"><span>RUNNING</span><i class="bi bi-lightning-charge"></i></div>
+            <h1>{{ verify.runningVerifyJobs }}</h1>
+          </div>
+
+          <div class="card yellow" (click)="goToVerify('paused')">
+            <div class="card-header"><span>PAUSED</span><i class="bi bi-pause-circle"></i></div>
+            <h1>{{ verify.pausedVerifyJobs }}</h1>
+          </div>
+
+          <div class="card red" (click)="goToVerify('critical')">
+            <div class="card-header"><span>ONGOING CRITICAL</span><i class="bi bi-exclamation-triangle"></i></div>
+            <h1>{{ verify.ongoingCriticalVerifyJobs }}</h1>
+          </div>
+
+          <div class="card orange" (click)="goToVerify('extended')">
+            <div class="card-header"><span>EXTENDED</span><i class="bi bi-clock-history"></i></div>
+            <h1>{{ verify.extendedVerifyJobs }}</h1>
+          </div>
+
+          <div class="card gray" (click)="goToVerify('completed')">
+            <div class="card-header"><span>NORMAL COMPLETED</span><i class="bi bi-check2-circle"></i></div>
+            <h1>{{ verify.normalCompletedVerifyJobs }}</h1>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- ISSUE OPERATIONS OVERVIEW  ← NEW                       -->
+      <!-- Placed directly after Verify, before Project Dashboard  -->
+      <!-- Shows: Pending Issues + Completed Issues                -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <section class="section" *ngIf="roleId !== 4 && roleId !== 5">
+        <h3 class="section-title">Issue Operations Overview</h3>
+        <div class="cards-grid">
+
+          <!-- Pending Issues — jobs not yet issued (still in issue list) -->
+          <div class="card"
+               style="border-top:4px solid #0d6efd; cursor:pointer;"
+               (click)="goToIssue('pending')">
+            <div class="card-header" style="background:transparent;">
+              <span style="color:#0d6efd; font-weight:700;">PENDING ISSUES</span>
+              <i class="bi bi-box-arrow-in-right" style="color:#0d6efd;"></i>
+            </div>
+            <h1 style="color:#0d6efd;">{{ issueStats.pendingIssues }}</h1>
+          </div>
+
+          <!-- Completed Issues — issue jobs with status 3 -->
+          <div class="card"
+               style="border-top:4px solid #198754; cursor:pointer;"
+               (click)="goToIssue('completed')">
+            <div class="card-header" style="background:transparent;">
+              <span style="color:#198754; font-weight:700;">COMPLETED ISSUES</span>
+              <i class="bi bi-check2-all" style="color:#198754;"></i>
+            </div>
+            <h1 style="color:#198754;">{{ issueStats.completedIssues }}</h1>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- PROJECT DASHBOARD OVERVIEW                              -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <section class="section" *ngIf="roleId !== 4 && roleId !== 5">
+        <h3 class="section-title">Project Dashboard Overview</h3>
+        <div class="cards-grid">
+
+          <div class="card" style="border-top:4px solid #f0ad4e; cursor:pointer;"
+               (click)="goToProjectDashboard('hold')">
+            <div class="card-header" style="background:transparent;">
+              <span style="color:#856404; font-weight:700;">HOLD JOBS</span>
+              <i class="bi bi-pause-fill" style="color:#f0ad4e;"></i>
+            </div>
+            <h1 style="color:#856404;">{{ projectStats.holdJobs }}</h1>
+          </div>
+
+          <div class="card" style="border-top:4px solid #dc3545; cursor:pointer;"
+               (click)="goToProjectDashboard('reject')">
+            <div class="card-header" style="background:transparent;">
+              <span style="color:#842029; font-weight:700;">REJECTED JOBS</span>
+              <i class="bi bi-x-circle" style="color:#dc3545;"></i>
+            </div>
+            <h1 style="color:#842029;">{{ projectStats.rejectedJobs }}</h1>
+          </div>
+
+          <div class="card" style="border-top:4px solid #0dcaf0; cursor:pointer;"
+               (click)="goToProjectDashboard('holdSubmit')">
+            <div class="card-header" style="background:transparent;">
+              <span style="color:#055160; font-weight:700;">HOLD SUBMITTED</span>
+              <i class="bi bi-send-check" style="color:#0dcaf0;"></i>
+            </div>
+            <h1 style="color:#055160;">{{ projectStats.holdSubmitted }}</h1>
+          </div>
+
+          <div class="card" style="border-top:4px solid #6f42c1; cursor:pointer;"
+               (click)="goToProjectDashboard('rejectSubmit')">
+            <div class="card-header" style="background:transparent;">
+              <span style="color:#432874; font-weight:700;">REJECT SUBMITTED</span>
+              <i class="bi bi-send-x" style="color:#6f42c1;"></i>
+            </div>
+            <h1 style="color:#432874;">{{ projectStats.rejectSubmitted }}</h1>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- IDLE RESOURCE MONITOR                                   -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <section class="section">
+        <h3 class="section-title">Idle Resource Monitor</h3>
+        <div class="cards-grid two">
+
+          <div class="card white bordered blue-border"
+               style="padding:15px; margin-bottom:15px; border-radius:10px;">
+            <div class="card-header" style="font-weight:bold; margin-bottom:10px;">
+              <span>Idle Employees</span>
+            </div>
+            <h2 style="display:flex; justify-content:space-between; align-items:center;
+                        width:100%; margin:0; font-size:24px;">
+              <span style="flex:1; text-align:center; color:blue;">
+                {{ (utilization.totalEmployees || 0) - (utilization.activeEmployees || 0) }}
+                {{ utilization.totalEmployees || 0 }}
+              </span>
+              <small style="text-align:right; font-size:16px; color:#333;">
+                {{ getIdlePercentageEmployee() }}%
+              </small>
+            </h2>
+          </div>
+
+          <div class="card white bordered blue-border"
+               style="padding:15px; margin-bottom:15px; border-radius:10px;">
+            <div class="card-header" style="font-weight:bold; margin-bottom:10px;">
+              <span>Idle Machines</span>
+            </div>
+            <h2 style="display:flex; justify-content:space-between; align-items:center;
+                        width:100%; margin:0; font-size:24px;">
+              <span style="flex:1; text-align:center; color:blue;">
+                {{ (utilization.totalMachines || 0) - (utilization.activeMachines || 0) }} /
+                {{ utilization.totalMachines || 0 }}
+              </span>
+              <small style="text-align:right; font-size:16px; color:#333;">
+                {{ getIdlePercentageMachine() }}%
+              </small>
+            </h2>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- CURRENTLY JOBS STATUS TABLE                             -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <section style="padding:20px; margin-bottom:20px; background:#f9f9f9;
+                      border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="margin-bottom:15px; font-size:20px; color:#333;
+                   border-bottom:2px solid #007bff; display:inline-block; padding-bottom:5px;">
+          Currently Jobs Status
+        </h3>
+
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; background:white;
+                        border-radius:8px; overflow:hidden;">
+            <thead style="background:#007bff; color:white;">
+              <tr>
+                <th style="padding:10px;">S.No</th>
+                <th style="padding:10px;">Job</th>
+                <th style="padding:10px;">Serial No</th>
+                <th style="padding:10px;">Operation</th>
+                <th style="padding:10px;">Work Center</th>
+                <th style="padding:10px;">Login Id</th>
+                <th style="padding:10px;">Employee Name</th>
+                <th style="padding:10px;">Machine</th>
+                <th style="padding:10px;">Status</th>
+                <th style="padding:10px;">Type</th>
+                <th style="padding:10px;">Trans Date & Time</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngFor="let item of jobData; let i = index"
+                  [ngStyle]="{
+                    'background-color': hoveredRow === i ? '#f1f9ff' : (i % 2 === 0 ? '#fff' : '#f9f9f9'),
+                    'border-bottom': '1px solid #ddd',
+                    'transition': 'background 0.3s'
+                  }"
+                  (mouseenter)="hoveredRow = i"
+                  (mouseleave)="hoveredRow = -1">
+
+                <td style="padding:10px;">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                <td style="padding:10px;">{{ item.job }}</td>
+                <td style="padding:10px;">{{ item.serialNo || '-' }}</td>
+                <td style="padding:10px;">{{ item.operation }}</td>
+                <td style="padding:10px;">{{ item.wc }}</td>
+                <td style="padding:10px;">{{ 'WME00' + (item.wommId || '') }}</td>
+                <td style="padding:10px;">{{ item.employeeName }}</td>
+                <td style="padding:10px;">{{ item.machine || '-' }}</td>
+                <td style="padding:10px;">
+                  <span class="status-badge" [ngClass]="getStatusBadgeClass(item.progress)">
+                    {{ item.progress }}
+                  </span>
+                </td>
+                <td style="padding:10px;">{{ item.type }}</td>
+                <td style="padding:10px;">{{ item.time | date:'short' }}</td>
+              </tr>
+
+              <tr *ngIf="jobData.length === 0">
+                <td colspan="11" style="text-align:center; padding:15px; color:gray;">
+                  No records found.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-controls" style="text-align:center; margin-top:15px;">
+          <button (click)="prevPage()" [disabled]="currentPage === 1"
+                  style="margin-right:10px; padding:5px 10px;">Prev</button>
+          <span>Page {{ currentPage }} of {{ totalPages }}</span>
+          <button (click)="nextPage()" [disabled]="currentPage === totalPages"
+                  style="margin-left:10px; padding:5px 10px;">Next</button>
+        </div>
+      </section>
+
+    </div>
   </main>
 </div>
-    
-
-      

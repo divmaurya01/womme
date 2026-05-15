@@ -1,11 +1,11 @@
 import { Component, HostListener } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { SidenavComponent } from "../sidenav/sidenav";
-import { HeaderComponent } from "../header/header";
+import { SidenavComponent } from '../sidenav/sidenav';
+import { HeaderComponent } from '../header/header';
 import { JobService } from '../../services/job.service';
 import { Router, RouterModule } from '@angular/router';
-
-
+import { finalize } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard-overview',
@@ -21,27 +21,27 @@ import { Router, RouterModule } from '@angular/router';
   ]
 })
 export class DashboardOverviewComponent {
- 
 
+  // ── Transaction / QC / Verify overviews ──────────────────────────────────
   transaction = {
     runningJobs: 0,
     pausedJobs: 0,
     normalCompletedJobs: 0,
     extendedJobs: 0,
     ongoingCriticalJobs: 0,
-    nextOperationJobs: 0 
+    nextOperationJobs: 0
   };
 
- qc = {
-  runningQCJobs: 0,
-  pausedQCJobs: 0,
-  normalCompletedQCJobs: 0,
-  extendedQCJobs: 0,
-  ongoingCriticalQCJobs: 0,
-  holdQCJobs: 0,
-  rejectedQCJobs: 0,
-  nextOperationQCJobs: 0
-};
+  qc = {
+    runningQCJobs: 0,
+    pausedQCJobs: 0,
+    normalCompletedQCJobs: 0,
+    extendedQCJobs: 0,
+    ongoingCriticalQCJobs: 0,
+    holdQCJobs: 0,
+    rejectedQCJobs: 0,
+    nextOperationQCJobs: 0
+  };
 
   verify = {
     runningVerifyJobs: 0,
@@ -51,150 +51,202 @@ export class DashboardOverviewComponent {
     ongoingCriticalVerifyJobs: 0
   };
 
-
-
-  utilization = {
-    totalEmployees: 0,
-    activeEmployees: 0,
-    employeeUtilization: "0%",
-    totalMachines: 0,
-    activeMachines: 0,
-    machineUtilization: "0%"
+  // ── Issue Operations counts ───────────────────────────────────────────────
+  issueStats = {
+    pendingIssues:   0,   // jobs in issued-transaction list (not yet done)
+    completedIssues: 0    // completed issue jobs (status = 3, wc = ISSUE)
   };
 
-  allJobData: any[] = [];     // full dataset loaded once
-  jobData:    any[] = [];     // current page slice
-  currentPage = 1;
-  pageSize    = 10;
+  // ── Project Dashboard counts ──────────────────────────────────────────────
+  projectStats = {
+    holdJobs:        0,
+    rejectedJobs:    0,
+    holdSubmitted:   0,
+    rejectSubmitted: 0
+  };
+
+  // ── Utilization ───────────────────────────────────────────────────────────
+  utilization = {
+    totalEmployees:      0,
+    activeEmployees:     0,
+    employeeUtilization: '0%',
+    totalMachines:       0,
+    activeMachines:      0,
+    machineUtilization:  '0%'
+  };
+
+  // ── Job table ─────────────────────────────────────────────────────────────
+  allJobData:   any[] = [];
+  jobData:      any[] = [];
+  currentPage  = 1;
+  pageSize     = 10;
   totalRecords = 0;
   totalPages   = 0;
   hoveredRow: number = -1;
   roleId: number = 0;
-   isSidebarHidden = window.innerWidth <= 1024;
+
+  isSidebarHidden = window.innerWidth <= 1024;
 
   constructor(private jobService: JobService, private router: Router) {}
 
   ngOnInit() {
     this.checkScreenSize();
-    
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');    
-    this.roleId = userDetails.roleID;    
-    this.applyRoleRules();    
-    this.loadUtilizationData(); 
-      
-    
 
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+    this.roleId = userDetails.roleID;
+
+    this.applyRoleRules();
+    this.loadUtilizationData();
+    this.loadProjectStats();
+    this.loadIssueStats();   // ← NEW
   }
 
-    @HostListener('window:resize')
-  onResize() {
-    this.checkScreenSize();
-  }
+  @HostListener('window:resize')
+  onResize() { this.checkScreenSize(); }
 
-    checkScreenSize() {
-    if (window.innerWidth <= 1024) {
-      this.isSidebarHidden = true;   // Mobile → hidden
-    } else {
-      this.isSidebarHidden = false;  // Desktop → visible
-    }
-  }
+  checkScreenSize() { this.isSidebarHidden = window.innerWidth <= 1024; }
+  toggleSidebar()   { this.isSidebarHidden = !this.isSidebarHidden; }
 
-  toggleSidebar() {
-    this.isSidebarHidden = !this.isSidebarHidden;
-  }
+  // ─────────────────────────────────────────────────────────────────────────
+  // Role-based loading
+  // ─────────────────────────────────────────────────────────────────────────
 
   applyRoleRules() {
-    if (this.roleId === 4) {      
+    if (this.roleId === 4) {
       this.loadOverview(0, 1, 0, 0);
       this.loadTransactionData(0, 1, 0, 0);
-    }
-    else if (this.roleId === 5) {      
+    } else if (this.roleId === 5) {
       this.loadOverview(0, 0, 1, 0);
       this.loadTransactionData(0, 0, 1, 0);
-    }
-    else {      
+    } else {
       this.loadOverview();
       this.loadTransactionData();
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Overview APIs
+  // ─────────────────────────────────────────────────────────────────────────
 
   loadOverview(
-      todayOnly: number = 0,
-      includeTransaction: number = 1,
-      includeQC: number = 1,
-      includeVerify: number = 1
-    ) {
-      const payload = { todayOnly, includeTransaction, includeQC, includeVerify };
-
-      this.jobService.GetTransactionOverview(payload).subscribe({
-        next: (res: any) => {
-          if (res.success) {
-            this.transaction = res.transactionOverview ?? this.transaction;
-            this.qc = res.qcOverview ?? this.qc;
-            this.verify = res.verifyOverview ?? this.verify;
-          }
-        },
-        error: err => console.error('Error loading overview:', err)
-      });
-    }
-
+    todayOnly: number = 0,
+    includeTransaction: number = 1,
+    includeQC: number = 1,
+    includeVerify: number = 1
+  ) {
+    const payload = { todayOnly, includeTransaction, includeQC, includeVerify };
+    this.jobService.GetTransactionOverview(payload).subscribe({
+      next: (res: any) => {
+        if (res.success) {
+          this.transaction = res.transactionOverview ?? this.transaction;
+          this.qc          = res.qcOverview          ?? this.qc;
+          this.verify      = res.verifyOverview      ?? this.verify;
+        }
+      },
+      error: err => console.error('Error loading overview:', err)
+    });
+  }
 
   loadUtilizationData() {
     this.jobService.GetEmployeeAndMachineStats().subscribe({
       next: (res: any) => {
-        if (res.success && res.data) {
-          this.utilization = res.data;
-        }
+        if (res.success && res.data) this.utilization = res.data;
       },
-      error: (err) => console.error('Error loading utilization data:', err)
+      error: err => console.error('Error loading utilization:', err)
     });
   }
 
-  loadTransactionData(todayOnly: number = 0, includeTransaction: number = 1, includeQC: number = 1, includeVerify: number = 1) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // NEW: Issue Operations stats
+  // Pending  = jobs still in the issued-transaction list (GetIssuedTransactions)
+  // Completed = issue jobs where latest status = "3" from GetAllCompletedJobs
+  // Both fire in parallel via forkJoin
+  // ─────────────────────────────────────────────────────────────────────────
+
+  loadIssueStats() {
+    forkJoin({
+      pending:   this.jobService.GetIssuedTransactions(0, 99999, '', ''),
+      completed: this.jobService.GetAllCompletedJobs()
+    }).subscribe({
+      next: ({ pending, completed }: any) => {
+        const pendingData   = (pending?.data   ?? []) as any[];
+        const completedData = (completed?.data ?? []) as any[];
+
+        // Pending = anything still in the issue list (not yet completed)
+        this.issueStats.pendingIssues = pendingData.length;
+
+        // Completed issue jobs = completed jobs where wc contains 'issue' (case-insensitive)
+        this.issueStats.completedIssues = completedData.filter((j: any) =>
+          (j.wcCode ?? j.wc ?? '').toLowerCase().includes('issue')
+        ).length;
+      },
+      error: err => console.error('Error loading issue stats:', err)
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Project Dashboard counts
+  // ─────────────────────────────────────────────────────────────────────────
+
+  loadProjectStats() {
+    forkJoin({
+      hold:         this.jobService.GetHoldQCJobs(),
+      rejected:     this.jobService.GetRejectedQCJobs(),
+      holdSubmit:   this.jobService.GetHoldSubmittedJobs(),
+      rejectSubmit: this.jobService.GetRejectSubmittedJobs()
+    }).subscribe({
+      next: ({ hold, rejected, holdSubmit, rejectSubmit }: any) => {
+        this.projectStats = {
+          holdJobs:        (hold?.data        ?? []).length,
+          rejectedJobs:    (rejected?.data    ?? []).length,
+          holdSubmitted:   (holdSubmit?.data  ?? []).length,
+          rejectSubmitted: (rejectSubmit?.data ?? []).length
+        };
+      },
+      error: err => console.error('Error loading project stats:', err)
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Transaction table
+  // ─────────────────────────────────────────────────────────────────────────
+
+  loadTransactionData(
+    todayOnly: number = 0,
+    includeTransaction: number = 1,
+    includeQC: number = 1,
+    includeVerify: number = 1
+  ) {
     const payload = {
-      TodayOnly: todayOnly,
+      TodayOnly:          todayOnly,
       IncludeTransaction: includeTransaction,
-      IncludeQC: includeQC,
-      IncludeVerify: includeVerify,  
-      PageNumber: 1,
-      PageSize: 99999   // ← load everything once
-      
+      IncludeQC:          includeQC,
+      IncludeVerify:      includeVerify,
+      PageNumber:         1,
+      PageSize:           99999
     };
 
     this.jobService.GetTransactionData(payload).subscribe({
       next: (res: any) => {
         if (res.success) {
-          this.allJobData  = res.data || [];
+          this.allJobData   = res.data || [];
           this.totalRecords = this.allJobData.length;
           this.totalPages   = Math.ceil(this.totalRecords / this.pageSize);
           this.currentPage  = 1;
-          this.slicePage();   // render first page instantly
+          this.slicePage();
         }
       },
-      error: (err) => console.error('Error loading job data:', err)
+      error: err => console.error('Error loading job data:', err)
     });
   }
 
-  // ── Instant client-side slice — no API call ───────────────────────────
   slicePage() {
-    const start = (this.currentPage - 1) * this.pageSize;
+    const start  = (this.currentPage - 1) * this.pageSize;
     this.jobData = this.allJobData.slice(start, start + this.pageSize);
   }
 
-  nextPage() {
-    if (this.currentPage < this.totalPages) {
-      this.currentPage++;
-      this.slicePage();   // ← instant, no API
-    }
-  }
-
-  prevPage() {
-    if (this.currentPage > 1) {
-      this.currentPage--;
-      this.slicePage();   // ← instant, no API
-    }
-  }
+  nextPage() { if (this.currentPage < this.totalPages) { this.currentPage++; this.slicePage(); } }
+  prevPage() { if (this.currentPage > 1)               { this.currentPage--; this.slicePage(); } }
 
   goToPage(page: number) {
     if (page < 1 || page > this.totalPages) return;
@@ -202,159 +254,90 @@ export class DashboardOverviewComponent {
     this.slicePage();
   }
 
-getIdlePercentageEmployee(): number {
-  if (!this.utilization) return 0;
+  // ─────────────────────────────────────────────────────────────────────────
+  // Idle helpers
+  // ─────────────────────────────────────────────────────────────────────────
 
-  const activeValue = this.utilization.employeeUtilization;
-  const active = typeof activeValue === 'string'
-    ? parseFloat(activeValue.replace('%', ''))
-    : Number(activeValue) || 0;
-
-  return Math.max(0, 100 - active);
-}
-
-getIdlePercentageMachine(): number {
-  if (!this.utilization) return 0;
-
-  const activeValue = this.utilization.machineUtilization;
-  const active = typeof activeValue === 'string'
-    ? parseFloat(activeValue.replace('%', ''))
-    : Number(activeValue) || 0;
-
-  return Math.max(0, 100 - active);
-}
-
-getStatusBadgeClass(status: string): string {
-  switch (status) {
-    case 'Running':          return 'badge badge-success';
-    case 'Paused':           return 'badge badge-warning';
-    case 'Extended':         return 'badge badge-danger';
-    case 'Ongoing Critical': return 'badge badge-dark';
-    case 'Completed':        return 'badge badge-success';
-    case 'Hold':             return 'badge badge-info';
-    case 'Rejected':         return 'badge badge-danger';
-    case 'In Queue':   return 'badge badge-primary';  // ← add
-    default:                 return 'badge badge-secondary';
-  }
-}
-
-goToTransaction(type: string) {
-  const ss_id =
-    this.router.routerState.snapshot.root.queryParams['ss_id']
-    || localStorage.getItem('ss_id');
-
-  if (!ss_id) {
-    console.warn('ss_id missing');
-    return;
+  getIdlePercentageEmployee(): number {
+    if (!this.utilization) return 0;
+    const a = typeof this.utilization.employeeUtilization === 'string'
+      ? parseFloat(this.utilization.employeeUtilization.replace('%', ''))
+      : Number(this.utilization.employeeUtilization) || 0;
+    return Math.max(0, 100 - a);
   }
 
-  let route = '/unpostedjobtransaction'; // default
+  getIdlePercentageMachine(): number {
+    if (!this.utilization) return 0;
+    const a = typeof this.utilization.machineUtilization === 'string'
+      ? parseFloat(this.utilization.machineUtilization.replace('%', ''))
+      : Number(this.utilization.machineUtilization) || 0;
+    return Math.max(0, 100 - a);
+  }
 
-  if (type === 'completed') {
-    route = '/postedjobtransaction';
-  } else if (type === 'extended') {
-    // Check actual running or paused jobs
-    if ((this.transaction.runningJobs ?? 0) > 0 || (this.transaction.pausedJobs ?? 0) > 0) {
-      route = '/unpostedjobtransaction';
-    } else if ((this.transaction.normalCompletedJobs ?? 0) > 0) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Status badge
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case 'Running':          return 'badge badge-success';
+      case 'Paused':           return 'badge badge-warning';
+      case 'Extended':         return 'badge badge-danger';
+      case 'Ongoing Critical': return 'badge badge-dark';
+      case 'Completed':        return 'badge badge-success';
+      case 'Hold':             return 'badge badge-info';
+      case 'Rejected':         return 'badge badge-danger';
+      case 'In Queue':         return 'badge badge-primary';
+      default:                 return 'badge badge-secondary';
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Navigation
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private getSsId(): string | null {
+    return this.router.routerState.snapshot.root.queryParams['ss_id']
+        || localStorage.getItem('ss_id');
+  }
+
+  goToTransaction(type: string) {
+    const ss_id = this.getSsId();
+    if (!ss_id) { console.warn('ss_id missing'); return; }
+    let route = '/unpostedjobtransaction';
+    if (type === 'completed') {
       route = '/postedjobtransaction';
-    } else {
-      route = '/unpostedjobtransaction';
+    } else if (type === 'extended') {
+      route = (this.transaction.runningJobs > 0 || this.transaction.pausedJobs > 0)
+        ? '/unpostedjobtransaction' : '/postedjobtransaction';
     }
+    this.router.navigate([route], { queryParams: { ss_id, highlight: 'extended' } });
   }
 
-  console.log('Transaction Overview:', this.transaction);
-  console.log('➡️ Navigating to route:', route);
-
-    this.router.navigate([route], { 
-    queryParams: { 
-      ss_id,
-      highlight: 'extended'   // 👈 IMPORTANT
-    } 
-  });
-}
-
-
-
-goToQC(type: string) {
-
-  const ss_id =
-    this.router.routerState.snapshot.root.queryParams['ss_id']
-    || localStorage.getItem('ss_id');
-
-  if (!ss_id) {
-    console.warn('ss_id missing');
-    return;
+  goToQC(type: string) {
+    const ss_id = this.getSsId();
+    if (!ss_id) { console.warn('ss_id missing'); return; }
+    this.router.navigate(['/qualitychecker'], { queryParams: { status: type, ss_id } });
   }
 
-  let route = '/qualitychecker'; // QC page
-
-  switch (type) {
-
-    case 'running':
-    case 'paused':
-    case 'critical':
-    case 'extended':
-    case 'completed':
-    case 'hold':
-    case 'reject':
-      route = '/qualitychecker';
-      break;
-
-    default:
-      route = '/qualitychecker';
+  goToVerify(type: string) {
+    const ss_id = this.getSsId();
+    if (!ss_id) { console.warn('ss_id missing'); return; }
+    this.router.navigate(['/verify-transaction'], { queryParams: { status: type, ss_id } });
   }
 
-  console.log('QC Overview:', this.qc);
-  console.log('Navigating to QC route:', route);
-  console.log('Status:', type);
-
-  this.router.navigate([route], {
-    queryParams: {
-      status: type,
-      ss_id
-    }
-  });
-
-}
-
-goToVerify(type: string) {
-  const ss_id =
-    this.router.routerState.snapshot.root.queryParams['ss_id']
-    || localStorage.getItem('ss_id');
-
-  if (!ss_id) {
-    console.warn(' ss_id missing');
-    return;
+  // NEW: Navigate to issue transaction page
+  goToIssue(type: 'pending' | 'completed') {
+    const ss_id = this.getSsId();
+    if (!ss_id) { console.warn('ss_id missing'); return; }
+    // pending → issue transaction list, completed → posted transaction filtered
+    const route = type === 'completed' ? '/postedjobtransaction' : '/issuejobtransaction';
+    this.router.navigate([route], { queryParams: { ss_id } });
   }
 
-  let route = '/verify-transaction'; // default
-
-  if (type === 'completed') {
-    route = '/verify-transaction';
-  } 
-  else if (type === 'extended') {
-    if ((this.verify.runningVerifyJobs ?? 0) > 0 || (this.verify.pausedVerifyJobs ?? 0) > 0) {
-      route = '/verify-transaction';
-    } 
-    else if ((this.verify.normalCompletedVerifyJobs ?? 0) > 0) {
-      route = '/verify-transaction';
-    } 
-    else {
-      route = '/verify-transaction';
-    }
+  goToProjectDashboard(tab: 'hold' | 'reject' | 'holdSubmit' | 'rejectSubmit') {
+    const ss_id = this.getSsId();
+    if (!ss_id) { console.warn('ss_id missing'); return; }
+    this.router.navigate(['/project-dashboard'], { queryParams: { status: tab, ss_id } });
   }
-
-  console.log('Verify Overview:', this.verify);
-  console.log(' Navigating to Verify route:', route);
-
-  this.router.navigate([route], {
-    queryParams: { status: type, ss_id }
-  });
-}
-
-
-
-
-
 }
