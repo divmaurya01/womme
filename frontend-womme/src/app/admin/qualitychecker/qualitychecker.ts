@@ -372,8 +372,17 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
         // Role 5: only show jobs assigned to this QC employee
         if (roleId === 5) {
           filtered = filtered.filter((x: any) => {
-            const empList = (x.emp_num || '').split(',').map((e: string) => e.trim());
-            return empList.includes(empCode);
+            // Running jobs: only show to the employee currently working on it
+            if (x.status === '1') {
+              const empList = (x.emp_num || '').split(',').map((e: string) => e.trim());
+              return empList.includes(empCode);
+            }
+            // Paused / reopened: visible to ALL authorized QC employees
+            // so any available QC person can resume it
+            if (x.status === '2') {
+              return true;
+            }
+            return false;
           });
         }
 

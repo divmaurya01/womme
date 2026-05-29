@@ -256,3 +256,5 @@
 [2026-05-15 05:09:48] API: GET /api/Get/GetUnpostedTransactions?page=0&size=100000&search=&emp_num=EE00025 Status: 200
 [2026-05-15 05:09:51] API: GET /api/Get/IsNextJobActive Status: 200
 [2026-05-15 05:09:51] API: GET /api/Get/GetActiveJobTransactions Status: 200
+[2026-05-15 05:41:07] API: GET /api/Get/RolePageMappings?roleID=1 Status: 500
+[2026-05-15 05:41:07] API: GET /api/Get/GetUnpostedTransactions?page=0&size=100000&search=&emp_num=EE00025 Status: 500

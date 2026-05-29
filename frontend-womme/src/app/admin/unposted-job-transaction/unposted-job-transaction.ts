@@ -97,74 +97,90 @@ export class UnpostedJobTransaction implements OnInit {
   // ── Load Jobs ─────────────────────────────────────────────────────────
 
   loadJobs(pageEvent?: any) {
-    this.isLoading = true;
-    this.loader.show();
+  this.isLoading = true;
+  this.loader.show();
 
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-    this.employeeCode = userDetails?.employeeCode;
-    this.role_id = userDetails.roleID;
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  this.employeeCode = userDetails?.employeeCode;
+  this.role_id = userDetails.roleID;
 
-    this.jobService.GetUnpostedTransactions(0, 100000, '', this.employeeCode)
-      .subscribe({
-        next: (jobRes: any) => {
-          const rawJobs = jobRes.data ?? [];
+  this.jobService.GetUnpostedTransactions(0, 100000, '', this.employeeCode)
+    .subscribe({
+      next: (jobRes: any) => {
+        const rawJobs = jobRes.data ?? [];
 
-          this.jobService.getIsNextJobActive().subscribe({
-            next: (nextRes: any) => {
+        this.jobService.getIsNextJobActive().subscribe({
+          next: (nextRes: any) => {
 
-              // Build job|serial → next operations map
-              const nextOpMap = new Map<string, number[]>();
-              (nextRes.data ?? []).forEach((x: any) => {
-                const key = `${x.job}|${x.serialNo}`;
-                if (!nextOpMap.has(key)) nextOpMap.set(key, []);
-                nextOpMap.get(key)!.push(Number(x.nextOper));
-              });
+            this.jobService.GetAllCompletedJobs().subscribe({
+              next: (completedRes: any) => {
 
-              let filteredJobs = rawJobs.map((x: any) => ({
-                serialNo:        (x.serialNo ?? '').toString().trim(),
-                jobNumber:       (x.job ?? '').toString().trim(),
-                qtyReleased:     x.qtyReleased,
-                operationNumber: x.operNum ?? x.operationNumber,
-                wcCode:          (x.wcCode ?? '').toString().trim(),
-                wcDescription:   (x.wcDescription ?? '').toString().trim(),
-                emp_num:         '',
-                machine_id:      '',
-                a_hrs:           0,
-                // ── NEW: flag if this job+serial+oper is a next-job ──
-                isNextJob: (() => {
-                  const key = `${(x.job ?? '').toString().trim()}|${(x.serialNo ?? '').toString().trim()}`;
-                  const nextOps = nextOpMap.get(key) ?? [];
-                  return nextOps.includes(Number(x.operNum ?? x.operationNumber));
-                })()
-              }));
+                // ── Completed set: job|serial|oper ────────────────────
+                const completedSet = new Set<string>(
+                  (completedRes.data ?? []).map((c: any) =>
+                    `${(c.job ?? c.jobNumber ?? '').toString().trim()}|${(c.serialNo ?? c.serial_no ?? c.SerialNo ?? '').toString().trim()}|${Number(c.oper_num ?? c.operNum ?? c.operationNumber)}`
+                  )
+                );
 
-              filteredJobs.sort((a: any, b: any) => (b.isNextJob ? 1 : 0) - (a.isNextJob ? 1 : 0));
-              // Apply next-job filter for role 4 and 2
-              if (this.role_id === 4 || this.role_id === 2) {
-                filteredJobs = filteredJobs.filter((job: any) => {
-                  const key = `${job.jobNumber}|${job.serialNo}`;
-                  const nextOps = nextOpMap.get(key) ?? [];
-                  return nextOps.includes(Number(job.operationNumber));
+                // ── nextOpMap ─────────────────────────────────────────
+                const nextOpMap = new Map<string, number[]>();
+                (nextRes.data ?? []).forEach((x: any) => {
+                  const key = `${x.job}|${x.serialNo}`;
+                  if (!nextOpMap.has(key)) nextOpMap.set(key, []);
+                  nextOpMap.get(key)!.push(Number(x.nextOper));
                 });
-              }
 
-              this.allTransactions      = filteredJobs;
-              this.filteredTransactions = [...filteredJobs];
-              this.transactions         = this.filteredTransactions;
-              this.totalRecords         = this.filteredTransactions.length;
+                let filteredJobs = rawJobs
+                  .map((x: any) => ({
+                    serialNo:        (x.serialNo ?? '').toString().trim(),
+                    jobNumber:       (x.job ?? '').toString().trim(),
+                    qtyReleased:     x.qtyReleased,
+                    operationNumber: x.operNum ?? x.operationNumber,
+                    wcCode:          (x.wcCode ?? '').toString().trim(),
+                    wcDescription:   (x.wcDescription ?? '').toString().trim(),
+                    emp_num:         '',
+                    machine_id:      '',
+                    a_hrs:           0,
+                    isNextJob: (() => {
+                      const key = `${(x.job ?? '').toString().trim()}|${(x.serialNo ?? '').toString().trim()}`;
+                      const nextOps = nextOpMap.get(key) ?? [];
+                      return nextOps.includes(Number(x.operNum ?? x.operationNumber));
+                    })()
+                  }))
+                  // ── Exclude completed jobs ────────────────────────
+                  .filter((job: any) => {
+                    const key = `${job.jobNumber}|${job.serialNo}|${Number(job.operationNumber)}`;
+                    return !completedSet.has(key);
+                  });
 
-              // Load active transactions AFTER jobs are set
-              this.loadActiveJobTransactions();
+                filteredJobs.sort((a: any, b: any) => (b.isNextJob ? 1 : 0) - (a.isNextJob ? 1 : 0));
 
-              this.isLoading = false;
-              this.loader.hide();
-            },
-            error: err => this.handleError(err)
-          });
-        },
-        error: err => this.handleError(err)
-      });
-  }
+                if (this.role_id === 4 || this.role_id === 2) {
+                  filteredJobs = filteredJobs.filter((job: any) => {
+                    const key = `${job.jobNumber}|${job.serialNo}`;
+                    const nextOps = nextOpMap.get(key) ?? [];
+                    return nextOps.includes(Number(job.operationNumber));
+                  });
+                }
+
+                this.allTransactions      = filteredJobs;
+                this.filteredTransactions = [...filteredJobs];
+                this.transactions         = this.filteredTransactions;
+                this.totalRecords         = this.filteredTransactions.length;
+
+                this.loadActiveJobTransactions();
+                this.isLoading = false;
+                this.loader.hide();
+              },
+              error: err => this.handleError(err)
+            });
+          },
+          error: err => this.handleError(err)
+        });
+      },
+      error: err => this.handleError(err)
+    });
+}
 
   private handleError(err: any) {
     this.isLoading = false;
@@ -194,59 +210,106 @@ export class UnpostedJobTransaction implements OnInit {
   }
 
   mapTransToJobs() {
-    if (!this.transactions?.length || !this.activeJobTrans?.length) return;
+  if (!this.transactions?.length || !this.activeJobTrans?.length) return;
 
-    this.transactions = this.transactions.map(job => {
-      const match = this.activeJobTrans.find(tr =>
-        (tr.job ?? '').toString().trim()    === job.jobNumber &&
-        Number(tr.oper_num)                 === Number(job.operationNumber) &&
-        (tr.serialNo ?? tr.serial_no ?? tr.SerialNo ?? '').toString().trim() === job.serialNo
-      );
+  console.log('=== activeJobTrans for WELD opr 60 ===');
+  const debugRows = this.activeJobTrans.filter((tr: any) =>
+    Number(tr.oper_num) === 60
+  );
+  console.table(debugRows.map((tr: any) => ({
+    trans_num:      tr.trans_num,
+    job:            tr.job,
+    serialNo:       tr.serialNo ?? tr.serial_no ?? tr.SerialNo,
+    oper_num:       tr.oper_num,
+    status:         tr.status,
+    complete_op:    tr.complete_op,
+    completed_flag: tr.completed_flag,
+    reopen_flag:    tr.reopen_flag,
+    wc:             tr.wc
+  })));
 
-      if (match) {
-        // Use serialNo + operationNumber as unique timer key
-        const key = `${job.serialNo}-${job.operationNumber}`;
+  // ── Build latest-status map per job|serial|oper ───────────────────
+  const latestStatusMap = new Map<string, any>();
+  this.activeJobTrans.forEach((tr: any) => {
+    const key = `${(tr.job ?? '').toString().trim()}|${(tr.serialNo ?? tr.serial_no ?? tr.SerialNo ?? '').toString().trim()}|${Number(tr.oper_num)}`;
+    const existing = latestStatusMap.get(key);
+    if (!existing || Number(tr.trans_num) > Number(existing.trans_num)) {
+      latestStatusMap.set(key, tr);
+    }
+  });
 
-        const accumulated = Math.floor((match.total_a_hrs ?? 0) * 3600);
-        let elapsedSeconds = accumulated;
+  // ── Completed = status '3' OR complete_op = 1 OR completed_flag = 1 ──
+  const completedKeys = new Set<string>(
+    Array.from(latestStatusMap.entries())
+      .filter(([, tr]) =>
+        tr.status === '3' ||
+        tr.complete_op === 1 || tr.complete_op === '1' ||
+        tr.completed_flag === 1 || tr.completed_flag === '1'
+      )
+      .map(([key]) => key)
+  );
 
-        if (match.status === '1' && match.start_time) {
-          const startTime = new Date(match.start_time);
-          elapsedSeconds += Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+  // ── Also scan ALL rows for completed_flag=1 (not just latest) ────
+  // Because completed row might not be in GetActiveJobTransactions at all
+  this.activeJobTrans.forEach((tr: any) => {
+    if (tr.complete_op === 1 || tr.complete_op === '1' ||
+        tr.completed_flag === 1 || tr.completed_flag === '1') {
+      const key = `${(tr.job ?? '').toString().trim()}|${(tr.serialNo ?? tr.serial_no ?? tr.SerialNo ?? '').toString().trim()}|${Number(tr.oper_num)}`;
+      completedKeys.add(key);
+    }
+  });
 
-          if (this.activeTimers[key]) clearInterval(this.activeTimers[key]);
+  // ── Filter completed out ──────────────────────────────────────────
+  this.transactions = this.transactions.filter(job => {
+    const key = `${job.jobNumber}|${job.serialNo}|${Number(job.operationNumber)}`;
+    return !completedKeys.has(key);
+  });
 
-          this.activeTimers[key] = setInterval(() => {
-            const target = this.transactions.find(
-              x => x.serialNo === job.serialNo && x.operationNumber === job.operationNumber
-            );
-            if (target) target.elapsedSeconds += 1;
-          }, 1000);
+  // ── Map running/paused status ─────────────────────────────────────
+  this.transactions = this.transactions.map(job => {
+    const key   = `${job.jobNumber}|${job.serialNo}|${Number(job.operationNumber)}`;
+    const match = latestStatusMap.get(key);
 
-        } else {
-          // Paused or stopped — clear timer
-          if (this.activeTimers[key]) {
-            clearInterval(this.activeTimers[key]);
-            delete this.activeTimers[key];
-          }
+    if (match && (match.status === '1' || match.status === '2')) {
+      const timerKey    = `${job.serialNo}-${job.operationNumber}`;
+      const accumulated = Math.floor((match.total_a_hrs ?? 0) * 3600);
+      let elapsedSeconds = accumulated;
+
+      if (match.status === '1' && match.start_time) {
+        const startTime = new Date(match.start_time);
+        elapsedSeconds += Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+
+        if (this.activeTimers[timerKey]) clearInterval(this.activeTimers[timerKey]);
+        this.activeTimers[timerKey] = setInterval(() => {
+          const target = this.transactions.find(
+            x => x.serialNo === job.serialNo && x.operationNumber === job.operationNumber
+          );
+          if (target) target.elapsedSeconds += 1;
+        }, 1000);
+      } else {
+        if (this.activeTimers[timerKey]) {
+          clearInterval(this.activeTimers[timerKey]);
+          delete this.activeTimers[timerKey];
         }
-
-        return {
-          ...job,
-          emp_num:       match.emp_num    ?? '',
-          emp_name:      match.emp_name   ?? '',
-          machine_id:    match.machine_id ?? '',
-          a_hrs:         accumulated,
-          status:        match.status,
-          elapsedSeconds
-        };
       }
 
-      return job; // no match → status stays null → Start button shown
-    });
+      return {
+        ...job,
+        emp_num:       match.emp_num    ?? '',
+        emp_name:      match.emp_name   ?? '',
+        machine_id:    match.machine_id ?? '',
+        a_hrs:         accumulated,
+        status:        match.status,
+        elapsedSeconds
+      };
+    }
 
-    this.filteredTransactions = [...this.transactions];
-  }
+    return job;
+  });
+
+  this.filteredTransactions = [...this.transactions];
+  this.totalRecords         = this.filteredTransactions.length;
+}
 
   // ── Start Job Wizard ──────────────────────────────────────────────────
 
