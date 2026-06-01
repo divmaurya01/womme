@@ -2053,18 +2053,15 @@ public class GetController : ControllerBase
 public IActionResult GetActiveJobTransactions()
 {
     var latestByJob = _context.JobTranMst
-        .Where(j =>
-            j.trans_type == "D" &&
-            (j.reopen_flag == null || j.reopen_flag == false)  // ← explicit
-        )
+        .Where(j => j.SerialNo != null)  // ← remove trans_type and reopen_flag filters
         .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
         .Select(g => new
         {
-            Latest     = g.OrderByDescending(x => x.trans_date).FirstOrDefault(),
+            Latest     = g.OrderByDescending(x => x.trans_num).FirstOrDefault(),
             TotalHours = g.Where(x => x.status == "1").Sum(x => x.a_hrs ?? 0)
         })
         .ToList();
- 
+
     var activeJobs = latestByJob
         .Where(x => x.Latest != null &&
                     (x.Latest.status == "1" || x.Latest.status == "2"))
@@ -2083,10 +2080,11 @@ public IActionResult GetActiveJobTransactions()
                         .Select(e => e.name)
                         .FirstOrDefault(),
             x.Latest.machine_id,
-            total_a_hrs = x.TotalHours
+            total_a_hrs = x.TotalHours,
+            reopen_flag = x.Latest.reopen_flag
         })
         .ToList();
- 
+
     return Ok(new { data = activeJobs, total = activeJobs.Count });
 }
 
@@ -2119,7 +2117,7 @@ public IActionResult GetActiveJobTransactions()
             var latestStatuses = await _context.JobTranMst
                 .Where(jt => jt.job == job && jt.SerialNo == serialNo)
                 .GroupBy(jt => jt.oper_num)
-                .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault())
+                .Select(g => g.OrderByDescending(x => x.trans_num).FirstOrDefault())
                 .ToListAsync();
 
             var statusDict = latestStatuses
