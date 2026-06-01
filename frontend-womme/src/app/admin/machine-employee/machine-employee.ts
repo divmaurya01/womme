@@ -183,19 +183,21 @@ loadMachinesList() {
   /** Load Work Centers for dropdown */
   loadWcList() {
     this.loader.show();
-    this.jobService.GetAllWcMachines()
+    this.jobService.GetWorkCenterMaster()
       .pipe(finalize(() => this.loader.hide()))
       .subscribe({
-        next: (res: any[]) => {
-          const distinctWcs = res
-            .map(m => ({ wcCode: m.wc, wcName: m.wcName || '(No Name)' }))
-            .filter((v, i, a) => a.findIndex(t => t.wcCode === v.wcCode) === i);
-          this.wcList = distinctWcs;
+        next: (res: any) => {
+          const data = res?.data ?? res;
+          this.wcList = data.map((wc: any) => ({
+            wcCode: wc.wc,
+            wcName: wc.description || '(No Name)'
+          })).sort((a: WorkCenter, b: WorkCenter) => 
+            a.wcName.localeCompare(b.wcName)
+          );
         },
         error: (err) => console.error('Failed to load WCs:', err)
       });
   }
-
   /** When machine is selected */
 selectedMachine: Machine | null = null;
 
