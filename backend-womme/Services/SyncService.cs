@@ -15,11 +15,13 @@ namespace WommeAPI.Services
     {
         private readonly SytelineDbContext _sourceContext;
         private readonly AppDbContext _localContext;
+        private readonly ManhourDbContext _manhourContext;
 
-        public SyncService(SytelineDbContext sourceContext, AppDbContext localContext)
+        public SyncService(SytelineDbContext sourceContext, AppDbContext localContext, ManhourDbContext manhourContext)
         {
             _sourceContext = sourceContext;
             _localContext = localContext;
+            _manhourContext = manhourContext;
         }
 
         public async Task SyncDataAsync()
@@ -173,6 +175,8 @@ namespace WommeAPI.Services
 
             return (inserted, updated);
         }
+
+
 
                 
 
@@ -472,30 +476,56 @@ namespace WommeAPI.Services
         {
             var inserted = new List<WomWcEmployee>();
 
-            var lastSync = await GetLastSyncDate("WomWcEmployee");
-
+            // ── Pull ALL data from SyteLine (15) ──
             var sourceData = await _sourceContext.WomWcEmployee
-                .Where(x => x.RecordDate > lastSync)
                 .ToListAsync();
 
-            var existingKeys = (await _localContext.WomWcEmployee
+            // ── Push to ManhourApplication (27) ──
+            var manhourExistingKeys = (await _manhourContext.WomWcEmployee
                 .Select(x => $"{x.Wc}_{x.EmpNum}")
                 .ToListAsync()).ToHashSet();
 
             foreach (var src in sourceData)
             {
                 var key = $"{src.Wc}_{src.EmpNum}";
-                if (existingKeys.Contains(key)) continue;
 
-                await _localContext.WomWcEmployee.AddAsync(src);
-                inserted.Add(src);
+                if (manhourExistingKeys.Contains(key))
+                {
+                    // Update existing
+                    var existing = await _manhourContext.WomWcEmployee
+                        .FirstOrDefaultAsync(x => x.Wc == src.Wc && x.EmpNum == src.EmpNum);
+
+                    if (existing != null)
+                    {
+                        existing.Description = src.Description;
+                        existing.Name = src.Name;
+                        existing.UpdatedBy = src.UpdatedBy;
+                        existing.RecordDate = src.RecordDate;
+                        _manhourContext.WomWcEmployee.Update(existing);
+                    }
+                }
+                else
+                {
+                    var newRecord = new WomWcEmployee
+                    {
+                        Wc = src.Wc,
+                        EmpNum = src.EmpNum,
+                        Description = src.Description,
+                        Name = src.Name,
+                        NoteExistsFlag = src.NoteExistsFlag,
+                        RecordDate = src.RecordDate,
+                        RowPointer = src.RowPointer,
+                        CreatedBy = src.CreatedBy,
+                        UpdatedBy = src.UpdatedBy,
+                        CreateDate = src.CreateDate,
+                        InWorkflow = src.InWorkflow
+                    };
+                    await _manhourContext.WomWcEmployee.AddAsync(newRecord);
+                    inserted.Add(newRecord);
+                }
             }
 
-            await _localContext.SaveChangesAsync();
-
-            if (sourceData.Any())
-                await UpdateLastSyncDate("WomWcEmployee",
-                    sourceData.Max(x => x.RecordDate));
+            await _manhourContext.SaveChangesAsync();
 
             return inserted;
         }

@@ -82,6 +82,9 @@ builder.Services.AddDbContext<SytelineDbContext>(options =>
         )
     )
 );
+builder.Services.AddDbContext<ManhourDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+    sqlOptions => sqlOptions.CommandTimeout(180)));
 
 builder.Services.AddCors(options =>
 {

@@ -111,27 +111,31 @@ public class SchedulerController : ControllerBase
     
 
 
-     [HttpPost("SyncWcMst")]
+    // FIND entire SyncWcMst action and REPLACE WITH:
+    [HttpPost("SyncWcMst")]
     public async Task<IActionResult> SyncWcMst()
     {
         try
         {
+            // 1. Sync WcMst to local WOMME_App (existing)
             var (inserted, updated) = await _syncService.SyncWcMstAsync();
+
+            // 2. Sync WomWcEmployee: SyteLine (15) → ManhourApplication (27)
+            var womInserted = await _syncService.SyncWomWcEmployeeAsync();
 
             return Ok(new
             {
-                message = "Wc_mst sync completed successfully.",
-                insertedCount = inserted.Count,
-                updatedCount = updated.Count,
-                insertedWCs = inserted.Select(w => w.wc).ToList(),
-                updatedWCs = updated.Select(w => w.wc).ToList()
+                message = "Wc_mst and WomWcEmployee sync completed successfully.",
+                wcInsertedCount = inserted.Count,
+                wcUpdatedCount = updated.Count,
+                womInsertedCount = womInserted.Count
             });
         }
         catch (Exception ex)
         {
             return StatusCode(500, new
             {
-                message = "Error syncing Wc_mst.",
+                message = "Error syncing Wc_mst or WomWcEmployee.",
                 error = ex.Message
             });
         }
