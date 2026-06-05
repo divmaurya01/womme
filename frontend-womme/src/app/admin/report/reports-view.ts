@@ -246,16 +246,22 @@ export class ReportsViewComponent implements OnInit {
   downloadPDF() {
     const element = document.querySelector('.report-wrapper');
     if (!element) return;
-  
+
     const opt = {
-      margin: [20, 20, 20, 20], // Adds space around content
-      filename: `${this.jobData.job}_Report.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      margin:     [15, 15, 15, 15],
+      filename:   `${this.jobData.job}_Report.pdf`,
+      image:      { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale:    2,
+        useCORS:  true,
+        scrollY:  0,
+        logging:  false,
+        windowWidth: 900   // ← fixes layout cramping in PDF
+      },
       jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // ✅ Prevent splits
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
-  
+
     html2pdf().set(opt).from(element).save();
   }
   

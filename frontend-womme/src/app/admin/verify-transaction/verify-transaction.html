@@ -52,6 +52,9 @@
                     <th pSortableColumn="job" style="background-color: #ECC391; padding: 10px;">Job
                       <p-sortIcon field="job"></p-sortIcon>
                     </th>
+                    <th pSortableColumn="suffix" style="background-color: #ECC391; padding: 10px;">
+                      Suffix <p-sortIcon field="suffix"></p-sortIcon>
+                    </th>
                     <th pSortableColumn="serialNo" style="background-color: #ECC391; padding: 10px;">Serial No
                       <p-sortIcon field="serialNo"></p-sortIcon>
                     </th>
@@ -72,6 +75,7 @@
                   <tr>
                     <td>{{ i + 1 }}</td>
                     <td>{{ job.job }}</td>
+                    <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
                     <td>{{ job.serialNo }}</td>
                     <td>{{ job.qtyReleased }}</td>
                     <td>{{ job.operNum }}</td>

@@ -4809,7 +4809,40 @@ public async Task<IActionResult> SaveJobAudit(JobReportAuditDto dto)
     }
 
 
+   [HttpPost("SaveManualSerial")]
+    public async Task<IActionResult> SaveManualSerial([FromBody] JobSerialMappingDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Job) ||
+            string.IsNullOrWhiteSpace(dto.SystemSerial) ||
+            string.IsNullOrWhiteSpace(dto.ManualSerial))
+            return BadRequest(new { message = "Job, SystemSerial and ManualSerial are required." });
 
+        var existing = await _context.JobSerialMapping
+            .FirstOrDefaultAsync(m => m.Job == dto.Job && m.SystemSerial == dto.SystemSerial);
+
+        if (existing != null)
+        {
+            existing.ManualSerial = dto.ManualSerial;
+            existing.SavedBy      = dto.SavedBy;
+            existing.SavedOn      = DateTime.Now;
+            _context.JobSerialMapping.Update(existing);
+        }
+        else
+        {
+            _context.JobSerialMapping.Add(new JobSerialMapping
+            {
+                Job          = dto.Job,
+                SystemSerial = dto.SystemSerial,
+                ManualSerial = dto.ManualSerial,
+                SerialIndex  = dto.SerialIndex,
+                SavedBy      = dto.SavedBy,
+                SavedOn      = DateTime.Now
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Serial mapping saved successfully." });
+    }
 
 
 

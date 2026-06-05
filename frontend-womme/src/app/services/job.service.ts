@@ -701,7 +701,17 @@ respondToNotification(payload: any): Observable<any> {
 }
 
 
+getJobProgressDetail(job: string): Observable<any> {
+  return this.http.get(`${this.baseUrl}/Get/GetJobProgressDetail?job=${job}`);
+}
 
+saveManualSerial(payload: any): Observable<any> {
+  return this.http.post(
+    `${this.baseUrl}/Post/SaveManualSerial`,
+    payload,
+    { headers: this.getHeaders() }
+  );
+}
   
 
 
@@ -905,6 +915,8 @@ updateMachineEmployee(machineNumber: string, payload: any) {
 GetEmployee(): Observable<{ data: any[], total: number }> {
   return this.http.get<{ data: any[], total: number }>(`${this.baseUrl}/api/Employee/GetEmployeeList`);
 }
+
+
 
 // Add Employee-WC mapping
 addEmployeeWc(payload: { wc: string; empNum: string; description?: string; name?: string }) {

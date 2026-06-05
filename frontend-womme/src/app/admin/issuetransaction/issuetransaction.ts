@@ -109,6 +109,7 @@ export class Issuetransaction implements OnInit {
                 id: `${x.job?.trim()}_${x.serialNo?.trim()}_${x.operNum}_${x.wcCode?.trim()}`,
                 serialNo: x.serialNo?.trim(),
                 jobNumber: x.job?.trim(),
+                suffix:          x.suffix ?? 0,
                 qtyReleased: x.qtyReleased,
                 item: x.item?.trim(),
                 operationNumber: x.operNum,

@@ -61,7 +61,7 @@ export class SidenavComponent implements OnInit {
         // Quality & Reports
         { label: 'Quality Check', link: '/qualitychecker', icon: faSpellCheck, color: '#F4A261' },
         { label: 'Main Reports', link: '/JobListComponent', icon: faFileLines, color: '#0288D1' },
-        { label: 'Edit Reports', link: '/JobListComponent_copy', icon: faFileLines, color: '#02d12b' },
+        { label: 'Sub Reports', link: '/JobListComponent_copy', icon: faFileLines, color: '#02d12b' },
         { label: 'Job Report', link: '/job-report', icon: faChartColumn, color: '#ff7300ff' },
         { label: 'Project Dashboard', link: '/project-dashboard', icon: faReceipt, color: 'rgb(108, 56, 14)' },
       ],

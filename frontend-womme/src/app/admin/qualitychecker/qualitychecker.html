@@ -36,6 +36,7 @@
                     <th style="background-color:#ECC391; padding:10px;"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
                     <th style="background-color:#ECC391; padding:10px;">S.No</th>
                     <th pSortableColumn="jobNumber" style="background-color:#ECC391; padding:10px;">Job <p-sortIcon field="jobNumber"></p-sortIcon></th>
+                    <th pSortableColumn="suffix" style="background-color:#ECC391; padding:10px;">Suffix <p-sortIcon field="suffix"></p-sortIcon></th>
                     <th pSortableColumn="serialNo" style="background-color:#ECC391; padding:10px;">Serial No <p-sortIcon field="serialNo"></p-sortIcon></th>
                     <th pSortableColumn="operationNumber" style="background-color:#ECC391; padding:10px;">Opr No. <p-sortIcon field="operationNumber"></p-sortIcon></th>
                     <th pSortableColumn="wcCode" style="background-color:#ECC391; padding:10px;">WC <p-sortIcon field="wcCode"></p-sortIcon></th>
@@ -49,9 +50,10 @@
 
                 <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
                   <tr [pSelectableRow]="job">
-                    <td><p-tableCheckbox [value]="job"></p-tableCheckbox></td>
+                    <td><p-tableCheckbox [value]="job"></p-tableCheckbox></td>                    
                     <td>{{ rowIndex + 1 }}</td>
                     <td>{{ job.jobNumber }}</td>
+                    <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
                     <td>{{ job.serialNo }}</td>
                     <td>{{ job.operationNumber }}</td>
                     <td>{{ job.wcCode }} ({{ job.wcDescription }})</td>
@@ -108,6 +110,7 @@
                   <tr>
                     <th style="background-color:#ECC391; padding:10px;">S.No</th>
                     <th style="background-color:#ECC391; padding:10px;">Job</th>
+                    <th style="background-color:#ECC391; padding:10px;">Suffix</th>
                     <th style="background-color:#ECC391; padding:10px;">SerialNo</th>
                     <th style="background-color:#ECC391; padding:10px;">Opr No.</th>
                     <th style="background-color:#ECC391; padding:10px;">WC</th>
@@ -126,6 +129,7 @@
                   <tr>
                     <td>{{ rowIndex + 1 }}</td>
                     <td>{{ job.jobNumber }}</td>
+                    <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
                     <td>{{ job.serialNo }}</td>
                     <td>{{ job.operationNumber }}</td>
                     <td>{{ job.wcCode }}</td>
@@ -192,6 +196,7 @@
                   <tr>
                     <th style="background-color:#ECC391; padding:10px;">S.No</th>
                     <th style="background-color:#ECC391; padding:10px;">Job</th>
+                    <th style="background-color:#ECC391; padding:10px;">Suffix</th>
                     <th style="background-color:#ECC391; padding:10px;">SerialNo</th>
                     <th style="background-color:#ECC391; padding:10px;">Opr No.</th>
                     <th style="background-color:#ECC391; padding:10px;">WC</th>
@@ -208,6 +213,7 @@
                   <tr [ngClass]="{ 'highlight-row': isExtendedMode && isExtendedJob(job) }">
                     <td>{{ rowIndex + 1 }}</td>
                     <td>{{ job.jobNumber }}</td>
+                    <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
                     <td>{{ job.serialNo }}</td>
                     <td>{{ job.operationNumber }}</td>
                     <td>{{ job.wcCode }}</td>

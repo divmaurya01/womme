@@ -42,6 +42,7 @@ namespace WommeAPI.Data
         public DbSet<ReopenJobs> ReopenJobs { get; set; }
         public DbSet<JobFormRevMst> JobFormRevMst { get; set; }
         public DbSet<JobReopenTrack> JobReopenTrack { get; set; }
+        public DbSet<JobSerialMapping> JobSerialMapping { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AssignedJob>()

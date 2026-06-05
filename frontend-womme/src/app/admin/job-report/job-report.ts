@@ -29,6 +29,7 @@ interface Operation {
 
 interface JobRow {
   job:      string;
+  suffix:   number; 
   item:     string;
   itemDesc: string;
   qty:      number;
@@ -99,6 +100,7 @@ export class JobReportComponent implements OnInit {
         this.jobProgressData = res;
         this.jobs = res.map(j => ({
           job:      j.jobNo,
+          suffix:   j.suffix ?? 0,
           item:     j.item        ?? '-',
           itemDesc: j.description ?? '-',
           qty:      j.qty,

@@ -66,6 +66,7 @@
                 <th pSortableColumn="job" style="background-color:#ECC391;">
                   Job <p-sortIcon field="job"></p-sortIcon>
                 </th>
+                <th pSortableColumn="suffix" style="background-color:#ECC391;">Suffix <p-sortIcon field="suffix"></p-sortIcon></th>
                 <th pSortableColumn="item" style="background-color:#ECC391;">
                   Item <p-sortIcon field="item"></p-sortIcon>
                 </th>
@@ -91,7 +92,7 @@
                     {{ job.job }}
                   </a>
                 </td>
-
+                <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
                 <td>{{ job.item }}</td>
                 <td>{{ job.wcCode }}</td>
 

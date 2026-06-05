@@ -94,6 +94,7 @@ export class JobListComponent implements OnInit {
             return {
               sno:               index + 1,
               job:               first.job,
+              suffix:            first.suffix ?? 0,  
               item:              first.item,
               wcCode:            first.wcCode,
               empName:           first.empName,
@@ -194,7 +195,7 @@ export class JobListComponent implements OnInit {
       const currentParams = this.route.snapshot.queryParams;
       const ss_id = currentParams['ss_id'] || '';
   
-      this.router.navigate(['/reports-copy'], {
+      this.router.navigate(['/reports'], {
         queryParams: {
           ss_id: ss_id,
           jb_id: job,

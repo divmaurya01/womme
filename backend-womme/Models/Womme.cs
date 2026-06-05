@@ -2423,6 +2423,8 @@ public string? TransType { get; set; }
         public int trans_number { get; set; }
         public string SerialNo { get; set; } = string.Empty;
         public string Job { get; set; } = string.Empty;
+        public short Suffix { get; set; } = 0;
+
         public string TransType { get; set; } = string.Empty;
         public decimal QtyReleased { get; set; }
         public string Item { get; set; } = string.Empty;
@@ -2597,6 +2599,28 @@ public class DeleteJobTransactionDto
 
     }
 
+    [Table("JobSerialMapping")]
+    public class JobSerialMapping
+    {
+        [Key]
+        public int Id { get; set; }
+        public string Job { get; set; } = string.Empty;
+        public string SystemSerial { get; set; } = string.Empty;
+        public string ManualSerial { get; set; } = string.Empty;
+        public int SerialIndex { get; set; }
+        public string? SavedBy { get; set; }
+        public DateTime SavedOn { get; set; } = DateTime.Now;
+    }
+
+    public class JobSerialMappingDto
+    {
+        public string Job { get; set; } = string.Empty;
+        public string SystemSerial { get; set; } = string.Empty;
+        public string ManualSerial { get; set; } = string.Empty;
+        public int SerialIndex { get; set; }
+        public string? SavedBy { get; set; }
+    }
+
 public class ScrapJobDto
 {
     public string JobNumber { get; set; }
@@ -2613,6 +2637,7 @@ public class ScrapJobDto
     public string? Description { get; set; }
     public decimal Qty { get; set; }
     public DateTime ? JobDate {get;set;}
+     public short Suffix        { get; set; } 
     public decimal? TotalHours { get; set; }
     public List<JobSerialDto> Serials { get; set; } = new();
 }

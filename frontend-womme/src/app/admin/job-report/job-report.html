@@ -47,7 +47,7 @@
         [paginator]="true"
         [scrollable]="true"
         scrollHeight="70vh"
-        [globalFilterFields]="['job','item','itemDesc','qty']"
+        [globalFilterFields]="['job','suffix','item','itemDesc','qty']"
       >
         <!-- Header -->
         <ng-template pTemplate="header">
@@ -55,6 +55,9 @@
             <th style="width:40px;"></th>
             <th pSortableColumn="job">
               Job No <p-sortIcon field="job"></p-sortIcon>
+            </th>
+            <th pSortableColumn="suffix">
+              Suffix <p-sortIcon field="suffix"></p-sortIcon>
             </th>
             <th pSortableColumn="item">
               Item <p-sortIcon field="item"></p-sortIcon>
@@ -84,6 +87,7 @@
               </button>
             </td>
             <td>{{ job.job }}</td>
+            <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
             <td>{{ job.item }}</td>
             <td>{{ job.itemDesc }}</td>
             <td>{{ job.qty }}</td>
@@ -95,7 +99,7 @@
         <!-- ── Row expansion: Level-2 (serials) + Level-3 (operations) ── -->
         <ng-template pTemplate="rowexpansion" let-job>
           <tr>
-            <td colspan="7" style="padding:0;">
+            <td colspan="8" style="padding:0;">
               <div class="level2-wrapper">
 
                 <!-- Level-2: Serial summary table -->

@@ -93,6 +93,7 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
             return {
               srNo: index + 1,
               jobNumber: x.job.trim(),
+              suffix: x.suffix?.toString().padStart(4, '0') ?? '0000',
               qtyReleased: x.quantity,
               item: x.item.trim(),
               operationNumber: x.operNo,
@@ -259,6 +260,7 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
     const exportData = this.filteredJobs.map((job, index) => ({
       'Sr No': index + 1,
       'Job': job.jobNumber,
+      'Suffix': job.suffix,
       'Qty': job.qtyReleased,
       'Item': job.item,
       'JobDate':job.JobDate,

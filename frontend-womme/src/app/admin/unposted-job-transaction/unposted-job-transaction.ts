@@ -151,6 +151,7 @@ export class UnpostedJobTransaction implements OnInit {
                       .map((x: any) => ({
                         serialNo:        (x.serialNo ?? '').toString().trim(),
                         jobNumber:       (x.job ?? '').toString().trim(),
+                        suffix:          x.suffix ?? 0, 
                         qtyReleased:     x.qtyReleased,
                         operationNumber: x.operNum ?? x.operationNumber,
                         wcCode:          (x.wcCode ?? '').toString().trim(),

@@ -193,6 +193,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
           uniqueRowId:     `${(x.job ?? '').trim()}|${(x.serialNo ?? '').trim()}|${+x.operNum}|${(x.wcCode ?? '').trim()}`,
           serialNo:        x.serialNo.trim(),
           jobNumber:       x.job.trim(),
+          suffix:          x.suffix ?? 0, 
           qtyReleased:     x.qtyReleased,
           item:            x.item.trim(),
           jobYear:         x.jobYear,
@@ -409,6 +410,7 @@ export class QualityChecker implements OnInit, AfterViewInit, OnDestroy {
           const jobObj: any = {
             uniqueRowId:     jobKey,
             jobNumber:       x.job,
+            suffix: x.suffix ?? 0,
             serialNo:        x.serialNo,
             operationNumber: x.oper_num,
             wcCode:          x.wc,

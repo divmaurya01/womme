@@ -50,6 +50,9 @@
                     Job
                     <p-sortIcon field="jobNumber"></p-sortIcon>
                   </th>
+                  <th pSortableColumn="suffix" style="background-color:#ECC391;">
+                    Suffix <p-sortIcon field="suffix"></p-sortIcon>
+                  </th>
 
                   <th pSortableColumn="serialNo" style="background-color:#ECC391;">
                     SerialNo
@@ -95,6 +98,7 @@
               <tr [class.active-job]="job.isActive">
                 <td>{{ rowIndex + 1 }}</td>
                 <td>{{ job.jobNumber }}</td>
+                <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
                 <td>{{ job.serialNo }}</td>                
                 <td>{{ job.qtyReleased }}</td>                
                 <td>{{ job.operationNumber }}</td>

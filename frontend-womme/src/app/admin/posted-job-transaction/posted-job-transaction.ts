@@ -173,6 +173,7 @@ highlightedRowKey: string | null = null;
             return {
               ...lastRow,
               trans_num:    lastRow.trans_num,
+              suffix:       lastRow.suffix ?? 0,    
               timerHours:   totalHours,
               allLogs:      group,
               allEmployees,   // ← new

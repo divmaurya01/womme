@@ -36,7 +36,9 @@
                   Job
                   <p-sortIcon field="jobNumber"></p-sortIcon>
                 </th>
-
+                <th pSortableColumn="suffix" style="background-color:#ECC391;">
+                  Suffix <p-sortIcon field="suffix"></p-sortIcon>
+                </th>
                 <th pSortableColumn="serialNumber" style="background-color:#ECC391;">
                   Serial No
                   <p-sortIcon field="serialNumber"></p-sortIcon>
@@ -80,6 +82,7 @@
 
                 <td>{{ dt.first + rowIndex + 1 }}</td>
                 <td>{{ job.jobNumber }}</td>
+                <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
                 <td>{{ job.serialNumber }}</td>
                 <td>{{ formatTimer(job.timerHours || job.total_hours || 0) }}</td>
                 <td>{{ job.operationNumber }}</td>

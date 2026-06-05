@@ -183,6 +183,7 @@ export class VerifyTransaction implements OnInit {
 
             // UI flags
             data.forEach((x: any) => {
+              x.suffix = x.suffix ?? 0; 
               x.isRemarkSaved = !!x.remark;
               x.verify = false;
             });
@@ -377,12 +378,7 @@ console.log('employeeCode:', employeeCode);
       next: (res) => {
         const data = res.data || [];
 
-       this.completedJobs = data.filter((job: any) => {
-  const match = job.employees?.some((emp: any) =>
-    emp.empNum?.toString() === employeeCode
-  );
-  return match ?? true; // if no match, include job anyway
-});
+       this.completedJobs = data;
 
 
         this.allCompletedJobs = [...this.completedJobs];

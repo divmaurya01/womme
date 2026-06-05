@@ -63,47 +63,27 @@
             <ng-template pTemplate="header">
               <tr>
                 <th style="background-color:#ECC391;">S.No</th>
-                <th pSortableColumn="job" style="background-color:#ECC391;">
-                  Job <p-sortIcon field="job"></p-sortIcon>
-                </th>
-                <th pSortableColumn="item" style="background-color:#ECC391;">
-                  Item <p-sortIcon field="item"></p-sortIcon>
-                </th>
-                <th pSortableColumn="wcCode" style="background-color:#ECC391;">
-                  WC Code <p-sortIcon field="wcCode"></p-sortIcon>
-                </th>
-                <th pSortableColumn="empName" style="background-color:#ECC391;">
-                  Employee Name <p-sortIcon field="empName"></p-sortIcon>
-                </th>
-                <th style="background-color:#ECC391;">Last Modified</th>
-                <th style="background-color:#ECC391;">Last Modified By</th>
+                <th pSortableColumn="job" style="background-color:#ECC391;">Job <p-sortIcon field="job"></p-sortIcon></th>
+                <th pSortableColumn="suffix" style="background-color:#ECC391;">Suffix <p-sortIcon field="suffix"></p-sortIcon></th>
+                <th pSortableColumn="item" style="background-color:#ECC391;">Item <p-sortIcon field="item"></p-sortIcon></th>
+                <th pSortableColumn="wcCode" style="background-color:#ECC391;">WC Code <p-sortIcon field="wcCode"></p-sortIcon></th>
+                
               </tr>
             </ng-template>
 
             <ng-template pTemplate="body" let-job let-rowIndex="rowIndex">
               <tr>
                 <td>{{ job.sno }}</td>
-
                 <td>
-                  <a href="javascript:void(0)"
-                    (click)="onJobClick(job.job)"
+                  <a href="javascript:void(0)" (click)="onJobClick(job.job)"
                     class="text-primary text-decoration-underline">
                     {{ job.job }}
                   </a>
                 </td>
-
+                <td>{{ job.suffix?.toString().padStart(4,'0') ?? '0000' }}</td>
                 <td>{{ job.item }}</td>
                 <td>{{ job.wcCode }}</td>
-
-                <!-- Employee Name — will wrap long names like "RAJASHEKHAR CHANNABASAPPA, KUMBAPOOR" -->
-                <td style="white-space: normal; word-break: break-word;">
-                  {{ job.empName }}
-                </td>
-
-                <td>{{ job.lastModifiedDate ? (job.lastModifiedDate | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
-                <td style="white-space: normal; word-break: break-word;">
-                  {{ job.lastModifiedByName || '-' }}
-                </td>
+                
               </tr>
             </ng-template>
 
