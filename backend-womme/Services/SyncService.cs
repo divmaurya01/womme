@@ -178,25 +178,20 @@ namespace WommeAPI.Services
 
 
 
-                
+        public async Task<(List<EmployeeMst> insertedRecords, List<EmployeeMst> updatedRecords)> SyncEmployeeMstAsync()
+        {
+            const int batchSize = 300;
+            var insertedRecords = new List<EmployeeMst>();
+            var updatedRecords  = new List<EmployeeMst>();
 
-            public async Task<(List<EmployeeMst> insertedRecords, List<EmployeeMst> updatedRecords)> SyncEmployeeMstAsync()
-                {
-                    const int batchSize = 300;
-                    var insertedRecords = new List<EmployeeMst>();
-                    var updatedRecords = new List<EmployeeMst>();
+            var lastSync = await GetLastSyncDate("EmployeeMst");
+            var sourceBatch = await _sourceContext.EmployeeMstSource
+                .Where(x => x.RecordDate > lastSync)
+                .ToListAsync();
 
-                    var lastSync = await GetLastSyncDate("EmployeeMst");
-                    var sourceBatch = await _sourceContext.EmployeeMstSource
-                        .Where(x => x.RecordDate > lastSync)
-                        .ToListAsync();
-
-
-
-                    // Load all local employees once into a dictionary
-            var localData = await _localContext.EmployeeMst.ToDictionaryAsync(e => e.emp_num!);
-
+            var localData  = await _localContext.EmployeeMst.ToDictionaryAsync(e => e.emp_num!);
             var totalCount = await _sourceContext.EmployeeMstSource.CountAsync();
+            var connStr    = _localContext.Database.GetConnectionString();
 
             for (int i = 0; i < totalCount; i += batchSize)
             {
@@ -206,15 +201,17 @@ namespace WommeAPI.Services
                     .Take(batchSize)
                     .ToListAsync();
 
+                var batchHasUpdates = false;
+
                 foreach (var sourceItem in batch)
                 {
                     if (sourceItem.emp_num == null) continue;
 
                     if (localData.TryGetValue(sourceItem.emp_num, out var localItem))
                     {
+                        // ── EXISTING RECORD — only update changed fields ──────────
                         bool needsUpdate = false;
 
-                        // ✅ Helper method (no ref)
                         void UpdateIfDifferent<T>(Action<T> setAction, T currentValue, T newValue, ref bool changed)
                         {
                             if (!EqualityComparer<T>.Default.Equals(currentValue, newValue))
@@ -224,120 +221,175 @@ namespace WommeAPI.Services
                             }
                         }
 
-                        // ✅ Compare each field and update only if changed
-                        UpdateIfDifferent(v => localItem.name = v, localItem.name, sourceItem.name, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.city = v, localItem.city, sourceItem.city, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.state = v, localItem.state, sourceItem.state, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.zip = v, localItem.zip, sourceItem.zip, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.phone = v, localItem.phone, sourceItem.phone, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.ssn = v, localItem.ssn, sourceItem.ssn, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.dept = v, localItem.dept, sourceItem.dept, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.emp_type = v, localItem.emp_type, sourceItem.emp_type, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.pay_freq = v, localItem.pay_freq, sourceItem.pay_freq, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.email_addr = v, localItem.email_addr, sourceItem.email_addr, ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.name              = v, localItem.name,              sourceItem.name,              ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.city              = v, localItem.city,              sourceItem.city,              ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.state             = v, localItem.state,             sourceItem.state,             ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.zip               = v, localItem.zip,               sourceItem.zip,               ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.phone             = v, localItem.phone,             sourceItem.phone,             ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.ssn               = v, localItem.ssn,               sourceItem.ssn,               ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.dept              = v, localItem.dept,              sourceItem.dept,              ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.emp_type          = v, localItem.emp_type,          sourceItem.emp_type,          ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.pay_freq          = v, localItem.pay_freq,          sourceItem.pay_freq,          ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.email_addr        = v, localItem.email_addr,        sourceItem.email_addr,        ref needsUpdate);
                         UpdateIfDifferent(v => localItem.Uf_OfficeLocation = v, localItem.Uf_OfficeLocation, sourceItem.Uf_OfficeLocation, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.Uf_TermReason = v, localItem.Uf_TermReason, sourceItem.Uf_TermReason, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.emp_status = v, localItem.emp_status, sourceItem.emp_status, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.mfg_reg_rate = v, localItem.mfg_reg_rate, sourceItem.mfg_reg_rate, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.mfg_ot_rate = v, localItem.mfg_ot_rate, sourceItem.mfg_ot_rate, ref needsUpdate);
-                        UpdateIfDifferent(v => localItem.mfg_dt_rate = v, localItem.mfg_dt_rate, sourceItem.mfg_dt_rate, ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.Uf_TermReason     = v, localItem.Uf_TermReason,     sourceItem.Uf_TermReason,     ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.emp_status        = v, localItem.emp_status,        sourceItem.emp_status,        ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.mfg_reg_rate      = v, localItem.mfg_reg_rate,      sourceItem.mfg_reg_rate,      ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.mfg_ot_rate       = v, localItem.mfg_ot_rate,       sourceItem.mfg_ot_rate,       ref needsUpdate);
+                        UpdateIfDifferent(v => localItem.mfg_dt_rate       = v, localItem.mfg_dt_rate,       sourceItem.mfg_dt_rate,       ref needsUpdate);
 
                         if (needsUpdate)
                         {
-                            localItem.UpdatedBy = sourceItem.UpdatedBy;
+                            localItem.UpdatedBy  = sourceItem.UpdatedBy;
                             localItem.RecordDate = DateTime.UtcNow;
 
                             _localContext.EmployeeMst.Update(localItem);
+                            _localContext.Entry(localItem).Property(e => e.womm_id).IsModified = false;
+
                             updatedRecords.Add(localItem);
+                            batchHasUpdates = true;
 
                             SyncLogger.Log("EmployeeMst-Updated", new Dictionary<string, object>
-                    {
-                        { "emp_num", localItem.emp_num! }
-                    });
+                            {
+                                { "emp_num", localItem.emp_num! }
+                            });
                         }
                     }
                     else
                     {
-                        // 🆕 New Record
-                        var newEmp = new EmployeeMst
-                        {
-                            emp_num = sourceItem.emp_num,
-                            site_ref = sourceItem.site_ref,
-                            name = sourceItem.name,
-                            city = sourceItem.city,
-                            state = sourceItem.state,
-                            zip = sourceItem.zip,
-                            phone = sourceItem.phone,
-                            ssn = sourceItem.ssn,
-                            dept = sourceItem.dept,
-                            emp_type = sourceItem.emp_type,
-                            pay_freq = sourceItem.pay_freq,
-                            mfg_reg_rate = sourceItem.mfg_reg_rate,
-                            mfg_ot_rate = sourceItem.mfg_ot_rate,
-                            mfg_dt_rate = sourceItem.mfg_dt_rate,
-                            birth_date = sourceItem.birth_date,
-                            hire_date = sourceItem.hire_date,
-                            raise_date = sourceItem.raise_date,
-                            review_date = sourceItem.review_date,
-                            term_date = sourceItem.term_date,
-                            salary = sourceItem.salary,
-                            reg_rate = sourceItem.reg_rate,
-                            ot_rate = sourceItem.ot_rate,
-                            dt_rate = sourceItem.dt_rate,
-                            fwt_num = sourceItem.fwt_num,
-                            fwt_dol = sourceItem.fwt_dol,
-                            swt_num = sourceItem.swt_num,
-                            swt_dol = sourceItem.swt_dol,
-                            ytd_fwt = sourceItem.ytd_fwt,
-                            ytd_swt = sourceItem.ytd_swt,
-                            ytd_med = sourceItem.ytd_med,
-                            ytd_tip_cr = sourceItem.ytd_tip_cr,
-                            NoteExistsFlag = sourceItem.NoteExistsFlag,
-                            RecordDate = DateTime.UtcNow,
-                            RowPointer = sourceItem.RowPointer,
-                            CreatedBy = sourceItem.CreatedBy,
-                            UpdatedBy = sourceItem.UpdatedBy,
-                            CreateDate = sourceItem.CreateDate,
-                            InWorkflow = sourceItem.InWorkflow,
-                            vac_paid = sourceItem.vac_paid,
-                            sick_paid = sourceItem.sick_paid,
-                            hol_paid = sourceItem.hol_paid,
-                            other_paid = sourceItem.other_paid,
-                            Uf_Bonus = sourceItem.Uf_Bonus,
-                            Uf_last_updated = sourceItem.Uf_last_updated,
-                            Uf_new_vac_hr_due = sourceItem.Uf_new_vac_hr_due,
-                            Uf_OfficeLocation = sourceItem.Uf_OfficeLocation,
-                            Uf_TermReason = sourceItem.Uf_TermReason,
-                            Uf_EmpExt = sourceItem.Uf_EmpExt,
-                            emp_status = sourceItem.emp_status,
-                            email_addr = sourceItem.email_addr,
+                        // ── NEW RECORD — direct ADO.NET to avoid identity + DBNull issues ──
+                        using var conn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
+                        await conn.OpenAsync();
 
-                            // Local-only columns
-                            IsActive = true,
-                            RoleID = null,
-                            PasswordHash = null,
-                            ProfileImage = null
-                        };
+                        using var cmd = new Microsoft.Data.SqlClient.SqlCommand(@"
+                            INSERT INTO employee_mst (
+                                emp_num, site_ref, name, city, state, zip, phone, ssn,
+                                dept, emp_type, pay_freq,
+                                mfg_reg_rate, mfg_ot_rate, mfg_dt_rate,
+                                birth_date, hire_date, raise_date, review_date, term_date,
+                                salary, reg_rate, ot_rate, dt_rate,
+                                fwt_num, fwt_dol, swt_num, swt_dol,
+                                ytd_fwt, ytd_swt, ytd_med, ytd_tip_cr,
+                                NoteExistsFlag, RecordDate, RowPointer,
+                                CreatedBy, UpdatedBy, CreateDate, InWorkflow,
+                                vac_paid, sick_paid, hol_paid, other_paid,
+                                Uf_Bonus, Uf_last_updated, Uf_new_vac_hr_due,
+                                Uf_OfficeLocation, Uf_TermReason, Uf_EmpExt,
+                                emp_status, email_addr,
+                                IsActive, RoleID, PasswordHash, ProfileImage
+                            ) VALUES (
+                                @emp_num, @site_ref, @name, @city, @state, @zip, @phone, @ssn,
+                                @dept, @emp_type, @pay_freq,
+                                @mfg_reg_rate, @mfg_ot_rate, @mfg_dt_rate,
+                                @birth_date, @hire_date, @raise_date, @review_date, @term_date,
+                                @salary, @reg_rate, @ot_rate, @dt_rate,
+                                @fwt_num, @fwt_dol, @swt_num, @swt_dol,
+                                @ytd_fwt, @ytd_swt, @ytd_med, @ytd_tip_cr,
+                                @NoteExistsFlag, @RecordDate, @RowPointer,
+                                @CreatedBy, @UpdatedBy, @CreateDate, @InWorkflow,
+                                @vac_paid, @sick_paid, @hol_paid, @other_paid,
+                                @Uf_Bonus, @Uf_last_updated, @Uf_new_vac_hr_due,
+                                @Uf_OfficeLocation, @Uf_TermReason, @Uf_EmpExt,
+                                @emp_status, @email_addr,
+                                1, NULL, NULL, NULL
+                            )", conn);
 
-                        await _localContext.EmployeeMst.AddAsync(newEmp);
-                        insertedRecords.Add(newEmp);
+                        // Helper — null becomes DBNull automatically
+                        void AddParam(string name, object? value)
+                            => cmd.Parameters.AddWithValue(name, value ?? (object)DBNull.Value);
+
+                        AddParam("@emp_num",           sourceItem.emp_num);
+                        AddParam("@site_ref",          sourceItem.site_ref);
+                        AddParam("@name",              sourceItem.name);
+                        AddParam("@city",              sourceItem.city);
+                        AddParam("@state",             sourceItem.state);
+                        AddParam("@zip",               sourceItem.zip);
+                        AddParam("@phone",             sourceItem.phone);
+                        AddParam("@ssn",               sourceItem.ssn);
+                        AddParam("@dept",              sourceItem.dept);
+                        AddParam("@emp_type",          sourceItem.emp_type);
+                        AddParam("@pay_freq",          sourceItem.pay_freq);
+                        AddParam("@mfg_reg_rate",      sourceItem.mfg_reg_rate);
+                        AddParam("@mfg_ot_rate",       sourceItem.mfg_ot_rate);
+                        AddParam("@mfg_dt_rate",       sourceItem.mfg_dt_rate);
+                        AddParam("@birth_date",        sourceItem.birth_date);
+                        AddParam("@hire_date",         sourceItem.hire_date);
+                        AddParam("@raise_date",        sourceItem.raise_date);
+                        AddParam("@review_date",       sourceItem.review_date);
+                        AddParam("@term_date",         sourceItem.term_date);
+                        AddParam("@salary",            sourceItem.salary);
+                        AddParam("@reg_rate",          sourceItem.reg_rate);
+                        AddParam("@ot_rate",           sourceItem.ot_rate);
+                        AddParam("@dt_rate",           sourceItem.dt_rate);
+                        AddParam("@fwt_num",           sourceItem.fwt_num ?? 0);
+                        AddParam("@fwt_dol",           sourceItem.fwt_dol);
+                        AddParam("@swt_num",           sourceItem.swt_num ?? 0);
+                        AddParam("@swt_dol",           sourceItem.swt_dol);
+                        AddParam("@ytd_fwt",           sourceItem.ytd_fwt);
+                        AddParam("@ytd_swt",           sourceItem.ytd_swt);
+                        AddParam("@ytd_med",           sourceItem.ytd_med);
+                        AddParam("@ytd_tip_cr",        sourceItem.ytd_tip_cr);
+                        AddParam("@NoteExistsFlag",    sourceItem.NoteExistsFlag);
+                        AddParam("@RecordDate",        DateTime.UtcNow);
+                        AddParam("@RowPointer",        sourceItem.RowPointer);
+                        AddParam("@CreatedBy",         sourceItem.CreatedBy);
+                        AddParam("@UpdatedBy",         sourceItem.UpdatedBy);
+                        AddParam("@CreateDate",        sourceItem.CreateDate);
+                        AddParam("@InWorkflow",        sourceItem.InWorkflow );
+                        AddParam("@vac_paid",          sourceItem.vac_paid);
+                        AddParam("@sick_paid",         sourceItem.sick_paid);
+                        AddParam("@hol_paid",          sourceItem.hol_paid);
+                        AddParam("@other_paid",        sourceItem.other_paid);
+                        AddParam("@Uf_Bonus",          sourceItem.Uf_Bonus);
+                        AddParam("@Uf_last_updated",   sourceItem.Uf_last_updated);
+                        AddParam("@Uf_new_vac_hr_due", sourceItem.Uf_new_vac_hr_due);
+                        AddParam("@Uf_OfficeLocation", sourceItem.Uf_OfficeLocation);
+                        AddParam("@Uf_TermReason",     sourceItem.Uf_TermReason);
+                        AddParam("@Uf_EmpExt",         sourceItem.Uf_EmpExt);
+                        AddParam("@emp_status",        sourceItem.emp_status);
+                        AddParam("@email_addr",        sourceItem.email_addr);
+
+                        await cmd.ExecuteNonQueryAsync();
+
+                        insertedRecords.Add(new EmployeeMst { emp_num = sourceItem.emp_num });
 
                         SyncLogger.Log("EmployeeMst-Inserted", new Dictionary<string, object>
-                {
-                    { "emp_num", newEmp.emp_num! }
-                });
+                        {
+                            { "emp_num", sourceItem.emp_num! }
+                        });
                     }
-                }
 
-                await _localContext.SaveChangesAsync();
-                if (sourceBatch.Any())
+                } // end foreach
+
+                // Save EF updates (inserts already executed via ADO.NET)
+                if (batchHasUpdates)
+                    await _localContext.SaveChangesAsync();
+
+            } // end for
+
+            // ── Cleanup: fix any NULL byte columns across all rows ────────────
+            using var cleanConn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
+            await cleanConn.OpenAsync();
+            using var cleanCmd = new Microsoft.Data.SqlClient.SqlCommand(@"
+                UPDATE employee_mst SET
+                    fwt_num        = ISNULL(fwt_num, 0),
+                    swt_num        = ISNULL(swt_num, 0),
+                    NoteExistsFlag = ISNULL(NoteExistsFlag, 0),
+                    InWorkflow     = ISNULL(InWorkflow, 0)
+                WHERE
+                    fwt_num IS NULL OR swt_num IS NULL OR
+                    NoteExistsFlag IS NULL OR InWorkflow IS NULL
+            ", cleanConn);
+            await cleanCmd.ExecuteNonQueryAsync();
+
+            if (sourceBatch.Any())
                 await UpdateLastSyncDate("EmployeeMst", sourceBatch.Max(x => x.RecordDate));
-
-            }
 
             return (insertedRecords, updatedRecords);
         }
-        
+                
+
+    
 
        public async Task<List<JobmatlMst>> SyncJobMatlMstAsync()
         {

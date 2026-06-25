@@ -69,7 +69,7 @@ export class JobListComponent implements OnInit {
       const empCodeParam = roleId === 1 ? null : loggedInEmpCode;
       console.log("employee is admin",empCodeParam)
       this.loader.show();
-      this.jobService.GetUnpostedTransactions(page, size, this.searchTerm,loggedInEmpCode)
+      this.jobService.GetReportTransactions(page, size, this.searchTerm,loggedInEmpCode)
       .pipe(finalize(() => this.loader.hide()))
       .subscribe({
         next: res => {

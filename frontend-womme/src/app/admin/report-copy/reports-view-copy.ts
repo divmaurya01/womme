@@ -343,13 +343,23 @@ export class ReportsViewComponentCopy implements OnInit, OnDestroy {
     if (!element) return;
 
     const opt = {
-      margin  : [20, 20, 30, 20],           // extra bottom for page numbers
+      margin  : [20, 20, 30, 20],
       filename: `${this.jobData.job}_Report.pdf`,
       image   : { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
+      },
       jsPDF   : { unit: 'pt', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      pagebreak: {
+                    mode: ['avoid-all', 'css', 'legacy'],
+                    avoid: ['.header-table', '.meta-info-table', '.issuance-table', '.item-table']
+                  }
     };
+
 
     html2pdf()
       .set(opt)

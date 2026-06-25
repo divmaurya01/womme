@@ -1284,6 +1284,289 @@ public class GetController : ControllerBase
                 join wm in _context.WcMst on jr.Wc equals wm.wc
                 where wm.dept == "OPR" && jm.CreateDate >= fromDate
                 && !jr.Wc.ToLower().Contains("issue")
+                && !jr.Wc.ToLower().Contains("verify")
+                select new
+                {
+                    jr,
+                    jm,
+                    wm,
+                    Suffix = jr.Suffix 
+                })
+                .ToListAsync();
+
+            // Step 2: Fetch related employees for the WCs
+            var wcList = baseData.Select(x => x.jr.Wc).Distinct().ToList();
+            var employees = await _context.WomWcEmployee
+                .Where(e => wcList.Contains(e.Wc))
+                .ToListAsync();
+
+            // Step 3: If this user is OPR+roleID4, only allow jobs of this emp_num
+            List<string> allowedWcForCurrentEmp = new();
+            if (isOprLevel4)
+            {
+                allowedWcForCurrentEmp = employees
+                    .Where(e => e.EmpNum == emp_num && e.Wc != null)
+                    .Select(e => e.Wc!)
+                    .Distinct()
+                    .ToList();
+
+                baseData = baseData
+                    .Where(x => x.jr.Wc != null && allowedWcForCurrentEmp.Contains(x.jr.Wc))
+                    .ToList();
+            }
+            var jobListForMapping = baseData.Select(x => (x.jr.Job ?? "").Trim()).Distinct().ToList();
+            var manualMappings = await _context.JobSerialMapping
+                .Where(m => jobListForMapping.Contains(m.Job))
+                .AsNoTracking()
+                .Select(m => new { m.Job, m.SystemSerial, m.ManualSerial })
+                .ToListAsync();
+
+            // Step 4: Group by job/oper/wc and expand serial numbers
+            // Step 4: Group by job/oper/wc and expand serial numbers
+            var empLookup = employees
+                .GroupBy(e => e.Wc)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new {
+                        EmpNums  = string.Join(", ", g.Select(e => e.EmpNum)),
+                        EmpNames = string.Join(", ", g.Select(e => e.Name))
+                    });
+
+        var groupedData = baseData
+            .GroupBy(x => new { x.jr.Job, x.jr.OperNum, x.jr.Wc, x.Suffix, x.jm.qty_released, x.jm.item, x.jm.CreateDate, x.wm.description })
+            .Distinct()
+            .SelectMany(g =>
+            {
+                empLookup.TryGetValue(g.Key.Wc ?? "", out var empData);
+                var empNums  = empData?.EmpNums  ?? "";
+                var empNames = empData?.EmpNames ?? "";
+
+                return Enumerable.Range(1, (int)g.Key.qty_released).Select(i =>
+                {
+                    var systemSerial = $"{(g.Key.Job ?? "").Trim()}-{i}";
+                    var mapping = manualMappings
+                        .FirstOrDefault(m => m.Job == (g.Key.Job ?? "").Trim() && m.SystemSerial == systemSerial);
+
+                    return new UnpostedTransactionDto
+                    {
+                        SerialNo      = mapping != null ? mapping.ManualSerial : systemSerial,  // ← manual override
+                        Job           = (g.Key.Job ?? "").Trim(),
+                        Suffix        = g.Key.Suffix,    // ← suffix from jobroute_mst
+                        QtyReleased   = 1,
+                        Item          = g.Key.item ?? "",
+                        JobYear       = g.Key.CreateDate.Year,
+                        OperNum       = g.Key.OperNum.ToString(),
+                        WcCode        = g.Key.Wc ?? "",
+                        WcDescription = g.Key.description ?? "",
+                        EmpNum        = empNums,
+                        EmpName       = empNames
+                    };
+                });
+            })
+            .OrderBy(x => x.Job)
+            .ThenBy(x => x.OperNum)
+            .ThenBy(x => x.SerialNo)
+            .ToList();
+
+            // Step 5: Optional search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var lowerSearch = search.ToLower();
+                groupedData = groupedData
+                    .Where(x =>
+                        x.Job.ToLower().Contains(lowerSearch) ||
+                        x.Item.ToLower().Contains(lowerSearch) ||
+                        (x.EmpName ?? "").ToLower().Contains(lowerSearch) ||
+                        (x.MachineDescription ?? "").ToLower().Contains(lowerSearch))
+                    .ToList();
+            }
+
+            // ── Completed jobs filter ─────────────────────────────────────────
+            var completedJobs = await _context.JobTranMst
+                .Where(jt => jt.SerialNo != null && jt.status == "3")
+                .Select(jt => new { jt.SerialNo, jt.oper_num, jt.wc })
+                .ToListAsync();
+
+            var reopenedRows = await _context.JobTranMst
+                .Where(jt => jt.SerialNo != null && jt.status == "2" && jt.reopen_flag == true)
+                .Select(jt => new { jt.SerialNo, jt.oper_num, jt.wc })
+                .ToListAsync();
+
+            var reopenedSet = new HashSet<string>(
+                reopenedRows.Select(x => $"{x.SerialNo}-{x.oper_num}-{x.wc}")
+            );
+
+            var completedJobSet = new HashSet<string>(
+                completedJobs
+                    .Select(x => $"{x.SerialNo}-{x.oper_num}-{x.wc}")
+                    .Where(key => !reopenedSet.Contains(key))
+            );
+
+            groupedData = groupedData
+                .Where(g => !completedJobSet.Contains($"{g.SerialNo}-{g.OperNum}-{g.WcCode}"))
+                .ToList();
+
+            // ── Step 5.5: Mark active jobs ────────────────────────────────────
+            var allSerialNos = groupedData
+                .Select(x => x.SerialNo)
+                .Where(x => x != null)
+                .ToList();
+
+            var latestStatuses = await _context.JobTranMst
+                .Where(jt =>
+                    jt.SerialNo != null &&
+                    allSerialNos.Contains(jt.SerialNo) &&
+                    (jt.trans_type == "D" || (jt.trans_type == "M" && jt.reopen_flag != true))
+                )
+                .GroupBy(jt => new { jt.job, jt.oper_num, jt.SerialNo, jt.wc })
+                .Select(g => g.OrderByDescending(x => x.trans_date).FirstOrDefault())
+                .ToListAsync();
+
+            var latestStatusDict = latestStatuses
+                .Where(x => x != null && x!.SerialNo != null && x.oper_num != null)
+                .ToDictionary(
+                    x => $"{x!.SerialNo}-{x!.oper_num}",
+                    x => x!.status
+                );
+
+            foreach (var g in groupedData)
+            {
+                var key = $"{g.SerialNo}-{g.OperNum}";
+                g.IsActive = latestStatusDict.TryGetValue(key, out var status) && status != "3";
+            }
+
+            // ── Step 5.6: Fetch audit info per unique Job ─────────────────────
+            var uniqueJobs = groupedData
+                .Select(x => x.Job)
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Distinct()
+                .ToList();
+
+            // Get latest audit record per job in ONE query
+            var auditRecords = await _context.JobReportAudit
+                .Where(a => a.Job != null && uniqueJobs.Contains(a.Job))
+                .GroupBy(a => a.Job)
+                .Select(g => g.OrderByDescending(a => a.UpdatedDate).First())
+                .ToListAsync();
+
+            // Get all employee names for updatedBy in ONE query
+            var updatedByList = auditRecords
+                .Select(a => a.UpdatedBy)
+                .Where(x => x != null)
+                .Distinct()
+                .ToList();
+
+            var auditEmployees = await _context.EmployeeMst
+                .Where(e => updatedByList.Contains(e.emp_num))
+                .Select(e => new { e.emp_num, e.name })
+                .ToListAsync();
+
+            var empNameMap = auditEmployees
+                .ToDictionary(e => e.emp_num ?? "", e => e.name ?? "");
+
+            // Build audit lookup dictionary: job → { date, name }
+            var auditMap = auditRecords.ToDictionary(
+                a => a.Job ?? "",
+                a => new
+                {
+                    LastModifiedDate   = a.UpdatedDate,
+                    LastModifiedBy     = a.UpdatedBy,
+                    LastModifiedByName = empNameMap.TryGetValue(a.UpdatedBy ?? "", out var name)
+                                            ? name
+                                            : a.UpdatedBy
+                }
+            );
+
+            // Sort: active jobs first
+            groupedData = groupedData
+                .OrderByDescending(x => x.IsActive)
+                .ThenBy(x => x.Job)
+                .ThenBy(x => x.OperNum)
+                .ThenBy(x => x.SerialNo)
+                .ToList();
+
+            // Step 6: Pagination
+            var totalRecords = groupedData.Count;
+            var pagedData    = groupedData
+                .Skip(page * size)
+                .Take(size)
+                .ToList();
+
+            // Step 7: Attach audit info to each row before returning
+            var result = pagedData.Select(g => new
+            {
+                g.SerialNo,
+                g.Job,
+                g.Suffix, 
+                g.QtyReleased,
+                g.Item,
+                g.JobYear,
+                g.OperNum,
+                g.WcCode,
+                g.WcDescription,
+                g.EmpNum,
+                g.EmpName,
+                g.IsActive,
+                g.IsNextJobActive,
+                g.Status,
+                g.Remark,
+                g.MachineId,
+                g.MachineDescription,
+                g.TransType,
+                g.QcGroup,
+                g.trans_number,
+
+                // ← NEW audit fields
+                LastModifiedDate   = auditMap.TryGetValue(g.Job ?? "", out var audit)
+                                        ? audit.LastModifiedDate
+                                        : (DateTime?)null,
+                LastModifiedBy     = auditMap.TryGetValue(g.Job ?? "", out var audit2)
+                                        ? audit2.LastModifiedBy
+                                        : null,
+                LastModifiedByName = auditMap.TryGetValue(g.Job ?? "", out var audit3)
+                                        ? audit3.LastModifiedByName
+                                        : null
+            }).ToList();
+
+            return Ok(new
+            {
+                totalRecords,
+                page,
+                size,
+                data = result
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+[HttpGet]
+    public async Task<IActionResult> GetReportTransactions(
+        int page = 0,
+        int size = 50,
+        string search = "",
+        string emp_num = "")
+    {
+        try
+        {
+            var fromDate = new DateTime(2025, 11, 1);
+
+            // Step 0: Check logged-in employee info
+            var currentEmp = await _context.EmployeeMst
+                .FirstOrDefaultAsync(e => e.emp_num == emp_num);
+
+            bool isOprLevel4 = currentEmp != null && currentEmp.RoleID == 4;
+
+            // Step 1: Fetch the base data from DB asynchronously
+            var baseData = await (
+                from jr in _context.JobRouteMst
+                join jm in _context.JobMst on jr.Job equals jm.job
+                join wm in _context.WcMst on jr.Wc equals wm.wc
+                where wm.dept == "OPR" && jm.CreateDate >= fromDate
+                && !jr.Wc.ToLower().Contains("issue")
+                
                 select new
                 {
                     jr,
@@ -1733,179 +2016,225 @@ public class GetController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetVerifyTransactions(
-        int page = 0, int size = 50, string search = "", string emp_num = "")
+public async Task<IActionResult> GetVerifyTransactions(
+    int page = 0, int size = 50, string search = "", string emp_num = "")
+{
+    try
     {
-        try
+        var fromDate = new DateTime(2025, 11, 1);
+
+        var currentEmp = await _context.EmployeeMst
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.emp_num == emp_num);
+        bool isOprLevel4 = currentEmp != null && currentEmp.RoleID == 4;
+
+        var baseData = await (
+            from jr in _context.JobRouteMst
+            join jm in _context.JobMst on jr.Job equals jm.job
+            join wm in _context.WcMst on jr.Wc equals wm.wc
+            where wm.dept == "OPR"
+            && jm.CreateDate >= fromDate
+            && jr.Wc.ToLower().Contains("verify")   // ← lowercase for safety
+            select new
+            {
+                Job           = jr.Job,
+                Suffix        = jr.Suffix,             // ← ADD
+                OperNum       = jr.OperNum,
+                Wc            = jr.Wc,
+                QtyReleased   = jm.qty_released,
+                Item          = jm.item,
+                CreateDate    = jm.CreateDate,
+                WcDescription = wm.description
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        baseData = baseData
+            .GroupBy(x => new { x.Job, x.OperNum, x.Wc })
+            .Select(g => g.First())
+            .ToList();
+
+        var wcList = baseData.Select(x => x.Wc).Distinct().ToList();
+        var employees = await _context.WomWcEmployee
+            .Where(e => wcList.Contains(e.Wc))
+            .AsNoTracking()
+            .Select(e => new { e.Wc, e.EmpNum, e.Name })
+            .ToListAsync();
+
+        if (isOprLevel4)
         {
-            var fromDate = new DateTime(2025, 11, 1);
+            var allowedWc = employees
+                .Where(e => e.EmpNum == emp_num && e.Wc != null)
+                .Select(e => e.Wc!).Distinct().ToList();
+            baseData = baseData.Where(x => allowedWc.Contains(x.Wc)).ToList();
+        }
 
-            var currentEmp = await _context.EmployeeMst
-                .AsNoTracking()
-                .FirstOrDefaultAsync(e => e.emp_num == emp_num);
-            bool isOprLevel4 = currentEmp != null && currentEmp.RoleID == 4;
+        // ← Fetch manual mappings
+        var jobList = baseData.Select(x => x.Job.Trim()).Distinct().ToList();
+        var manualMappings = await _context.JobSerialMapping
+            .Where(m => jobList.Contains(m.Job))
+            .AsNoTracking()
+            .Select(m => new { m.Job, m.SystemSerial, m.ManualSerial })
+            .ToListAsync();
 
-            var baseData = await (
-                from jr in _context.JobRouteMst
-                join jm in _context.JobMst on jr.Job equals jm.job
-                join wm in _context.WcMst on jr.Wc equals wm.wc
-                where wm.dept == "OPR"
-                && jm.CreateDate >= fromDate
-                && jr.Wc.ToLower().Contains("verify")   // ← lowercase for safety
-                select new
+        var empLookup = employees
+            .GroupBy(e => e.Wc)
+            .ToDictionary(
+                g => g.Key,
+                g => new {
+                    EmpNums  = string.Join(", ", g.Select(e => e.EmpNum)),
+                    EmpNames = string.Join(", ", g.Select(e => e.Name))
+                });
+
+        var groupedData = baseData
+            .GroupBy(x => new { x.Job, x.Suffix, x.OperNum, x.Wc, x.QtyReleased, x.Item, x.CreateDate, x.WcDescription })
+            .SelectMany(g =>
+                Enumerable.Range(1, (int)g.Key.QtyReleased).Select(i =>
                 {
-                    Job           = jr.Job,
-                    Suffix        = jr.Suffix,             // ← ADD
-                    OperNum       = jr.OperNum,
-                    Wc            = jr.Wc,
-                    QtyReleased   = jm.qty_released,
-                    Item          = jm.item,
-                    CreateDate    = jm.CreateDate,
-                    WcDescription = wm.description
-                })
-                .AsNoTracking()
-                .ToListAsync();
+                    var systemSerial = $"{g.Key.Job.Trim()}-{i}";
+                    var mapping = manualMappings
+                        .FirstOrDefault(m => m.Job == g.Key.Job.Trim() && m.SystemSerial == systemSerial);
 
-            baseData = baseData
-                .GroupBy(x => new { x.Job, x.OperNum, x.Wc })
-                .Select(g => g.First())
-                .ToList();
+                    empLookup.TryGetValue(g.Key.Wc, out var empData);
 
-            var wcList = baseData.Select(x => x.Wc).Distinct().ToList();
-            var employees = await _context.WomWcEmployee
-                .Where(e => wcList.Contains(e.Wc))
-                .AsNoTracking()
-                .Select(e => new { e.Wc, e.EmpNum, e.Name })
-                .ToListAsync();
-
-            if (isOprLevel4)
-            {
-                var allowedWc = employees
-                    .Where(e => e.EmpNum == emp_num && e.Wc != null)
-                    .Select(e => e.Wc!).Distinct().ToList();
-                baseData = baseData.Where(x => allowedWc.Contains(x.Wc)).ToList();
-            }
-
-            // ← Fetch manual mappings
-            var jobList = baseData.Select(x => x.Job.Trim()).Distinct().ToList();
-            var manualMappings = await _context.JobSerialMapping
-                .Where(m => jobList.Contains(m.Job))
-                .AsNoTracking()
-                .Select(m => new { m.Job, m.SystemSerial, m.ManualSerial })
-                .ToListAsync();
-
-            var empLookup = employees
-                .GroupBy(e => e.Wc)
-                .ToDictionary(
-                    g => g.Key,
-                    g => new {
-                        EmpNums  = string.Join(", ", g.Select(e => e.EmpNum)),
-                        EmpNames = string.Join(", ", g.Select(e => e.Name))
-                    });
-
-            var groupedData = baseData
-                .GroupBy(x => new { x.Job, x.Suffix, x.OperNum, x.Wc, x.QtyReleased, x.Item, x.CreateDate, x.WcDescription })
-                .SelectMany(g =>
-                    Enumerable.Range(1, (int)g.Key.QtyReleased).Select(i =>
+                    return new UnpostedTransactionDto
                     {
-                        var systemSerial = $"{g.Key.Job.Trim()}-{i}";
-                        var mapping = manualMappings
-                            .FirstOrDefault(m => m.Job == g.Key.Job.Trim() && m.SystemSerial == systemSerial);
+                        SerialNo      = mapping != null ? mapping.ManualSerial : systemSerial, // ← manual override
+                        Job           = g.Key.Job.Trim(),                            
+                        Suffix        = g.Key.Suffix,
+                        QtyReleased   = 1,
+                        Item          = g.Key.Item,
+                        JobYear       = g.Key.CreateDate.Year,
+                        OperNum       = g.Key.OperNum.ToString(),
+                        WcCode        = g.Key.Wc,
+                        WcDescription = g.Key.WcDescription,
+                        EmpNum        = empData?.EmpNums ?? "",
+                        EmpName       = empData?.EmpNames ?? ""
+                    };
+                })
+            ).ToList();
 
-                        empLookup.TryGetValue(g.Key.Wc, out var empData);
+        groupedData = groupedData
+            .GroupBy(x => new { x.SerialNo, x.OperNum, x.WcCode })
+            .Select(g => g.First())
+            .ToList();
 
-                        return new UnpostedTransactionDto
-                        {
-                            SerialNo      = mapping != null ? mapping.ManualSerial : systemSerial, // ← manual override
-                            Job           = g.Key.Job.Trim(),                            
-                            QtyReleased   = 1,
-                            Item          = g.Key.Item,
-                            JobYear       = g.Key.CreateDate.Year,
-                            OperNum       = g.Key.OperNum.ToString(),
-                            WcCode        = g.Key.Wc,
-                            WcDescription = g.Key.WcDescription,
-                            EmpNum        = empData?.EmpNums ?? "",
-                            EmpName       = empData?.EmpNames ?? ""
-                        };
-                    })
-                ).ToList();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.ToLower();
+            groupedData = groupedData.Where(x =>
+                x.Job.ToLower().Contains(s) ||
+                x.Item.ToLower().Contains(s) ||
+                (x.EmpName ?? "").ToLower().Contains(s)
+            ).ToList();
+        }
 
-            groupedData = groupedData
-                .GroupBy(x => new { x.SerialNo, x.OperNum, x.WcCode })
-                .Select(g => g.First())
-                .ToList();
+        // ← Only fetch serials we actually have
+        var allExpandedSerials = groupedData.Select(x => x.SerialNo).ToList();
 
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var s = search.ToLower();
-                groupedData = groupedData.Where(x =>
-                    x.Job.ToLower().Contains(s) ||
-                    x.Item.ToLower().Contains(s) ||
-                    (x.EmpName ?? "").ToLower().Contains(s)
-                ).ToList();
-            }
+        // Only exclude if LATEST row per group is status=3
+        var allVerifyTrans = await _context.JobTranMst
+            .Where(j => j.SerialNo != null && allExpandedSerials.Contains(j.SerialNo))
+            .AsNoTracking()
+            .Select(j => new { j.SerialNo, j.oper_num, j.wc, j.status, j.trans_num })
+            .ToListAsync();
 
-            // ← Only fetch serials we actually have
-            var allExpandedSerials = groupedData.Select(x => x.SerialNo).ToList();
+        var completedSet = new HashSet<string>(
+            allVerifyTrans
+                .GroupBy(x => new { x.SerialNo, x.oper_num, x.wc })
+                .Where(g => g.OrderByDescending(x => x.trans_num).First().status == "3")
+                .Select(g => $"{g.Key.SerialNo}-{g.Key.oper_num}-{g.Key.wc}")
+        );
 
-            var completedSet = new HashSet<string>(
-                await _context.JobTranMst
-                    .Where(j => j.SerialNo != null
-                            && allExpandedSerials.Contains(j.SerialNo)
-                            && j.status == "3")
-                    .AsNoTracking()
-                    .Select(j => $"{j.SerialNo}-{j.oper_num}-{j.wc}")
-                    .ToListAsync()
+        groupedData = groupedData
+            .Where(x => !completedSet.Contains($"{x.SerialNo}-{x.OperNum}-{x.WcCode}"))
+            .ToList();
+
+        // ── Next-operation gating (same pattern as GetUnpostedTransactions / IsNextJobActive) ──
+        var nextOpRaw = await _context.JobTranMst
+            .Where(t => t.SerialNo != null && t.status == "3")
+            .GroupBy(t => new { t.job, t.SerialNo, t.wc, t.oper_num })
+            .Select(g => g.OrderByDescending(x => x.trans_num).FirstOrDefault())
+            .ToListAsync();
+
+        var nextOpMap = nextOpRaw
+            .Where(x => x != null && x!.next_oper != null)
+            .GroupBy(x => $"{x!.job}|{x.SerialNo}")
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => x!.next_oper!.Value).ToHashSet()
             );
 
-            groupedData = groupedData
-                .Where(x => !completedSet.Contains($"{x.SerialNo}-{x.OperNum}-{x.WcCode}"))
-                .ToList();
+        // Track which job/serial combos have ANY completed (status=3) operation at all
+        var jobsWithHistory = nextOpRaw
+            .Where(x => x != null)
+            .Select(x => $"{x!.job}|{x.SerialNo}")
+            .ToHashSet();
 
-            var remainingSerials = groupedData.Select(x => x.SerialNo).ToList();
-
-            var latestStatuses = await _context.JobTranMst
-                .Where(j => j.SerialNo != null && remainingSerials.Contains(j.SerialNo))
-                .AsNoTracking()
-                .Select(j => new { j.SerialNo, j.oper_num, j.wc, j.status, j.trans_num, j.Remark, j.trans_date })
-                .ToListAsync();
-
-            var statusDict = latestStatuses
-                .GroupBy(x => new { x.SerialNo, x.oper_num, x.wc })
-                .ToDictionary(
-                    g => $"{g.Key.SerialNo}-{g.Key.oper_num}-{g.Key.wc}",
-                    g => g.OrderByDescending(x => x.trans_date).First()
-                );
-
-            foreach (var item in groupedData)
-            {
-                var key = $"{item.SerialNo}-{item.OperNum}-{item.WcCode}";
-                if (statusDict.TryGetValue(key, out var st))
-                {
-                    item.trans_number = (int)st.trans_num;
-                    item.Status       = st.status;
-                    item.Remark       = st.Remark;
-                    item.IsActive     = st.status != "3";
-                }
-            }
-
-            var totalRecords = groupedData.Count;
-            var pagedData = groupedData
-                .OrderByDescending(x => x.IsActive)
-                .ThenBy(x => x.Job)
-                .ThenBy(x => x.OperNum)
-                .ThenBy(x => x.SerialNo)
-                .Skip(page * size)
-                .Take(size)
-                .ToList();
-
-            return Ok(new { totalRecords, page, size, data = pagedData });
-        }
-        catch (Exception ex)
+        foreach (var item in groupedData)
         {
-            return StatusCode(500, new { error = ex.Message });
+            var key = $"{item.Job}|{item.SerialNo}";
+
+            if (nextOpMap.TryGetValue(key, out var nextOps))
+            {
+                item.IsNextJobActive = nextOps.Contains(int.Parse(item.OperNum));
+            }
+            else if (!jobsWithHistory.Contains(key))
+            {
+                // No completed operations exist yet for this job/serial —
+                // this verify op is its entry point, treat as ready
+                item.IsNextJobActive = true;
+            }
+            else
+            {
+                item.IsNextJobActive = false;
+            }
         }
+
+        var remainingSerials = groupedData.Select(x => x.SerialNo).ToList();
+
+        var latestStatuses = await _context.JobTranMst
+            .Where(j => j.SerialNo != null && remainingSerials.Contains(j.SerialNo))
+            .AsNoTracking()
+            .Select(j => new { j.SerialNo, j.oper_num, j.wc, j.status, j.trans_num, j.Remark, j.trans_date })
+            .ToListAsync();
+
+        var statusDict = latestStatuses
+            .GroupBy(x => new { x.SerialNo, x.oper_num, x.wc })
+            .ToDictionary(
+                g => $"{g.Key.SerialNo}-{g.Key.oper_num}-{g.Key.wc}",
+                g => g.OrderByDescending(x => x.trans_num).First()
+            );
+
+        foreach (var item in groupedData)
+        {
+            var key = $"{item.SerialNo}-{item.OperNum}-{item.WcCode}";
+            if (statusDict.TryGetValue(key, out var st))
+            {
+                item.trans_number = (int)st.trans_num;
+                item.Status       = st.status;
+                item.Remark       = st.Remark;
+                item.IsActive     = st.status != "3";
+            }
+        }
+
+        var totalRecords = groupedData.Count;
+        var pagedData = groupedData
+            .OrderByDescending(x => x.IsActive)
+            .ThenBy(x => x.Job)
+            .ThenBy(x => x.OperNum)
+            .ThenBy(x => x.SerialNo)
+            .Skip(page * size)
+            .Take(size)
+            .ToList();
+
+        return Ok(new { totalRecords, page, size, data = pagedData });
     }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { error = ex.Message });
+    }
+}
 
 
     [HttpGet]
@@ -1916,40 +2245,34 @@ public class GetController : ControllerBase
             // STEP 1: All VERIFY transactions (any status)
             var allVerifyRows = await _context.JobTranMst
                 .Where(j =>
-                    j.wc == "VERIFY" &&
+                    j.wc != null && j.wc.ToLower().Contains("verify") &&
                     (j.qty_scrapped == null || j.qty_scrapped == 0))
                 .ToListAsync();
 
             // STEP 2: Groups which HAVE at least one completed row
             var completedGroups = allVerifyRows
-                .GroupBy(j => new
-                {
-                    j.job,
-                    j.SerialNo,
-                    j.oper_num,
-                    j.wc
-                })
-                .Where(g => g.Any(x => x.status == "3")) // completed job
-                .Select(g => new
-                {
-                    // Latest completed transaction
-                    LatestCompleted = g
-                        .Where(x => x.status == "3")
-                        .OrderByDescending(x => x.trans_date)
-                        .First(),
+            .GroupBy(j => new { j.job, j.SerialNo, j.oper_num, j.wc })
+            .Where(g =>
+            {
+                // Only include if LATEST row is status=3
+                var latest = g.OrderByDescending(x => x.trans_num)
+                            .First();
+                return latest.status == "3";
+            })
+            .Select(g => new
+            {
+                LatestCompleted = g
+                .Where(x => x.status == "3")
+                .OrderByDescending(x => x.trans_num)
+                .First(),
 
-                    // ALL remarks from ANY status
-                    Remarks = g
-                        .Where(x => !string.IsNullOrWhiteSpace(x.Remark))
-                        .Select(x => new
-                        {
-                            x.emp_num,
-                            x.Remark
-                        })
-                        .Distinct()
-                        .ToList()
-                })
-                .ToList();
+                Remarks = g
+                    .Where(x => !string.IsNullOrWhiteSpace(x.Remark))
+                    .Select(x => new { x.emp_num, x.Remark })
+                    .Distinct()
+                    .ToList()
+            })
+            .ToList();
 
             // STEP 3: Employee names
             var empNums = completedGroups

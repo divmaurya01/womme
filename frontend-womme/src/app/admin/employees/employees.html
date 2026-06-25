@@ -126,10 +126,10 @@
                 id="email"
                 type="email"
                 class="form-control"
-                [(ngModel)]="newEmployee.email"
-                name="email"
+                [(ngModel)]="newEmployee.email_addr"
+                name="email_addr"
                 required />
-              <div *ngIf="employeeForm.submitted && !newEmployee.email"
+              <div *ngIf="employeeForm.submitted && !newEmployee.email_addr"
                   class="text-danger small">
                 Email is required
               </div>
@@ -244,9 +244,9 @@
                   <p-sortIcon field="name" />
                 </th>
 
-                <th pSortableColumn="email" style="background-color:#ECC391;">
+                <th pSortableColumn="email_addr" style="background-color:#ECC391;">
                   Email
-                  <p-sortIcon field="email" />
+                  <p-sortIcon field="email_addr" />
                 </th>
 
                 <th pSortableColumn="dept" style="background-color:#ECC391;">
@@ -290,7 +290,7 @@
                 <td>{{ emp.loginID }}</td>
                 <td>{{ emp.empNum }}</td>
                 <td>{{ emp.name }}</td>
-                <td>{{ emp.email }}</td>
+                <td>{{ emp.email_addr }}</td>
                 <td>{{ emp.dept }}</td>
                 <td>{{ emp.emp_type }}</td>
                 <td>{{ emp.pay_freq }}</td>

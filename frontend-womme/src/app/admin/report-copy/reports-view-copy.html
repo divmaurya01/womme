@@ -179,8 +179,8 @@
               <table class="table table-bordered issuance-table mt-4">
                 <thead>
                   <tr>
-                    <th>Operation No.</th>
-                    <th>Description</th>
+                    <th style="width:60px;"></th>
+                    <th>WC / Details</th>
                     <th>Sr No.</th>
                     <th>Qty</th>
                     <th>Date</th>
@@ -191,30 +191,25 @@
                   <ng-container *ngIf="operation.transactions && operation.transactions.length > 0; else noTransaction">
                     <tr *ngFor="let trans of operation.transactions; let i = index">
                       <!-- Only show operation no + QR + description for first transaction row -->
-                      <td *ngIf="i === 0" [attr.rowspan]="operation.transactions.length"
-                        style="vertical-align: middle; text-align:center;">
+                      
+                      
+                      <td *ngIf="i === 0" [attr.rowspan]="operation.transactions.length" class="op-qr-cell">
                         <h4>{{ operation.operationNo }}</h4>
-                        <img *ngIf="operation.qrCodeUrl" [src]="operation.qrCodeUrl" alt="Operation QR" height="90" />
+                        <img *ngIf="operation.qrCodeUrl" [src]="operation.qrCodeUrl" alt="Operation QR" class="op-qr" />
                       </td>
-                      <td *ngIf="i === 0"
-                          [attr.rowspan]="operation?.transactions?.length || 1"
-                          style="vertical-align: middle; font-size:11px; padding-left: 50px;">
-
+                      <td *ngIf="i === 0" [attr.rowspan]="operation?.transactions?.length || 1" class="op-details">
                         <div><strong>WC:</strong> {{ operation.wc }}</div>
                         <div><strong>Description:</strong> {{ operation.description }}</div>
-                        <div *ngIf="trans.machineId">
-                          <strong>Machine:</strong> {{ trans.machineId }}
-                        </div>
-                        <div *ngIf="trans.employeeName">
-                          <strong>Employee:</strong> {{ trans.employeeName }}
-                        </div>
-
+                        <div *ngIf="trans.machineId"><strong>Machine:</strong> {{ trans.machineId }}</div>
+                        <div *ngIf="trans.employeeName"><strong>Employee:</strong> {{ trans.employeeName }}</div>
                       </td>
+
+
 
                       <!-- Transaction details -->
                       <td>{{ trans.serialNo }}</td>
-                      <td>{{ trans.qty }}</td>
-                      <td>
+                      <td *ngIf="i === 0" [attr.rowspan]="operation.transactions.length">{{ jobData.released }}</td>
+                      <td style="vertical-align: middle; text-align: center;">
 
                         <span *ngIf="!isEditMode">
                           {{ trans.date }}
@@ -233,11 +228,11 @@
                   <!-- No Transaction Case -->
                   <ng-template #noTransaction>
                     <tr>
-                      <td style="text-align:center;">
+                      <td class="op-qr-cell">
                         <h4>{{ operation.operationNo }}</h4>
-                        <img *ngIf="operation.qrCodeUrl" [src]="operation.qrCodeUrl" alt="Operation QR" height="90" />
+                        <img *ngIf="operation.qrCodeUrl" [src]="operation.qrCodeUrl" alt="Operation QR" class="op-qr" />
                       </td>
-                      <td>{{ operation.description }}</td>
+                      <td class="op-details">{{ operation.description }}</td>
                       <td colspan="4" class="text-center text-muted"><em>No transactions available</em></td>
                     </tr>
                   </ng-template>

@@ -182,11 +182,23 @@ export class VerifyTransaction implements OnInit {
             // });
 
             // UI flags
-            data.forEach((x: any) => {
-              x.suffix = x.suffix ?? 0; 
-              x.isRemarkSaved = !!x.remark;
-              x.verify = false;
+            // Mark jobs that are next in sequence
+            data.forEach((job: any) => {
+              const key = `${job.job}|${job.serialNo}`;
+              const nextOps = this.nextOpMap.get(key) ?? [];
+
+              job.isInQueue = nextOps.includes(Number(job.operNum));
             });
+
+            // Put queued jobs on top
+            data.sort((a: any, b: any) => {
+              if (a.isInQueue === b.isInQueue) {
+                return 0;
+              }
+
+              return a.isInQueue ? -1 : 1;
+            });
+            
 
             // Tabs
             // this.newJobs = data.filter((x: { status: string; isActive: boolean; }) =>
@@ -196,8 +208,16 @@ export class VerifyTransaction implements OnInit {
 
 
 
-            this.ongoingJobs = data.filter((x: { status: string; isActive: boolean; }) =>
-              x.status === '1' && x.isActive === true
+            // New Jobs only
+            this.newJobs = data.filter((x: any) =>
+              (!x.status || x.status === '') &&
+              x.isActive === false
+            );
+
+            // Ongoing Jobs only
+            this.ongoingJobs = data.filter((x: any) =>
+              (x.status === '1' || x.status === '2') &&
+              x.isActive === true
             );
 
             this.allNewJobs = [...this.newJobs];
@@ -228,10 +248,10 @@ export class VerifyTransaction implements OnInit {
         );
 
       case 'ONGOING':
-        return data.filter(x =>
-          x.status === '1' &&
-          x.isActive === true
-        );
+      return data.filter(x =>
+        (x.status === '1' || x.status === '2') &&
+        x.isActive === true
+      );
 
       case 'COMPLETED':
         return data.filter(x =>

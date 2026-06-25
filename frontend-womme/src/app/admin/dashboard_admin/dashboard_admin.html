@@ -85,15 +85,7 @@
             <h1>{{ qc.normalCompletedQCJobs }}</h1>
           </div>
 
-          <div class="card purple" (click)="goToQC('hold')">
-            <div class="card-header"><span>HOLD</span><i class="bi bi-pause-fill"></i></div>
-            <h1>{{ qc.holdQCJobs }}</h1>
-          </div>
-
-          <div class="card darkred" (click)="goToQC('reject')">
-            <div class="card-header"><span>REJECTED</span><i class="bi bi-x-circle"></i></div>
-            <h1>{{ qc.rejectedQCJobs }}</h1>
-          </div>
+          
 
         </div>
       </section>
@@ -108,6 +100,11 @@
           <div class="card green" (click)="goToVerify('running')">
             <div class="card-header"><span>RUNNING</span><i class="bi bi-lightning-charge"></i></div>
             <h1>{{ verify.runningVerifyJobs }}</h1>
+          </div>
+
+          <div class="card blue-card" (click)="goToVerify('nextop')">
+            <div class="card-header"><span>IN QUEUE</span><i class="bi bi-arrow-right-circle"></i></div>
+            <h1>{{ verify.nextOperationVerifyJobs }}</h1>
           </div>
 
           <div class="card yellow" (click)="goToVerify('paused')">

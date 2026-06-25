@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, HostListener } from '@angular/core';
+import { Component, OnInit, Input, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -11,7 +11,6 @@ import { DialogModule } from 'primeng/dialog';
 import html2pdf from 'html2pdf.js';
 import { LoaderService } from '../../services/loader.service';
 import { finalize } from 'rxjs/operators';
-import { Theme } from 'fullcalendar';
 
 interface JobItem {
   seq: number;
@@ -26,11 +25,11 @@ interface JobOperationFrontend {
   operationNo: string;
   wc: string;
   description: string;
+  transactions: JobTransaction[];
   items: JobItem[];
   qrCodeUrl?: string | null;
-  machineId?: string;
-  employeeId?: string;
 }
+
 interface JobTransaction {
   serialNo: string;
   qty: number;
@@ -38,14 +37,7 @@ interface JobTransaction {
   notes: string;
   machineId?: string;
   employeeId?: string;
-}
-
-interface JobOperationFrontend {
-  operationNo: string;
-  description: string;
-  items: JobItem[];
-  transactions: JobTransaction[]; // ✅ add this line
-  qrCodeUrl?: string | null;
+  employeeName?: string;
 }
 
 @Component({
@@ -53,36 +45,40 @@ interface JobOperationFrontend {
   templateUrl: './reports-view.html',
   styleUrls: ['./reports-view.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent, SidenavComponent, TableModule, DialogModule]
+  imports: [
+    CommonModule,
+    FormsModule,
+    HeaderComponent,
+    SidenavComponent,
+    TableModule,
+    DialogModule
+  ]
 })
-export class ReportsViewComponent implements OnInit {
+export class ReportsViewComponent implements OnInit, OnDestroy {
+
   isSidebarHidden = window.innerWidth <= 1024;
-    @Input()jobId: string | null = null;
-    jobNumber: string = '';
-    qrCodeUrl: string | null = null;
-    @Input() jobData: any = {};
-    @Input() jobOperations: JobOperationFrontend[] = [];
-  
-    constructor(
-      private jobService: JobService,
-      private route: ActivatedRoute,
-      private reportService: ReportService,private loader:LoaderService
-    ) {}
-  
-    private mapStatus(code: string): string {
-      switch (code) {
-        case "R": return "Released";
-        case "C": return "Closed";
-        case "O": return "Open";
-        case "H": return "Hold";
-        default:  return code || "---";
-      }
-    }
-  
-    ngOnInit(): void {
-        this.checkScreenSize();
-      this.loader.show();
-      this.route.queryParams
+
+  @Input() jobId: string | null = null;
+  jobNumber: string = '';
+  qrCodeUrl: string | null = null;
+
+  @Input() jobData: any = {};
+  @Input() jobOperations: JobOperationFrontend[] = [];
+
+  constructor(
+    private jobService: JobService,
+    private route: ActivatedRoute,
+    private reportService: ReportService,
+    private loader: LoaderService
+  ) {}
+
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
+
+  ngOnInit(): void {
+    this.checkScreenSize();
+    this.loader.show();
+
+    this.route.queryParams
       .pipe(finalize(() => this.loader.hide()))
       .subscribe(params => {
         const jobId = params['jb_id'] || null;
@@ -91,179 +87,209 @@ export class ReportsViewComponent implements OnInit {
           this.loadJobReport(jobId);
         }
       });
-    }
-     @HostListener('window:resize')
-    onResize() {
-      this.checkScreenSize();
-    }
-  
-      checkScreenSize() {
-      if (window.innerWidth <= 1024) {
-        this.isSidebarHidden = true;   // Mobile → hidden
-      } else {
-        this.isSidebarHidden = false;  // Desktop → visible
-      }
-    }
-  
-    toggleSidebar(): void {
-      this.isSidebarHidden = !this.isSidebarHidden;
-    }
-  
-    loadJobReport(jobId: string | null, download: boolean = false): Promise<void> {
-      return new Promise((resolve) => {
-        if (!jobId) {
-          resolve();
-          return;
-        }
-  
-        this.loader.show();
-  
-        this.jobService.GetJobReport(jobId)
-          .pipe(finalize(() => this.loader.hide()))
-          .subscribe({
-            next: (data) => {
-              if (!data) {
-                resolve();
-                return;
-              }
-  
-              //  Job header mapping
-              this.jobData = {
-                job: data.job,
-                jobDate: data.jobDate ? new Date(data.jobDate).toLocaleDateString() : '---',
-                jobDueDate: data.jobDueDate ? new Date(data.jobDueDate).toLocaleDateString() : '---',
-                preparedBy: data.preparedBy || '---',
-                materialClass: data.materialClass || '---',
-                drawingNo: data.drawingNo || '---',
-                revisionNo: data.revisionNo || '---',
-                tempClass: data.tempClass || '---',
-                drawingRev: data.drawingRev || 0,
-                soNo: data.soNo || '---',
-                released: data.releasedQty || 0,
-                status: this.mapStatus(data.status),
-                matlDesc: data.matlDesc || '---',
-                psl: data.psl || '---',
-                item: data.item || '---',
-                description: data.itemDescription || '---',
-                suffix: data.suffix ?? 0,
-                ufItemDescription2: data.ufItemDescription2 || '---',
-                date: data.createdDate ? new Date(data.createdDate).toLocaleDateString() : '---'
-              };
-  
-  
-              //  Operation mapping starts
-              this.jobOperations = (data.operations || []).map((op: any, opIndex: number) => {
-  
-                // ✅ Detect transactions array
-                const transArray = op.transactions || op.Transactions || [];
-  
-                // ✅ Check type & length
-                if (!Array.isArray(transArray)) {
-                  console.warn(` Transactions is not an array for Operation ${op.operNum}`);
-                } else {
-                  console.log(` Found ${transArray.length} transactions for Operation ${op.operNum}`);
-                }
-  
-                const completedMap = new Map<string, any>();
-  
-                transArray.forEach((t: any) => {
-                  if (t.status === '3') {
-                    completedMap.set(t.serialNo, t);
-                  }
-                });
-  
-                const transactions = Array.from(completedMap.values()).map((t: any) => ({
-                  serialNo: t.serialNo || '---',
-                  qty: 1,
-                  date: t.transDate
-                    ? new Date(t.transDate).toISOString().split('T')[0]
-                    : '---',
-                  notes: t.remark || '',
-                  machineId: t.machineId || '',
-                  employeeId: t.employeeId || ''
+  }
+
+  ngOnDestroy(): void {
+    if (this.qrCodeUrl) URL.revokeObjectURL(this.qrCodeUrl);
+  }
+
+  // ─── Screen / Sidebar ─────────────────────────────────────────────────────
+
+  @HostListener('window:resize')
+  onResize(): void { this.checkScreenSize(); }
+
+  checkScreenSize(): void {
+    this.isSidebarHidden = window.innerWidth <= 1024;
+  }
+
+  toggleSidebar(): void {
+    this.isSidebarHidden = !this.isSidebarHidden;
+  }
+
+  // ─── Load Data ────────────────────────────────────────────────────────────
+
+  loadJobReport(jobId: string | null, download: boolean = false): Promise<void> {
+    return new Promise((resolve) => {
+      if (!jobId) { resolve(); return; }
+
+      this.loader.show();
+
+      this.jobService.GetJobReport(jobId)
+        .pipe(finalize(() => this.loader.hide()))
+        .subscribe({
+          next: (data) => {
+            if (!data) { resolve(); return; }
+
+            // ── Map job header ───────────────────────────────────────────────
+            this.jobData = {
+              job              : data.job,
+              jobDate          : data.jobDate          ? data.jobDate.split('T')[0]          : '',
+              jobDueDate       : data.jobDueDate       ? data.jobDueDate.split('T')[0]       : '',
+              RevisionDate     : data.revisionDate     ? data.revisionDate.split('T')[0]     : '',
+              date             : data.date             ? data.date.split('T')[0]             : '',
+              preparedBy       : data.preparedBy       || '---',
+              materialClass    : data.materialClass    || '---',
+              drawingNo        : data.drawingNo        || '---',
+              revisionNo       : data.revisionNo       || '---',
+              tempClass        : data.tempClass        || '---',
+              drawingRev       : data.drawingRev       || 0,
+              soNo             : data.soNo             || '---',
+              released         : data.releasedQty      || 0,
+              status           : this.mapStatus(data.status),
+              matlDesc         : data.matlDesc         || '---',
+              psl              : data.psl              || '---',
+              item             : data.item             || '---',
+              description      : data.itemDescription  || '---',
+              suffix           : data.suffix           ?? 0,
+              ufItemDescription2: data.ufItemDescription2 || '---',
+              remark           : data.remark           || '',
+              engineeringNotes : data.engineeringNotes || '',
+              specNo           : data.specNo           || '---',
+              thirdPartyInsp   : data.thirdPartyInsp   || '---',
+              heatNo           : data.heatNo           || '---',
+              traceCode        : data.traceCode        || '---',
+              partRev          : data.partRev          || '---',
+              formNo_revno     : data.formNo_revno     || ''
+            };
+
+            // ── Map operations ───────────────────────────────────────────────
+            this.jobOperations = (data.operations || []).map((op: any) => {
+              const transArray = op.transactions || op.Transactions || [];
+
+              const machines  = new Set<string>();
+              const employees = new Set<string>();
+
+              transArray.forEach((t: any) => {
+                if (t.machineId)    t.machineId.split(',').forEach((m: string) => machines.add(m.trim()));
+                if (t.employeeName) t.employeeName.split(',').forEach((e: string) => employees.add(e.trim()));
+              });
+
+              const machineStr  = Array.from(machines).join(', ');
+              const employeeStr = Array.from(employees).join(', ');
+
+              const transactions = transArray
+                .filter((t: any) => t.status === '3')
+                .map((t: any) => ({
+                  serialNo    : t.serialNo   || '---',
+                  qty         : 1,
+                  date        : t.transDate  ? t.transDate.split('T')[0] : '---',
+                  notes       : t.remark     || '',
+                  machineId   : machineStr,
+                  employeeName: employeeStr
                 }));
-  
-  
-                 const mappedOp = {
-                  operationNo: op.operNum?.toString() || '---',
-                  description: op.operationDescription || '',
-                  wc: op.wc || '',
-                  machineId: op.machineId || '',
-                  employeeId: op.employeeId || '',
-                  items: (op.items || []).map((it: any, i: number) => ({
-                    seq: it.sequence || it.seq || 0,
-                    item: it.item || it.itemCode || '---',
-                    description: `${it.itemDescription || ''} ${it.ufItemDescription2 || ''}`.trim(),
-                    qty: it.requiredQty || it.qty || 0,
-                    remark: it.ufLastVendName || ''
-                  })),
-                  transactions,
-                  qrCodeUrl: op.qrCodeUrl || null
-                };
-  
-                console.groupEnd();
-                return mappedOp;
-              });
-              
-  
-              //  Fetch Job QR
-              if (data.job) {
-                this.loader.show();
-                this.jobService.GenerateQrWithJob(data.job)
-                  .pipe(finalize(() => this.loader.hide()))
-                  .subscribe({
-                    next: (blob) => { this.qrCodeUrl = URL.createObjectURL(blob); },
-                    error: () => { this.qrCodeUrl = null; }
-                  });
-              }
-  
-              //  Fetch Operation QR codes
-              this.jobOperations.forEach(op => {
-                this.loader.show();
-                this.jobService.downloadOperationQR(op.operationNo)
-                  .pipe(finalize(() => this.loader.hide()))
-                  .subscribe({
-                    next: (blob) => { op.qrCodeUrl = URL.createObjectURL(blob); },
-                    error: () => { op.qrCodeUrl = null; }
-                  });
-              });
-  
-              resolve();
-            },
-            error: (err) => {
-              console.error(' API Error:', err);
-              resolve();
+
+              return {
+                operationNo : op.operNum?.toString() || '---',
+                description : op.operationDescription || '',
+                wc          : op.wc  || '',
+                items       : (op.items || []).map((it: any) => ({
+                  seq         : it.sequence  || it.seq  || 0,
+                  item        : it.item      || it.itemCode || '---',
+                  description : `${it.itemDescription || ''} ${it.ufItemDescription2 || ''}`.trim(),
+                  qty         : it.requiredQty || it.qty || 0,
+                  remark      : it.ufLastVendName || ''
+                })),
+                transactions,
+                qrCodeUrl: op.qrCodeUrl || null
+              };
+            });
+
+            // ── Fetch Job QR ─────────────────────────────────────────────────
+            if (data.job) {
+              this.loader.show();
+              this.jobService.GenerateQrWithJob(data.job)
+                .pipe(finalize(() => this.loader.hide()))
+                .subscribe({
+                  next : (blob) => { this.qrCodeUrl = URL.createObjectURL(blob); },
+                  error: ()     => { this.qrCodeUrl = null; }
+                });
             }
-          });
-      });
+
+            // ── Fetch Operation QR codes ─────────────────────────────────────
+            this.jobOperations.forEach(op => {
+              this.loader.show();
+              this.jobService.downloadOperationQR(op.operationNo)
+                .pipe(finalize(() => this.loader.hide()))
+                .subscribe({
+                  next : (blob) => { op.qrCodeUrl = URL.createObjectURL(blob); },
+                  error: ()     => { op.qrCodeUrl = null; }
+                });
+            });
+
+            resolve();
+          },
+          error: (err) => { console.error('API Error:', err); resolve(); }
+        });
+    });
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  private mapStatus(code: string): string {
+    switch (code) {
+      case 'R': return 'Released';
+      case 'C': return 'Closed';
+      case 'O': return 'Open';
+      case 'H': return 'Hold';
+      default:  return code || '---';
     }
-    ngOnDestroy() {
-      if (this.qrCodeUrl) {
-        URL.revokeObjectURL(this.qrCodeUrl);
-      }
-    }
-  
-  downloadPDF() {
-    const element = document.querySelector('.report-wrapper');
+  }
+
+  // ─── PDF Download with page numbers ──────────────────────────────────────
+
+  downloadPDF(): void {
+    const element = document.querySelector('.report-wrapper') as HTMLElement;
     if (!element) return;
 
     const opt = {
-      margin:     [15, 15, 15, 15],
-      filename:   `${this.jobData.job}_Report.pdf`,
-      image:      { type: 'jpeg', quality: 0.98 },
+      margin  : [20, 20, 30, 20],
+      filename: `${this.jobData.job}_Report.pdf`,
+      image   : { type: 'jpeg', quality: 0.98 },
       html2canvas: {
-        scale:    2,
-        useCORS:  true,
-        scrollY:  0,
-        logging:  false,
-        windowWidth: 900   // ← fixes layout cramping in PDF
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
       },
-      jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      jsPDF   : { unit: 'pt', format: 'a4', orientation: 'portrait' },
+      pagebreak: {
+        mode: ['avoid-all', 'css', 'legacy'],
+        avoid: ['.header-table', '.meta-info-table', '.issuance-table', '.item-table']
+      }
     };
 
-    html2pdf().set(opt).from(element).save();
-  }
-  
+    html2pdf()
+      .set(opt)
+      .from(element)
+      .toPdf()
+      .get('pdf')
+      .then((pdf: any) => {
+        const totalPages = pdf.internal.getNumberOfPages();
+        const pageWidth  = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
 
+        const formNo = this.jobData?.formNo_revno || '---';
+
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
+
+          pdf.setFontSize(9);
+          pdf.setTextColor(120);
+
+          pdf.text(
+            `Form & Rev No: ${formNo}`,
+            20,
+            pageHeight - 10
+          );
+
+          pdf.text(
+            `Page ${i} of ${totalPages}`,
+            pageWidth - 80,
+            pageHeight - 10
+          );
+        }
+      })
+      .save();
+  }
 }

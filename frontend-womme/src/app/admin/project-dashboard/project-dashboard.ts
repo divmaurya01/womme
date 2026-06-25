@@ -395,14 +395,20 @@ export class ProjectDashboardComponent implements OnInit, AfterViewInit, OnDestr
                 }
               },
               error: (err: any) => {
-                Swal.fire('Error', err.error?.message || 'Failed to save track record', 'error');
+                this.closeReopenDialog();
+                setTimeout(() => {
+                  Swal.fire('Error', err.error?.message || 'Failed to save track record', 'error');
+                }, 100);
               }
             });
         },
         error: (err: any) => {
           this.submittingReopen = false;
           this.loader.hide();
-          Swal.fire('Error', err.error?.message || 'Failed to start the job', 'error');
+          this.closeReopenDialog();
+          setTimeout(() => {
+            Swal.fire('Error', err.error?.message || 'Failed to start the job', 'error');
+          }, 100);
         }
       });
   }

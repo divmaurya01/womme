@@ -141,6 +141,12 @@ export class JobService {
     );
   }
 
+   GetReportTransactions(page: number, size: number, search: string, employeeCode:string) {
+    return this.http.get<{ data: any[], total: number }>(
+      `${this.baseUrl}/Get/GetReportTransactions?page=${page}&size=${size}&search=${search}&emp_num=${employeeCode}`,
+      { headers: this.getHeaders() }
+    );
+  }
 
   GetIssuedTransactions(page: number, size: number, search: string, employeeCode:string) {
     return this.http.get<{ data: any[], total: number }>(

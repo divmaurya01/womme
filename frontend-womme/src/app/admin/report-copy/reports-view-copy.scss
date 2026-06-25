@@ -216,3 +216,65 @@ background-color: #FFF8F7}
   text-align: left;
   line-height: 1.4;
 }
+
+
+.issuance-table {
+  table-layout: fixed;
+  width: 100%;
+  word-wrap: break-word;
+  border-collapse: collapse;
+
+  th, td {
+    padding: 6px;
+    font-size: 11px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  th {
+    background-color: #eceaea;
+  }
+
+  th:nth-child(1), td.op-qr-cell { width: 60px; }
+  th:nth-child(2), td.op-details { width: 220px; }
+  th:nth-child(3), td:nth-child(3) { width: 18%; }
+  th:nth-child(4), td:nth-child(4) { width: 8%; }
+  th:nth-child(5), td:nth-child(5) { width: 10%; }
+  th:nth-child(6), td:nth-child(6) { width: 12%; }
+}
+
+.op-qr-cell {
+  vertical-align: top;
+  text-align: center;
+  padding: 6px;
+}
+
+.op-qr-cell h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+}
+
+.op-qr {
+  display: block;
+  width: 50px;
+  height: 50px;
+  margin: 0 auto;
+  object-fit: contain;
+  border: 1px solid #ccc;
+  background: #fff;
+  padding: 2px;
+}
+
+.op-details {
+  text-align: left;
+  font-size: 10px;
+  line-height: 1.3;
+  word-break: break-word;
+  vertical-align: middle;
+  padding-left: 10px;
+}
+
+.issuance-table td:nth-child(2) {
+  text-align: left;
+  line-height: 1.4;
+}

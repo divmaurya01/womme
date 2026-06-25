@@ -67,6 +67,9 @@
                     <th pSortableColumn="item" style="background-color: #ECC391; padding: 10px;">Item
                       <p-sortIcon field="item"></p-sortIcon>
                     </th>
+                    <th pSortableColumn="item" style="background-color: #ECC391; padding: 10px;">Status
+                      <p-sortIcon field="item"></p-sortIcon>
+                    </th>
                     <th style="background-color:#ECC391;padding:10px;">Action</th>
                   </tr>
                 </ng-template>
@@ -80,7 +83,23 @@
                     <td>{{ job.qtyReleased }}</td>
                     <td>{{ job.operNum }}</td>
                     <td>{{ job.item }}</td>
-                    <td class="text-center">
+                    <td>
+                      <span
+                        *ngIf="job.isInQueue"
+                        style="
+                          background-color: #cce5ff;
+                          color: #004085;
+                          border: 1px solid #b8daff;
+                          border-radius: 20px;
+                          padding: 3px 12px;
+                          font-size: 0.78rem;
+                          font-weight: 600;
+                          white-space: nowrap;
+                        ">
+                        In Queue
+                      </span>
+                    </td>
+                   <td class="text-center">
                       <button
                         class="btn btn-success btn-sm rounded-pill px-3"
                         (click)="startApproval(job)">                        

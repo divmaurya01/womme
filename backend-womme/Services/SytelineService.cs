@@ -63,7 +63,7 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@suffix", jobTran.suffix);
                         cmd.Parameters.AddWithValue("@oper_num", jobTran.oper_num);
                         cmd.Parameters.AddWithValue("@next_oper", jobTran.next_oper ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@trans_type", jobTran.trans_type ?? "D");
+                        cmd.Parameters.AddWithValue("@trans_type", "R");
                         cmd.Parameters.AddWithValue("@trans_date", jobTran.trans_date ?? DateTime.UtcNow);
 
                         cmd.Parameters.AddWithValue("@start_time", startTimeInt);
@@ -87,7 +87,7 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@issue_parent", jobTran.issue_parent ?? 0);
                         cmd.Parameters.AddWithValue("@complete_op", comjob);
                         cmd.Parameters.AddWithValue("@close_job", jobTran.close_job);
-                        cmd.Parameters.AddWithValue("@posted", jobTran.posted ?? 0);
+                        cmd.Parameters.AddWithValue("@posted", 0);
 
                         cmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
                         cmd.Parameters.AddWithValue("@Status", "1");
@@ -96,6 +96,23 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@CreatedBy", jobTran.emp_num);
                         cmd.Parameters.AddWithValue("@UpdatedBy", jobTran.emp_num);
                         cmd.Parameters.AddWithValue("@MovedOKToStock", jobTran.Uf_MovedOKToStock ?? 0);
+
+                        Console.WriteLine($@"[InsertJobTran] Inserting with:
+                            job         = {jobTran.job}
+                            suffix      = {jobTran.suffix}
+                            oper_num    = {jobTran.oper_num}
+                            trans_type  = {jobTran.trans_type}
+                            posted      = {jobTran.posted}
+                            start_time  = {startTimeInt}
+                            end_time    = {endTimeInt}
+                            a_hrs       = {jobTran.a_hrs ?? 0}
+                            a_dollar    = {jobTran.a_dollar ?? 0}
+                            emp_num     = {jobTran.emp_num}
+                            wc          = {jobTran.wc}
+                            SerialNo    = {jobTran.SerialNo}
+                            trans_date  = {jobTran.trans_date}
+                            complete_op = {comjob}
+                            qcgroup     = {jobTran.qcgroup}");
 
                         await cmd.ExecuteNonQueryAsync();
                     }

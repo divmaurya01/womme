@@ -51,7 +51,7 @@ export class EmployeesComponent implements OnInit {
   newEmployee: any = {
     empNum: '',
     name: '',
-    email: '',
+    email_addr: '',
     passwordHash: '',
     roleID: null,
     isActive: true,
@@ -131,7 +131,7 @@ mapEmployee(apiEmp: any) {
   return {
     empNum: apiEmp.emp_num || '',
     name: apiEmp.name || '',
-    email: apiEmp.email || '',  
+    email_addr: apiEmp.email_addr  || '',  
     passwordHash: apiEmp.passwordHash || '',
     dept: apiEmp.dept || '',
     emp_type: apiEmp.emp_type || '',
@@ -234,7 +234,7 @@ onGlobalSearch(): void {
     return {
       empNum: this.newEmployee.empNum,
       name: this.newEmployee.name,
-      email: this.newEmployee.email,
+      email: this.newEmployee.email_addr,
       passwordHash: this.newEmployee.passwordHash,
       roleID: this.newEmployee.roleID,
       createdBy: this.newEmployee.createdBy,
@@ -342,7 +342,7 @@ onGlobalSearch(): void {
       'Login ID': emp.loginID,
       'Employee No': emp.empNum,
       'Name': emp.name,
-      'Email': emp.email, 
+      'Email': emp.email_addr, 
       'Department': emp.dept,
       'Employee Type': emp.emp_type,
       'Pay Frequency': emp.pay_freq,

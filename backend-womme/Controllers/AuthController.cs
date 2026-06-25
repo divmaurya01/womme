@@ -130,21 +130,21 @@ namespace WommeAPI.Controllers
                 return BadRequest("Name and Email are required");
 
             var employee = _context.EmployeeMst
-                .FirstOrDefault(x => x.email == dto.Email);
+                .FirstOrDefault(x => x.email_addr == dto.Email);
 
             if (employee == null)
                 return NotFound("Email not found in system");
 
-            // Save notification
+            // ── Save notification ─────────────────────────────────────────────
             var notification = new Notification
             {
-                Name = employee.name,   // use DB name (safer)
-                Email = employee.email,
-                Subject = dto.Flag == "FORGOT_PASSWORD"
-                    ? "Forgot Password Request"
-                    : "Forgot User ID Request",
-                Details = $"Request raised for {dto.Flag}",
-                Status = "PENDING",
+                Name        = employee.name,
+                Email       = employee.email_addr,
+                Subject     = dto.Flag == "FORGOT_PASSWORD"
+                                ? "Forgot Password Request"
+                                : "Forgot User ID Request",
+                Details     = $"Request raised for {dto.Flag}",
+                Status      = "PENDING",
                 CreatedDate = DateTime.UtcNow
             };
 
@@ -155,17 +155,17 @@ namespace WommeAPI.Controllers
             if (string.IsNullOrEmpty(emailApiUrl))
                 return StatusCode(500, "Email API URL not configured");
 
-            // ---------------- EMAIL BODIES ----------------
+            // ── Email bodies ──────────────────────────────────────────────────
 
             string adminEmailBody = $@"
             <p>Dear Admin,</p>
             <p>A login assistance request has been submitted.</p>
             <ul>
-            <li><strong>Name:</strong> {employee.name}</li>
-            <li><strong>Email:</strong> {employee.email}</li>
-            <li><strong>Request:</strong>
-                {(dto.Flag == "FORGOT_PASSWORD" ? "Forgot Password" : "Forgot User ID")}
-            </li>
+                <li><strong>Name:</strong> {employee.name}</li>
+                <li><strong>Email:</strong> {employee.email_addr}</li>
+                <li><strong>Request:</strong>
+                    {(dto.Flag == "FORGOT_PASSWORD" ? "Forgot Password" : "Forgot User ID")}
+                </li>
             </ul>
             <p>Please review and take necessary action.</p>
             <p>Regards,<br/><strong>WOMME System</strong></p>";
@@ -173,39 +173,44 @@ namespace WommeAPI.Controllers
             string userEmailBody = $@"
             <p>Dear {employee.name},</p>
             <p>
-            We have received your request regarding login assistance.
-            Our support team will review it and get back to you shortly.
+                We have received your request regarding login assistance.
+                Our support team will review it and get back to you shortly.
             </p>
-            <p>
-            Thank you for your patience.
-            </p>
+            <p>Thank you for your patience.</p>
             <p>Regards,<br/><strong>WOMME Support Team</strong></p>";
 
             using var client = new HttpClient();
 
-            // ---------------- SEND ADMIN EMAIL ----------------
-            var adminResponse = await client.PostAsJsonAsync(emailApiUrl, new
+            // ── Helper: build multipart form ──────────────────────────────────
+            MultipartFormDataContent BuildForm(string to, string subject, string body)
             {
-                to = new[] { "divyansh@nowarainfotech.com" }, // admin email
-                cc = Array.Empty<string>(),
-                bcc = Array.Empty<string>(),
-                subject = "Action Required: Login Assistance Request",
-                body = adminEmailBody,
-                isHtml = true
-            });
+                var form = new MultipartFormDataContent();
+                form.Add(new StringContent(to),      "to");
+                form.Add(new StringContent(subject), "subject");
+                form.Add(new StringContent(body),    "body");
+                form.Add(new StringContent("true"),  "isHtml");
+                return form;
+            }
 
-            // ---------------- SEND USER EMAIL ----------------
-            var userResponse = await client.PostAsJsonAsync(emailApiUrl, new
-            {
-                to = new[] { employee.email }, // user email
-                cc = Array.Empty<string>(),
-                bcc = Array.Empty<string>(),
-                subject = "We Have Received Your Request",
-                body = userEmailBody,
-                isHtml = true
-            });
+            // ── Send Admin Email ──────────────────────────────────────────────
+            var adminForm     = BuildForm("manhour@womme.ae", "Action Required: Login Assistance Request", adminEmailBody);
+            var adminResponse = await client.PostAsync(emailApiUrl, adminForm);
+            var adminError    = !adminResponse.IsSuccessStatusCode
+                ? await adminResponse.Content.ReadAsStringAsync()
+                : null;
 
-            // ---------------- UPDATE STATUS ----------------
+            // ── Send User Email ───────────────────────────────────────────────
+            var userEmailTo   = !string.IsNullOrEmpty(employee.email_addr)
+                ? employee.email_addr
+                : "manhour@womme.ae";
+
+            var userForm      = BuildForm(userEmailTo, "We Have Received Your Request", userEmailBody);
+            var userResponse  = await client.PostAsync(emailApiUrl, userForm);
+            var userError     = !userResponse.IsSuccessStatusCode
+                ? await userResponse.Content.ReadAsStringAsync()
+                : null;
+
+            // ── Update notification status ────────────────────────────────────
             notification.Status =
                 adminResponse.IsSuccessStatusCode && userResponse.IsSuccessStatusCode
                     ? "SENT"
@@ -214,15 +219,24 @@ namespace WommeAPI.Controllers
             notification.UpdatedDate = DateTime.UtcNow;
             _context.SaveChanges();
 
+            // ── Return result ─────────────────────────────────────────────────
             if (!adminResponse.IsSuccessStatusCode || !userResponse.IsSuccessStatusCode)
-                return StatusCode(500, "Email sending failed");
+            {
+                return StatusCode(500, new
+                {
+                    message     = "Email sending failed",
+                    adminStatus = adminResponse.StatusCode.ToString(),
+                    adminError  = adminError,
+                    userStatus  = userResponse.StatusCode.ToString(),
+                    userError   = userError
+                });
+            }
 
             return Ok(new
             {
                 message = "Request submitted successfully. A confirmation email has been sent."
             });
         }
-
  
         // Random token generator
         private string GenerateRandomToken(int length = 32)

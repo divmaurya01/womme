@@ -48,7 +48,8 @@ export class DashboardOverviewComponent {
     pausedVerifyJobs: 0,
     normalCompletedVerifyJobs: 0,
     extendedVerifyJobs: 0,
-    ongoingCriticalVerifyJobs: 0
+    ongoingCriticalVerifyJobs: 0,
+    nextOperationVerifyJobs: 0  
   };
 
   // ── Issue Operations counts ───────────────────────────────────────────────
@@ -140,7 +141,7 @@ export class DashboardOverviewComponent {
         if (res.success) {
           this.transaction = res.transactionOverview ?? this.transaction;
           this.qc          = res.qcOverview          ?? this.qc;
-          this.verify      = res.verifyOverview      ?? this.verify;
+          this.verify = { ...this.verify, ...(res.verifyOverview ?? {}) };
         }
       },
       error: err => console.error('Error loading overview:', err)
@@ -163,26 +164,45 @@ export class DashboardOverviewComponent {
   // Both fire in parallel via forkJoin
   // ─────────────────────────────────────────────────────────────────────────
 
-  loadIssueStats() {
-    forkJoin({
-      pending:   this.jobService.GetIssuedTransactions(0, 99999, '', ''),
-      completed: this.jobService.GetAllCompletedJobs()
-    }).subscribe({
-      next: ({ pending, completed }: any) => {
-        const pendingData   = (pending?.data   ?? []) as any[];
-        const completedData = (completed?.data ?? []) as any[];
+ loadIssueStats() {
+  forkJoin({
+    pending:   this.jobService.GetIssuedTransactions(0, 99999, '', ''),
+    completed: this.jobService.GetAllCompletedJobs(),
+    verify:    this.jobService.getVerifyTransactions(0, 99999, '', ''),
+    nextOp:    this.jobService.getIsNextJobActive()   // ← ADD
+  }).subscribe({
+    next: ({ pending, completed, verify, nextOp }: any) => {
+      const pendingData   = (pending?.data   ?? []) as any[];
+      const completedData = (completed?.data ?? []) as any[];
+      const verifyData    = (verify?.data    ?? []) as any[];
+      const nextOpData    = (nextOp?.data    ?? []) as any[];
 
-        // Pending = anything still in the issue list (not yet completed)
-        this.issueStats.pendingIssues = pendingData.length;
+      this.issueStats.pendingIssues = pendingData.length;
 
-        // Completed issue jobs = completed jobs where wc contains 'issue' (case-insensitive)
-        this.issueStats.completedIssues = completedData.filter((j: any) =>
-          (j.wcCode ?? j.wc ?? '').toLowerCase().includes('issue')
-        ).length;
-      },
-      error: err => console.error('Error loading issue stats:', err)
-    });
-  }
+      this.issueStats.completedIssues = completedData.filter((j: any) =>
+        (j.wcCode ?? j.wc ?? '').toLowerCase().includes('issue')
+      ).length;
+
+      // Build job|serial → [nextOper...] map, same pattern as Unposted page
+      const nextOpMap = new Map<string, number[]>();
+      nextOpData.forEach((x: any) => {
+        const key = `${x.job}|${x.serialNo}`;
+        if (!nextOpMap.has(key)) nextOpMap.set(key, []);
+        nextOpMap.get(key)!.push(Number(x.nextOper));
+      });
+
+      // In-queue verify jobs = no status yet AND this op is the next operation
+      this.verify.nextOperationVerifyJobs = verifyData.filter((j: any) => {
+        const hasNoStatus = !j.status || j.status === '';
+        const key = `${j.job}|${j.serialNo}`;
+        const nextOps = nextOpMap.get(key) ?? [];
+        const isNextOp = nextOps.includes(Number(j.operNum));
+        return hasNoStatus && isNextOp;
+      }).length;
+    },
+    error: err => console.error('Error loading issue stats:', err)
+  });
+}
 
   // ─────────────────────────────────────────────────────────────────────────
   // Project Dashboard counts
