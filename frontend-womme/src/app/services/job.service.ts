@@ -774,15 +774,17 @@ saveManualSerial(payload: any): Observable<any> {
     AddMachineWc(payload: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/post/AddMachineWc`, payload);
   }
- SyncJobMst() {
-    return this.http.post(`${this.baseUrl}/scheduler/SyncJobMst`, {}, {
+
+  
+ SyncRestTables() {
+    return this.http.post(`${this.baseUrl}/scheduler/SyncRestTables`, {}, {
       headers: this.getHeaders(),
       responseType: 'text' as 'json'   
     });
 }
 
-SyncAllTables() {
-  return this.http.post(`${this.baseUrl}/scheduler/SyncAllTablesAfterSept2025`, {}, {
+SyncJobTables() {
+  return this.http.post(`${this.baseUrl}/scheduler/SyncAllTablesFromSyteline`, {}, {
     headers: this.getHeaders(),
     responseType: 'text' as 'json'
   });

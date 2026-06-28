@@ -175,258 +175,87 @@ public class SchedulerController : ControllerBase
 
 
 
-
-    private static DateTime GetSafeSqlDateTime(DateTime? value)
-    {
-        var minSqlDate = new DateTime(1753, 1, 1);
-
-        if (!value.HasValue || value.Value < minSqlDate)
-            return minSqlDate;
-
-        return value.Value;
-    }
-
-        [HttpPost("SyncAllTablesAfterSept2025")]
-        public async Task<IActionResult> SyncAllTablesAfterSept2025()
+        private static DateTime GetSafeSqlDateTime(DateTime? value)
         {
-            var jobLastSync = await _syncService.GetLastSyncDate("JobMst");
-            var routeLastSync = await _syncService.GetLastSyncDate("JobRouteMst");
-            var empLastSync = await _syncService.GetLastSyncDate("EmployeeMst");
-            var itemLastSync = await _syncService.GetLastSyncDate("ItemMst");
-            var wcLastSync = await _syncService.GetLastSyncDate("WcMst");
-            var womLastSync = await _syncService.GetLastSyncDate("WomWcEmployee");
+            var minSqlDate = new DateTime(1753, 1, 1);
+            if (!value.HasValue || value.Value < minSqlDate)
+                return minSqlDate;
+            return value.Value;
+        }
 
-            var results = new List<string>();
+        private static DateTime GetSafeSqlDateTime(DateTime value)
+        {
+            var minSqlDate = new DateTime(1753, 1, 1);
+            return value < minSqlDate ? minSqlDate : value;
+        }
 
-            _localContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        
 
+        [HttpPost("SyncRestTables")]
+        public async Task<IActionResult> SyncRestTables()
+        {
             try
             {
-                // ===================== 1️⃣ JOB_MST =====================
-                var srcJobs = await _sourceContext.JobMst
-                    .AsNoTracking()
-                    .Where(x => x.RecordDate != null && x.RecordDate > jobLastSync)
-                    .ToListAsync();
 
-                var existingJobsSet = (await _localContext.JobMst
-                    .AsNoTracking()
-                    .Select(x => x.job)
-                    .ToListAsync()).ToHashSet();
+                var connStr = _localContext.Database.GetConnectionString();
 
-                int jobInserted = 0;
-                foreach (var src in srcJobs)
-                {
-                    if (existingJobsSet.Contains(src.job)) continue;
+                using var conn = new SqlConnection(connStr);
+                await conn.OpenAsync();
 
-                    _localContext.JobMst.Add(new JobMst
-                    {
-                        job = src.job,
-                        RecordDate = GetSafeSqlDateTime(src.RecordDate)
-                    });
-                    jobInserted++;
-                }
+                using var cmd = new SqlCommand("EXEC SyncRestTablesFromSyteline", conn);
+                cmd.CommandTimeout = 300; // 5 minutes — SP can take time on large data
 
-                await _localContext.SaveChangesAsync();
-                results.Add($"Job_mst inserted: {jobInserted}");
-
-                if (srcJobs.Any())
-                    await _syncService.UpdateLastSyncDate("JobMst",
-                        srcJobs.Max(x => x.RecordDate));
-
-                // ===================== 2️⃣ JOB_ROUTE_MST =====================
-                var srcRoutes = await _sourceContext.JobRouteMst
-                    .AsNoTracking()
-                    .Where(x => x.RecordDate != null && x.RecordDate > routeLastSync)
-                    .ToListAsync();
-
-                var existingRouteKeys = (await _localContext.JobRouteMst
-                    .AsNoTracking()
-                    .Select(x => $"{x.Job}|{x.Suffix}|{x.OperNum}|{x.SiteRef}")
-                    .ToListAsync()).ToHashSet();
-
-                int routeInserted = 0;
-                foreach (var src in srcRoutes)
-                {
-                    var key = $"{src.Job}|{src.Suffix}|{src.OperNum}|{src.SiteRef}";
-                    if (existingRouteKeys.Contains(key)) continue;
-
-                    _localContext.JobRouteMst.Add(new JobRouteMst
-                    {
-                        Job = src.Job,
-                        Suffix = src.Suffix,
-                        OperNum = src.OperNum,
-                        SiteRef = src.SiteRef,
-                        RecordDate = GetSafeSqlDateTime(src.RecordDate),
-                        CreateDate = GetSafeSqlDateTime(src.CreateDate),
-                        CreatedBy = src.CreatedBy ?? "SYSTEM",
-                        UpdatedBy = src.UpdatedBy ?? "SYSTEM",
-                        Wc = src.Wc ?? "UNKNOWN"
-                    });
-                    routeInserted++;
-                }
-
-                await _localContext.SaveChangesAsync();
-                results.Add($"JobRoute_mst inserted: {routeInserted}");
-
-                if (srcRoutes.Any())
-                    await _syncService.UpdateLastSyncDate("JobRouteMst",
-                        srcRoutes.Max(x => x.RecordDate));
-
-                // ===================== 3️⃣ EMPLOYEE_MST =====================
-                var srcEmployees = await _sourceContext.EmployeeMstSource
-                    .AsNoTracking()
-                    .Where(x => x.RecordDate != null && x.RecordDate > empLastSync)
-                    .ToListAsync();
-
-                var existingEmployees = (await _localContext.EmployeeMst
-                    .AsNoTracking()
-                    .Select(x => x.emp_num)
-                    .ToListAsync()).ToHashSet();
-
-                int empInserted = 0;
-                foreach (var src in srcEmployees)
-                {
-                    // ✅ Skip if primary key fields are null
-                    if (string.IsNullOrEmpty(src.emp_num) || string.IsNullOrEmpty(src.site_ref))
-                        continue;
-
-                    if (existingEmployees.Contains(src.emp_num)) continue;
-
-                    _localContext.EmployeeMst.Add(new EmployeeMst
-                    {
-                        emp_num = src.emp_num,
-                        name = src.name,
-                        site_ref = src.site_ref,   // ✅ map it
-                        RecordDate = GetSafeSqlDateTime(src.RecordDate)
-                    });
-                    empInserted++;
-                }
-
-                await _localContext.SaveChangesAsync();
-                results.Add($"Employee_mst inserted: {empInserted}");
-
-                if (srcEmployees.Any())
-                    await _syncService.UpdateLastSyncDate("EmployeeMst",
-                        srcEmployees.Max(x => x.RecordDate));
-
-                // ===================== 4️⃣ ITEM_MST =====================
-                var srcItems = await _sourceContext.ItemMst
-                    .AsNoTracking()
-                    .Where(x => x.RecordDate != null && x.RecordDate > itemLastSync)
-                    .ToListAsync();
-
-                var existingItems = (await _localContext.ItemMst
-                    .AsNoTracking()
-                    .Select(x => x.item)
-                    .ToListAsync()).ToHashSet();
-
-                int itemInserted = 0;
-                foreach (var src in srcItems)
-                {
-                    if (existingItems.Contains(src.item)) continue;
-
-                    _localContext.ItemMst.Add(new ItemMst
-                    {
-                        item = src.item,
-                        description = src.description,
-                        RecordDate = GetSafeSqlDateTime(src.RecordDate),
-                        Auto_Job = src.Auto_Job ?? "N",
-                        Auto_Post = src.Auto_Post ?? "N"
-                    });
-                    itemInserted++;
-                }
-
-                await _localContext.SaveChangesAsync();
-                results.Add($"Item_mst inserted: {itemInserted}");
-
-                if (srcItems.Any())
-                    await _syncService.UpdateLastSyncDate("ItemMst",
-                        srcItems.Max(x => x.RecordDate ?? DateTime.UtcNow));
-
-                // ===================== 5️⃣ WOM_WC_EMPLOYEE =====================
-                var srcWom = await _sourceContext.WomWcEmployee
-                    .AsNoTracking()
-                    .Where(x => x.RecordDate != null && x.RecordDate > womLastSync)
-                    .ToListAsync();
-
-                var existingWom = (await _localContext.WomWcEmployee
-                    .AsNoTracking()
-                    .Select(x => x.EmpNum)
-                    .ToListAsync()).ToHashSet();
-
-                int womInserted = 0;
-                foreach (var src in srcWom)
-                {
-                    if (existingWom.Contains(src.EmpNum)) continue;
-
-                    _localContext.WomWcEmployee.Add(new WomWcEmployee
-                    {
-                        EmpNum = src.EmpNum,
-                        RecordDate = GetSafeSqlDateTime(src.RecordDate)
-                    });
-                    womInserted++;
-                }
-
-                await _localContext.SaveChangesAsync();
-                results.Add($"WomWcEmployee inserted: {womInserted}");
-
-                if (srcWom.Any())
-                    await _syncService.UpdateLastSyncDate("WomWcEmployee",
-                        srcWom.Max(x => x.RecordDate));
-
-                // ===================== 6️⃣ WC_MST =====================
-                var srcWcs = await _sourceContext.WcMst
-                    .AsNoTracking()
-                    .Where(x => x.RecordDate != null && x.RecordDate > wcLastSync)
-                    .ToListAsync();
-
-                var existingWcs = (await _localContext.WcMst
-                    .AsNoTracking()
-                    .Select(x => x.wc)
-                    .ToListAsync()).ToHashSet();
-
-                int wcInserted = 0;
-                foreach (var src in srcWcs)
-                {
-                    if (existingWcs.Contains(src.wc)) continue;
-
-                    _localContext.WcMst.Add(new WcMst
-                    {
-                        wc = src.wc,
-                        RecordDate = GetSafeSqlDateTime(src.RecordDate)
-                    });
-                    wcInserted++;
-                }
-
-                await _localContext.SaveChangesAsync();
-                results.Add($"Wc_mst inserted: {wcInserted}");
-
-                if (srcWcs.Any())
-                    await _syncService.UpdateLastSyncDate("WcMst",
-                        srcWcs.Max(x => x.RecordDate));
+                await cmd.ExecuteNonQueryAsync();
+                
 
                 return Ok(new
                 {
-                    Status = "Success",
-                    Message = "Incremental sync completed successfully.",
-                    Details = results
+                    Status  = "Success",
+                    Message = "SyncRestTablesFromSyteline SP executed successfully."
                 });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    Status = "Failed",
-                    Message = ex.Message,
-                    Details = results
+                    Status  = "Failed",
+                    Message = ex.Message
                 });
-            }
-            finally
-            {
-                _localContext.ChangeTracker.AutoDetectChangesEnabled = true;
             }
         }
 
+
+
+       [HttpPost("SyncAllTablesFromSyteline")]
+        public async Task<IActionResult> SyncAllTablesFromSyteline()
+        {
+            try
+            {
+                var connStr = _localContext.Database.GetConnectionString();
+
+                using var conn = new SqlConnection(connStr);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand("EXEC SyncJobTablesFromSyteline", conn);
+                cmd.CommandTimeout = 300; // 5 minutes — SP can take time on large data
+
+                await cmd.ExecuteNonQueryAsync();
+
+                return Ok(new
+                {
+                    Status  = "Success",
+                    Message = "SyncJobTablesFromSyteline SP executed successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Status  = "Failed",
+                    Message = ex.Message
+                });
+            }
+        }
 
 
 

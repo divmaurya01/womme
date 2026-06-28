@@ -165,49 +165,52 @@ export class JobSyncComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  syncJob() {
-    this.isLoading = true;
-    this.syncMessage = null;
-    this.isError = false;
-    this.loader.show();
-    this.jobService.SyncJobMst()
-    .pipe(finalize(() => this.loader.hide()))
-    .subscribe({
-      next: (res: any) => {
-        this.isLoading = false;
-        this.syncMessage = res; // backend returns string
-        this.isError = false;
-      },
-      error: (err) => {
-        this.isLoading = false;
-        this.syncMessage = err.error || "Something went wrong while syncing.";
-        this.isError = true;
-      }
-    });
-  }
-
+  
   // 🔹 New Sync All Tables button
    syncAllTables() {
-  this.isLoading = true;
-  this.syncMessage = null;
-  this.isError = false;
-  this.loader.show();
+      this.isLoading = true;
+      this.syncMessage = null;
+      this.isError = false;
+      this.loader.show();
 
-  this.jobService.SyncAllTables()
-    .pipe(finalize(() => this.loader.hide()))
-    .subscribe({
-      next: (res: any) => {
-        this.isLoading = false;
-        this.syncMessage = res; // backend returns text
-        this.isError = false;
-      },
-      error: (err) => {
-        this.isLoading = false;
-        this.syncMessage = err.error || "Something went wrong while syncing all tables.";
-        this.isError = true;
+      this.jobService.SyncJobTables()
+        .pipe(finalize(() => this.loader.hide()))
+        .subscribe({
+          next: (res: any) => {
+            this.isLoading = false;
+            this.syncMessage = res; // backend returns text
+            this.isError = false;
+          },
+          error: (err) => {
+            this.isLoading = false;
+            this.syncMessage = err.error || "Something went wrong while syncing all tables.";
+            this.isError = true;
+          }
+        });
       }
-    });
-}
+
+      // 🔹 New Sync All Tables button
+   SyncRestTables() {
+      this.isLoading = true;
+      this.syncMessage = null;
+      this.isError = false;
+      this.loader.show();
+
+      this.jobService.SyncRestTables()
+        .pipe(finalize(() => this.loader.hide()))
+        .subscribe({
+          next: (res: any) => {
+            this.isLoading = false;
+            this.syncMessage = res; // backend returns text
+            this.isError = false;
+          },
+          error: (err) => {
+            this.isLoading = false;
+            this.syncMessage = err.error || "Something went wrong while syncing all tables.";
+            this.isError = true;
+          }
+        });
+      }
 
   onJobClick(job: string): void {
     const currentParams = this.route.snapshot.queryParams;

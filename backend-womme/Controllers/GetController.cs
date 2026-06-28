@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WommeAPI.Data;
 using WommeAPI.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace WommeAPI.Controllers;
 
@@ -12,10 +13,12 @@ namespace WommeAPI.Controllers;
 public class GetController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly AppSettings _appSettings;
 
-    public GetController(AppDbContext context)
+    public GetController(AppDbContext context, IConfiguration configuration)
     {
         _context = context;
+        _appSettings = configuration.GetSection("AppSettings").Get<AppSettings>()!;
     }
 
 
@@ -408,7 +411,7 @@ public class GetController : ControllerBase
     {
         try
         {
-            var fromDate = new DateTime(2025, 8, 1);
+            var fromDate = _appSettings.FromDate;
 
             // Step 0: Get current employee
             var currentEmp = await _context.EmployeeMst
@@ -682,29 +685,43 @@ public class GetController : ControllerBase
                             where j.job == jobId
                             select new JobReportDto
                             {
-                                Job              = j.job,
-                                JobDate          = j.job_date,
-                                PreparedBy       = j.Uf_JobPreparedBy,
-                                MaterialClass    = j.Uf_JobMatlClass,
-                                DrawingNo        = j.Uf_DrawingNo,
-                                RevisionNo       = j.revision,
-                                TempClass        = j.Uf_JobTempClass,
-                                DrawingRev       = j.Uf_RouterRevNo,
-                                SoNo             = j.ord_num,
-                                ReleasedQty      = j.qty_released,
-                                CreatedDate      = j.CreateDate,
-                                Status           = j.stat,
-                                MatlDesc         = j.Uf_MatlDescJob,
-                                PSL              = j.Uf_JobPsl,
-                                Item             = j.item,
-                                ItemDescription  = j.description,
-                                JobDueDate       = i != null ? i.CreateDate : (DateTime?)null,
-                                Suffix           = j.suffix,
+                                Job               = j.job,
+                                JobDate           = j.job_date,
+                                JobDueDate        = j.midnight_of_job_sch_end_date,   // ← CHANGED (was i.CreateDate)
+                                PreparedBy        = j.Uf_JobPreparedBy,
+                                MaterialClass     = j.Uf_JobMatlClass,
+                                DrawingNo         = j.Uf_DrawingNo,
+                                RevisionNo        = j.revision,
+                                TempClass         = j.Uf_JobTempClass,
+                                DrawingRev        = j.Uf_RouterRevNo,
+                                RouterRevRemarks  = j.Uf_RouterRevRemarks,            // ← NEW
+                                SoNo              = j.ord_num,
+                                AddJobCORef       = j.Uf_AddJobCORef,                 // ← NEW
+                                HeatNo            = j.Uf_HeatNo,                      // ← NEW
+                                HeatCode          = j.Uf_HeatCode,                    // ← NEW
+                                SpecNoJob         = j.Uf_SpecNoJob,                   // ← NEW
+                                ReleasedQty       = j.qty_released,
+                                CreatedDate       = j.CreateDate,
+                                Status            = j.stat,
+                                MatlDesc          = j.Uf_MatlDescJob,
+                                PSL               = j.Uf_JobPsl,
+                                Item              = j.item,
+                                ItemDescription   = j.description,
+                                Suffix            = j.suffix,
                                 UfItemDescription2 = i != null ? i.Uf_ItemDescription2 : null
                             }).FirstOrDefaultAsync();
 
         if (jobInfo == null)
             return NotFound(new { Message = "Job not found" });
+
+            // ── Fetch latest Form & Rev No ────────────────────────────────
+        var latestForm = await _context.JobFormRevMst
+            .OrderByDescending(f => f.Id)
+            .Select(f => f.FormNo_revno)
+            .FirstOrDefaultAsync();
+
+        jobInfo.FormNo_revno = latestForm ?? "";
+        // ─────────────────────────────────────────────────────────────
 
         // Step 2: Fetch operations
         var operations = await (
@@ -743,10 +760,26 @@ public class GetController : ControllerBase
             }
         ).ToListAsync();
 
+        
         // Step 3: Load all transactions separately
         var allTransactions = await _context.JobTranMst
             .Where(t => t.job == jobId)
             .ToListAsync();
+
+        // ── ADD THIS ──────────────────────────────────────────────────
+        var manualMappings = await _context.JobSerialMapping
+            .Where(m => m.Job == jobId)
+            .AsNoTracking()
+            .Select(m => new { m.Job, m.SystemSerial, m.ManualSerial })
+            .ToListAsync();
+
+        var manualDict = manualMappings
+            .GroupBy(m => m.SystemSerial)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Last().ManualSerial  // latest inserted wins
+            );
+        // ─────────────────────────────────────────────────────────────
 
         var employees = await _context.EmployeeMst
             .Select(e => new { e.emp_num, e.name })
@@ -760,7 +793,9 @@ public class GetController : ControllerBase
                 .OrderBy(t => t.trans_date)
                 .Select(t => new JobTransactionDto
                 {
-                    SerialNo   = t.SerialNo,
+                    SerialNo = t.SerialNo != null && manualDict.TryGetValue(t.SerialNo, out var ms)
+                                            ? ms
+                                            : t.SerialNo,
                     CreateDate = t.CreateDate,
                     TransDate  = t.trans_date,
                     TransType  = t.trans_type,
@@ -1191,7 +1226,7 @@ public class GetController : ControllerBase
     {
         try
         {
-            var fromDate = new DateTime(2025, 11, 1);
+            var fromDate = _appSettings.FromDate;
 
             // Step 1: Raw query — no GroupBy in SQL (faster)
             var rawQuery = from jr in _context.JobRouteMst
@@ -1269,7 +1304,7 @@ public class GetController : ControllerBase
     {
         try
         {
-            var fromDate = new DateTime(2025, 11, 1);
+            var fromDate = _appSettings.FromDate;
 
             // Step 0: Check logged-in employee info
             var currentEmp = await _context.EmployeeMst
@@ -1303,6 +1338,7 @@ public class GetController : ControllerBase
             // Step 3: If this user is OPR+roleID4, only allow jobs of this emp_num
             List<string> allowedWcForCurrentEmp = new();
             if (isOprLevel4)
+
             {
                 allowedWcForCurrentEmp = employees
                     .Where(e => e.EmpNum == emp_num && e.Wc != null)
@@ -1314,6 +1350,7 @@ public class GetController : ControllerBase
                     .Where(x => x.jr.Wc != null && allowedWcForCurrentEmp.Contains(x.jr.Wc))
                     .ToList();
             }
+
             var jobListForMapping = baseData.Select(x => (x.jr.Job ?? "").Trim()).Distinct().ToList();
             var manualMappings = await _context.JobSerialMapping
                 .Where(m => jobListForMapping.Contains(m.Job))
@@ -1345,7 +1382,7 @@ public class GetController : ControllerBase
                 {
                     var systemSerial = $"{(g.Key.Job ?? "").Trim()}-{i}";
                     var mapping = manualMappings
-                        .FirstOrDefault(m => m.Job == (g.Key.Job ?? "").Trim() && m.SystemSerial == systemSerial);
+                        .LastOrDefault(m => m.Job == (g.Key.Job ?? "").Trim() && m.SystemSerial == systemSerial);
 
                     return new UnpostedTransactionDto
                     {
@@ -1551,7 +1588,7 @@ public class GetController : ControllerBase
     {
         try
         {
-            var fromDate = new DateTime(2025, 11, 1);
+            var fromDate = _appSettings.FromDate;
 
             // Step 0: Check logged-in employee info
             var currentEmp = await _context.EmployeeMst
@@ -1627,7 +1664,7 @@ public class GetController : ControllerBase
                 {
                     var systemSerial = $"{(g.Key.Job ?? "").Trim()}-{i}";
                     var mapping = manualMappings
-                        .FirstOrDefault(m => m.Job == (g.Key.Job ?? "").Trim() && m.SystemSerial == systemSerial);
+                        .LastOrDefault(m => m.Job == (g.Key.Job ?? "").Trim() && m.SystemSerial == systemSerial);
 
                     return new UnpostedTransactionDto
                     {
@@ -1835,7 +1872,7 @@ public class GetController : ControllerBase
     {
         try
         {
-            var fromDate = new DateTime(2025, 11, 1);
+            var fromDate = _appSettings.FromDate;
 
             // 🔹 Employee role check
             var currentEmp = await _context.EmployeeMst
@@ -1918,7 +1955,7 @@ public class GetController : ControllerBase
                     {
                         var systemSerial = $"{g.Key.Job.Trim()}-{i}";
                         var mapping = manualMappings
-                            .FirstOrDefault(m => m.Job == g.Key.Job.Trim() && m.SystemSerial == systemSerial);
+                            .LastOrDefault(m => m.Job == g.Key.Job.Trim() && m.SystemSerial == systemSerial);
 
                         empLookup.TryGetValue(g.Key.Wc, out var empData);
 
@@ -2021,7 +2058,7 @@ public async Task<IActionResult> GetVerifyTransactions(
 {
     try
     {
-        var fromDate = new DateTime(2025, 11, 1);
+        var fromDate = _appSettings.FromDate;
 
         var currentEmp = await _context.EmployeeMst
             .AsNoTracking()
@@ -2093,7 +2130,7 @@ public async Task<IActionResult> GetVerifyTransactions(
                 {
                     var systemSerial = $"{g.Key.Job.Trim()}-{i}";
                     var mapping = manualMappings
-                        .FirstOrDefault(m => m.Job == g.Key.Job.Trim() && m.SystemSerial == systemSerial);
+                        .LastOrDefault(m => m.Job == g.Key.Job.Trim() && m.SystemSerial == systemSerial);
 
                     empLookup.TryGetValue(g.Key.Wc, out var empData);
 
@@ -2330,7 +2367,7 @@ public async Task<IActionResult> GetVerifyTransactions(
     {
         try
         {
-            var fromDate = new DateTime(2025, 11, 1);
+            var fromDate = _appSettings.FromDate;
 
             // 🔹 Step 1: Take latest transaction per Job+Serial+WC+Oper
             var latestTrans = await _context.JobTranMst
@@ -2649,7 +2686,7 @@ public IActionResult GetActiveJobTransactions()
     {
         try
         {
-            var fromDate = new DateTime(2025, 11, 1);
+            var fromDate = _appSettings.FromDate;
     
             // Step 1: Get all QA/QC operations
             var qcOperations = await (
@@ -2743,7 +2780,7 @@ public IActionResult GetActiveJobTransactions()
                         {
                             // ← lookup manual mapping for this serial
                             var mapping = qcManualMappings
-                                .FirstOrDefault(m => m.Job == bd.Job.Trim() && m.SystemSerial == serial);
+                                .LastOrDefault(m => m.Job == bd.Job.Trim() && m.SystemSerial == serial);
 
                             var empList  = employees.Where(e => e.Wc == bd.Wc).ToList();
                             var empNums  = string.Join(", ", empList.Select(e => e.EmpNum));
@@ -2807,7 +2844,7 @@ public IActionResult GetActiveJobTransactions()
     {
         try
         {
-            var fromDate = new DateTime(2025, 7, 1);
+            var fromDate = _appSettings.FromDate;
 
             // Step 1: Get jobs where ALL operations are in QA/ QC
             var qcOnlyJobs = await (
@@ -3384,7 +3421,7 @@ public IActionResult GetActiveJobTransactions()
     public async Task<IActionResult> getJobProgress()
     {
         // ── Date filter ───────────────────────────────────────────
-        DateTime cutoffDate = new DateTime(2025, 12, 07);
+        DateTime cutoffDate = _appSettings.FromDate;
 
         // ── Job master ────────────────────────────────────────────
         var jobs = await _context.JobMst
@@ -3466,10 +3503,12 @@ public IActionResult GetActiveJobTransactions()
             .Select(m => new { m.Job, m.SystemSerial, m.ManualSerial })
             .ToListAsync();
 
+        // Replace ToDictionary with GroupBy + Last
         var manualDict = manualMappings
+            .GroupBy(m => $"{m.Job}|{m.SystemSerial}")
             .ToDictionary(
-                m => $"{m.Job}|{m.SystemSerial}",
-                m => m.ManualSerial
+                g => g.Key,
+                g => g.Last().ManualSerial  // picks latest inserted
             );
 
         // ── Build tree ────────────────────────────────────────────
@@ -3840,7 +3879,7 @@ public async Task<IActionResult> GetJobProgressDetail([FromQuery] string job)
     var rows = Enumerable.Range(1, qty).Select(i =>
     {
         var serialNo = $"{job.Trim()}-{i}";
-        var existing = existingMappings.FirstOrDefault(m => m.SystemSerial == serialNo);
+        var existing = existingMappings.LastOrDefault(m => m.SystemSerial == serialNo);
 
         return new
         {

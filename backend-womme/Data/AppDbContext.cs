@@ -384,6 +384,14 @@ namespace WommeAPI.Data
                 entity.ToTable("wom_machine_employee");
             });
             
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var prop in entityType.GetProperties()
+                    .Where(p => p.ClrType == typeof(DateTime) || p.ClrType == typeof(DateTime?)))
+                {
+                    prop.SetColumnType("datetime");
+                }
+            }
 
            
 

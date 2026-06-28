@@ -49,9 +49,9 @@
 
         <!-- Sync Button (right) -->
         <div>
-          <button type="button" class="btn custom-assign-btn rounded-pill px-4 py-2" (click)="syncJob()" [disabled]="isLoading">
+          <button type="button" class="btn custom-assign-btn rounded-pill px-4 py-2" (click)="SyncRestTables()" [disabled]="isLoading">
             <i class="fas fa-sync-alt me-2"></i>
-            <span *ngIf="!isLoading"> Sync Job From SyteLine</span>
+            <span *ngIf="!isLoading"> Sync Rest Tables</span>
             <span *ngIf="isLoading"> Syncing... <i class="fas fa-spinner fa-spin ms-1"></i></span>
           </button>
 
@@ -64,7 +64,7 @@
            (click)="syncAllTables()" 
             [disabled]="isLoading">
            <i class="fas fa-database me-2"></i>
-           <span *ngIf="!isLoading"> Sync All Tables</span>
+           <span *ngIf="!isLoading"> Sync Job Tables</span>
            <span *ngIf="isLoading">Syncing All... <i class="fas fa-spinner fa-spin ms-1"></i></span>
            </button>
 

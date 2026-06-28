@@ -618,6 +618,21 @@ public string? TransType { get; set; }
         [Column("Uf_Active")]
         public byte? Uf_Active { get; set; }
 
+        [Column("midnight_of_job_sch_end_date")]
+        public DateTime? midnight_of_job_sch_end_date { get; set; }
+
+        [Column("Uf_HeatNo")]
+        public string? Uf_HeatNo { get; set; }
+
+        [Column("Uf_HeatCode")]
+        public string? Uf_HeatCode { get; set; }
+
+        [Column("Uf_SpecNoJob")]
+        public string? Uf_SpecNoJob { get; set; }
+
+        [Column("Uf_AddJobCORef")]
+        public string? Uf_AddJobCORef { get; set; }
+
 
     }
 
@@ -2197,7 +2212,7 @@ public string? TransType { get; set; }
         public string? DrawingNo { get; set; }
         public string? RevisionNo { get; set; }
         public DateTime? RevisionDate { get; set; }
-         public DateTime? Date { get; set; }
+        public DateTime? Date { get; set; }
         public string? TempClass { get; set; }
         public int? DrawingRev { get; set; }
         public string? SoNo { get; set; }
@@ -2211,8 +2226,17 @@ public string? TransType { get; set; }
         public DateTime? JobDueDate { get; set; }
         public int? Suffix { get; set; }
         public string? UfItemDescription2 { get; set; }
-        public List<JobOperationDto> Operations { get; set; } = new();
         public string? FormNo_revno { get; set; }
+
+        // ── NEW ──────────────────────────────────────
+        public string? RouterRevRemarks { get; set; }
+        public string? AddJobCORef      { get; set; }
+        public string? HeatNo           { get; set; }
+        public string? HeatCode         { get; set; }
+        public string? SpecNoJob        { get; set; }
+        // ─────────────────────────────────────────────
+
+        public List<JobOperationDto> Operations { get; set; } = new();
     }
 
     public class JobOperationDto
@@ -2864,6 +2888,13 @@ public class JobReportAudit
         public string FormNo_revno { get; set; }
         public string UpdatedBy { get; set; }
     }
+
+    public class AppSettings
+    {
+        public DateTime FromDate    { get; set; }
+
+    }
+
 
 
 

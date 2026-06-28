@@ -4235,6 +4235,31 @@ public async Task<IActionResult> GetTransactionData([FromBody] JobOverviewFilter
             .Where(j => !todayOnly || (j.trans_date.HasValue && j.trans_date.Value.Date == today))
             .ToListAsync();
 
+        // ── ADD THIS ──────────────────────────────────────────────────
+        var jobNos = allRows.Select(j => j.job).Where(j => j != null).Distinct().ToList();
+
+        var manualMappings = await _context.JobSerialMapping
+            .Where(m => jobNos.Contains(m.Job))
+            .OrderBy(m => m.Id)                          // latest by Id
+            .AsNoTracking()
+            .Select(m => new { m.Job, m.SystemSerial, m.ManualSerial })
+            .ToListAsync();
+
+        var manualDict = manualMappings
+            .GroupBy(m => $"{m.Job}|{m.SystemSerial}")
+            .ToDictionary(
+                g => g.Key,
+                g => g.Last().ManualSerial               // safe — already ordered by Id
+            );
+
+        // helper
+        string ResolveSerial(string? job, string? serial)
+        {
+            if (job == null || serial == null) return serial ?? "";
+            return manualDict.TryGetValue($"{job}|{serial}", out var ms) ? ms : serial;
+        }
+        // ─────────────────────────────────────────────────────────────
+
         List<JobTranMst> latestNormal = new();
         List<JobTranMst> latestQC     = new();
         List<JobTranMst> latestVerify = new();
@@ -4384,7 +4409,7 @@ public async Task<IActionResult> GetTransactionData([FromBody] JobOverviewFilter
                 return new
                 {
                     Job          = j.job,
-                    SerialNo     = j.SerialNo,
+                    SerialNo     = ResolveSerial(j.job, j.SerialNo),
                     WC           = j.wc,
                     Operation    = j.oper_num,
                     EmployeeCode = j.emp_num,

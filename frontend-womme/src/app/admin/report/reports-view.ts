@@ -122,35 +122,44 @@ export class ReportsViewComponent implements OnInit, OnDestroy {
 
             // ── Map job header ───────────────────────────────────────────────
             this.jobData = {
-              job              : data.job,
-              jobDate          : data.jobDate          ? data.jobDate.split('T')[0]          : '',
-              jobDueDate       : data.jobDueDate       ? data.jobDueDate.split('T')[0]       : '',
-              RevisionDate     : data.revisionDate     ? data.revisionDate.split('T')[0]     : '',
-              date             : data.date             ? data.date.split('T')[0]             : '',
-              preparedBy       : data.preparedBy       || '---',
-              materialClass    : data.materialClass    || '---',
-              drawingNo        : data.drawingNo        || '---',
-              revisionNo       : data.revisionNo       || '---',
-              tempClass        : data.tempClass        || '---',
-              drawingRev       : data.drawingRev       || 0,
-              soNo             : data.soNo             || '---',
-              released         : data.releasedQty      || 0,
-              status           : this.mapStatus(data.status),
-              matlDesc         : data.matlDesc         || '---',
-              psl              : data.psl              || '---',
-              item             : data.item             || '---',
-              description      : data.itemDescription  || '---',
-              suffix           : data.suffix           ?? 0,
-              ufItemDescription2: data.ufItemDescription2 || '---',
-              remark           : data.remark           || '',
-              engineeringNotes : data.engineeringNotes || '',
-              specNo           : data.specNo           || '---',
-              thirdPartyInsp   : data.thirdPartyInsp   || '---',
-              heatNo           : data.heatNo           || '---',
-              traceCode        : data.traceCode        || '---',
-              partRev          : data.partRev          || '---',
-              formNo_revno     : data.formNo_revno     || ''
-            };
+                        job              : data.job,
+                        jobDate          : data.jobDate          ? data.jobDate.split('T')[0]          : '',
+                        jobDueDate       : data.jobDueDate       ? data.jobDueDate.split('T')[0]       : '',
+                        RevisionDate     : data.revisionDate     ? data.revisionDate.split('T')[0]     : '',
+                        date             : data.date             ? data.date.split('T')[0]             : '',
+                        preparedBy       : data.preparedBy       || '---',
+                        materialClass    : data.materialClass    || '---',
+                        drawingNo        : data.drawingNo        || '---',
+                        revisionNo       : data.revisionNo       || '---',
+                        tempClass        : data.tempClass        || '---',
+                        drawingRev       : data.drawingRev       || 0,
+                        soNo             : data.soNo             || '---',
+                        released         : data.releasedQty      || 0,
+                        status           : this.mapStatus(data.status),
+                        matlDesc         : data.matlDesc         || '---',
+                        psl              : data.psl              || '---',
+                        item             : data.item             || '---',
+                        description      : data.itemDescription  || '---',
+                        suffix           : data.suffix           ?? 0,
+                        ufItemDescription2: data.ufItemDescription2 || '---',
+                        formNo_revno     : data.formNo_revno     || '',
+
+                        // ── NEW ──────────────────────────────────────
+                        routerRevRemarks : data.routerRevRemarks || '---',
+                        addJobCORef      : data.addJobCORef      || '---',
+                        heatNo           : data.heatNo           || '---',
+                        heatCode         : data.heatCode         || '---',
+                        specNoJob        : data.specNoJob        || '---',
+                        // ─────────────────────────────────────────────
+
+                        // ── These are in HTML but NOT coming from API yet ──
+                        remark           : data.remark           || '',
+                        engineeringNotes : data.engineeringNotes || '',
+                        thirdPartyInsp   : data.thirdPartyInsp   || '---',
+                        traceCode        : data.traceCode        || '---',  // maps to heatCode?
+                        partRev          : data.partRev          || '---',
+                        specNo           : data.specNoJob        || '---',  // ← maps to SpecNoJob
+                      };
 
             // ── Map operations ───────────────────────────────────────────────
             this.jobOperations = (data.operations || []).map((op: any) => {

@@ -83,18 +83,27 @@ editingMachineEntryNo: number | null = null;
     this.isSidebarHidden = !this.isSidebarHidden;
   }
 
-  saveForm() {
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+saveForm() {
+  const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
 
-    const payload = {
-      formNo_revno: this.formData.formNo_revno,
-      updatedBy: userDetails.employeeCode || ''
-    };
+  const payload = {
+    formNo_revno: this.formData.formNo_revno,
+    updatedBy: userDetails.employeeCode || ''
+  };
 
-    this.jobService.saveForm(payload).subscribe(() => {
-      this.loadForm(); // 🔥 refresh latest after save
+  this.loader.show();
+  this.jobService.saveForm(payload)
+    .pipe(finalize(() => this.loader.hide()))
+    .subscribe({
+      next: () => {
+        this.loadForm();
+        Swal.fire('Success', 'Form No. saved successfully.', 'success');  // ← ADD
+      },
+      error: (err) => {
+        Swal.fire('Error', err?.error?.message || 'Failed to save form.', 'error');  // ← ADD
+      }
     });
-  }
+}
 
   loadMachines(): void {
   this.loader.show();
