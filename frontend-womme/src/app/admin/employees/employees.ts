@@ -231,16 +231,21 @@ onGlobalSearch(): void {
   }
 
   private buildEmployeePayload() {
-    return {
+    const payload: any = {
       empNum: this.newEmployee.empNum,
       name: this.newEmployee.name,
-      email: this.newEmployee.email_addr,
       passwordHash: this.newEmployee.passwordHash,
       roleID: this.newEmployee.roleID,
       createdBy: this.newEmployee.createdBy,
       isActive: this.newEmployee.isActive,
       loginID: this.newEmployee.loginID
     };
+
+    if (this.newEmployee.email_addr?.trim()) {
+      payload.email = this.newEmployee.email_addr.trim();
+    }
+
+    return payload;
   }
 
 

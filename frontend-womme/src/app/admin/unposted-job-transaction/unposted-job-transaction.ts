@@ -175,7 +175,7 @@ export class UnpostedJobTransaction implements OnInit {
 
                     // ── Role 2/4: only nextJob ops at this stage ──────────
                     // paused ops will be added back in mapTransToJobs
-                    if (this.role_id === 4 || this.role_id === 2) {
+                    if (this.role_id === 4 ) {
                       filteredJobs = filteredJobs.filter((job: any) => {
                         const key = `${job.jobNumber}|${job.serialNo}`;
                         const nextOps = nextOpMap.get(key) ?? [];
@@ -244,7 +244,7 @@ export class UnpostedJobTransaction implements OnInit {
 
   if (!this.activeJobTrans?.length) {
     // No active transactions — just apply role filter and return
-    if (this.role_id === 4 || this.role_id === 2) {
+    if (this.role_id === 4) {
       this.transactions = this.transactions.filter(job => job.isNextJob);
     }
     this.filteredTransactions = [...this.transactions];
@@ -338,7 +338,7 @@ this.transactions = this.transactions.map(job => {
 });
 
   // ── Role 2/4: keep only nextJob OR running/paused ─────────────────
-  if (this.role_id === 4 || this.role_id === 2) {
+  if (this.role_id === 4) {
     this.transactions = this.transactions.filter(job => {
       if (job.isNextJob) return true;
       return job.status === '1' || job.status === '2';
@@ -465,7 +465,7 @@ this.transactions = this.transactions.map(job => {
         this.stepValid = this.availableMachines.includes(parsed.machineNumber);
         if (this.stepValid) {
           this.matchedData.machineNumber = parsed.machineNumber;
-          if (this.role_id === 4 || this.role_id === 2) {
+          if (this.role_id === 4) {
             parsed.empNum = this.employeeCode;
             this.scannedData = parsed;
             this.matchedData.empNum = this.employeeCode;
@@ -484,7 +484,7 @@ this.transactions = this.transactions.map(job => {
 
   nextStep() {
     if (!this.stepValid) return;
-    if (this.wizardStep === 3 && (this.role_id === 4 || this.role_id === 2)) {
+    if (this.wizardStep === 3 && this.role_id === 4) {
       this.finishWizard();
     } else {
       this.wizardStep++;

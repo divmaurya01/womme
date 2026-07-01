@@ -18,7 +18,7 @@ namespace WommeAPI.Services
         }
 
        
-   public async Task<int?> InsertJobTranAsync(JobTranMst jobTran,int comjob)
+   public async Task<int?> InsertJobTranAsync(JobTranMst jobTran,int qtycomplete, int qtymoved)
     {
         if (jobTran == null)
             throw new ArgumentNullException(nameof(jobTran));
@@ -45,13 +45,13 @@ namespace WommeAPI.Services
                         INSERT INTO jobtran_mst
                         (site_ref, job, suffix, oper_num, next_oper, trans_type,
                         trans_date, start_time, end_time, a_hrs, a_$, qty_complete, qty_moved, qty_scrapped,
-                        emp_num, wc, whse, shift, pay_rate, job_rate, issue_parent, complete_op,
+                        emp_num, wc, whse, shift, pay_rate, user_code, job_rate, issue_parent, complete_op,
                         close_job, posted, Uf_MHSerialNo, Uf_MHStatus, Uf_QCGroup,
                         CreatedBy, UpdatedBy, Uf_MovedOKToStock)
                         VALUES
                         (@site_ref, @job, @suffix, @oper_num, @next_oper, @trans_type,
                         @trans_date, @start_time, @end_time, @a_hrs, @a_dollar, @qty_complete, @qty_moved, @qty_scrapped,
-                        @emp_num, @wc, @whse, @shift, @pay_rate, @job_rate, @issue_parent, @complete_op,
+                        @emp_num, @wc, @whse, @shift, @pay_rate, @user_code, @job_rate, @issue_parent, @complete_op,
                         @close_job, @posted, @SerialNo, @Status, @QCGroup,
                         @CreatedBy, @UpdatedBy, @MovedOKToStock);
                     ";
@@ -72,8 +72,8 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@a_hrs", jobTran.a_hrs ?? 0);
                         cmd.Parameters.AddWithValue("@a_dollar", jobTran.a_dollar ?? 0);
 
-                        cmd.Parameters.AddWithValue("@qty_complete", jobTran.qty_complete ?? 0);
-                        cmd.Parameters.AddWithValue("@qty_moved", jobTran.qty_moved ?? 0);
+                        cmd.Parameters.AddWithValue("@qty_complete", qtycomplete);
+                        cmd.Parameters.AddWithValue("@qty_moved", qtymoved);
                         cmd.Parameters.AddWithValue("@qty_scrapped", jobTran.qty_scrapped ?? 0);
 
                         cmd.Parameters.AddWithValue("@emp_num", jobTran.emp_num);
@@ -82,11 +82,12 @@ namespace WommeAPI.Services
                         cmd.Parameters.AddWithValue("@shift", jobTran.shift ?? (object)DBNull.Value);
 
                         cmd.Parameters.AddWithValue("@pay_rate", jobTran.pay_rate ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@user_code", "MHA");
                         cmd.Parameters.AddWithValue("@job_rate", jobTran.job_rate ?? (object)DBNull.Value);
 
                         cmd.Parameters.AddWithValue("@issue_parent", jobTran.issue_parent ?? 0);
-                        cmd.Parameters.AddWithValue("@complete_op", comjob);
-                        cmd.Parameters.AddWithValue("@close_job", jobTran.close_job);
+                        cmd.Parameters.AddWithValue("@complete_op", 0);
+                        cmd.Parameters.AddWithValue("@close_job", 0);
                         cmd.Parameters.AddWithValue("@posted", 0);
 
                         cmd.Parameters.AddWithValue("@SerialNo", jobTran.SerialNo);
@@ -108,10 +109,11 @@ namespace WommeAPI.Services
                             a_hrs       = {jobTran.a_hrs ?? 0}
                             a_dollar    = {jobTran.a_dollar ?? 0}
                             emp_num     = {jobTran.emp_num}
+                            user_code   = MHA
                             wc          = {jobTran.wc}
                             SerialNo    = {jobTran.SerialNo}
                             trans_date  = {jobTran.trans_date}
-                            complete_op = {comjob}
+                            complete_op = {0}
                             qcgroup     = {jobTran.qcgroup}");
 
                         await cmd.ExecuteNonQueryAsync();
@@ -145,7 +147,7 @@ namespace WommeAPI.Services
                         if (result != null && result != DBNull.Value)
                             transNum = Convert.ToInt32(result);
                             Console.WriteLine("FETCH RESULT trans_num = " + (transNum?.ToString() ?? "NULL"));
-                            Console.WriteLine("FETCH RESULT comjob = " + (comjob));
+                            Console.WriteLine("FETCH RESULT qty_complete = " + (qtycomplete.ToString() ?? "NULL"));
                     }
                     await transaction.CommitAsync();
                     return transNum;
@@ -188,7 +190,7 @@ namespace WommeAPI.Services
 
                 using (SqlCommand cmd = new SqlCommand(updateSql, conn))
                 {
-                    
+                    cmd.Parameters.AddWithValue("@user_code", "MHA");
                     cmd.Parameters.AddWithValue("@complete_op", completeOp);
                     cmd.Parameters.AddWithValue("@close_job", closeJob);
                     cmd.Parameters.AddWithValue("@qty_complete", qtyComplete);

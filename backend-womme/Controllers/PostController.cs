@@ -447,7 +447,7 @@ public class PostController : ControllerBase
                 _context.Entry(secondLastRow).State = EntityState.Detached;
                 secondLastRow.qcgroup = "";
 
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 0);
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 0,0);
 
                 if (sytelineTransNum != null)
                 {
@@ -621,7 +621,7 @@ public class PostController : ControllerBase
                     whse = lastJob.whse,
                     close_job = closeJobFlag,
                     issue_parent = lastJob.issue_parent,
-                    complete_op = 1,
+                    complete_op = 0,
                     shift = "1",
                     posted = 1,
                     job_rate = regRate,
@@ -664,7 +664,12 @@ public class PostController : ControllerBase
                 secondLastRow.qty_moved = 1;
                 secondLastRow.qcgroup = "";
                 secondLastRow.close_job = (latestRow?.close_job == 1) ? (byte)1 : (byte)0;
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 1);
+
+                bool isLastOperation = secondLastRow.next_oper == null || secondLastRow.next_oper == 0;
+                int qtyCompleteToSend = 1;
+                int qtyMovedToSend = isLastOperation ? 0 : 1;
+
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, qtyCompleteToSend, qtyMovedToSend);
 
                 if (sytelineTransNum != null)
                 {
@@ -677,27 +682,24 @@ public class PostController : ControllerBase
             // CASE 2: latestRow = 3, secondLastRow = 2
             if (latestRow?.status == "3" && secondLastRow?.status == "2")
             {
-                var lastImportDocId = await _context.JobTranMst
-                .Where(j => j.job == dto.JobNumber
-                            && j.oper_num == dto.OperationNumber
-                            && j.wc == dto.Wc
-                            && j.SerialNo == dto.SerialNo
-                            && !string.IsNullOrEmpty(j.import_doc_id))
-                .OrderByDescending(j => j.trans_num)
-                .Select(j => j.import_doc_id)
-                .FirstOrDefaultAsync();
+                _context.Entry(secondLastRow).State = EntityState.Detached;
+                secondLastRow.qty_complete = 1;
+                secondLastRow.qty_moved = 1;
+                secondLastRow.qcgroup = "";
+                secondLastRow.close_job = (latestRow?.close_job == 1) ? (byte)1 : (byte)0;
 
-                if (string.IsNullOrEmpty(lastImportDocId))
-                    return BadRequest(new { message = "No Syteline transaction number found to update." });
+                bool isLastOperation = secondLastRow.next_oper == null || secondLastRow.next_oper == 0;
+                int qtyCompleteToSend = 1;
+                int qtyMovedToSend = isLastOperation ? 0 : 1;
 
-                bool sytelineResult = await _sytelineService.UpdateJobTranCompletionAsync(
-                    Convert.ToInt32(lastImportDocId),               // trans_num in Syteline
-                    (byte)latestRow.complete_op,                          // byte
-                    latestRow.close_job ?? 0,                       // byte
-                    latestRow.qty_complete ?? 0,
-                    latestRow.qty_moved ?? 0
-                );
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, qtyCompleteToSend, qtyMovedToSend);
 
+                if (sytelineTransNum != null)
+                {
+                    latestRow.import_doc_id = sytelineTransNum.Value.ToString();
+                    _context.JobTranMst.Update(secondLastRow);
+                    await _context.SaveChangesAsync();
+                }
             }
 
 }
@@ -851,7 +853,7 @@ public class PostController : ControllerBase
                         trans_type = lastTransType,
 
                         trans_num = currentTransNum,
-                        qty_complete = 1,
+                        qty_complete = 0,
                         qty_scrapped = 0,
                         qty_moved = 1,
                         close_job = closeJobFlag,
@@ -896,18 +898,7 @@ public class PostController : ControllerBase
                         {
                             var row = status1Rows[i];
 
-                            // if (row.start_time.HasValue)
-                            // {
-                            //     row.start_time = DateTime.Today
-                            //         .AddSeconds(row.start_time.Value.TimeOfDay.TotalSeconds);
-                            // }
-
-                            // if (row.end_time.HasValue)
-                            // {
-                            //     row.end_time = DateTime.Today
-                            //         .AddSeconds(row.end_time.Value.TimeOfDay.TotalSeconds);
-                            // }
-
+                           
                             row.qty_moved = 0;
                             row.complete_op = 0;
                             row.qty_complete = 0;
@@ -926,7 +917,7 @@ public class PostController : ControllerBase
 
 
                             int? sytelineTransNum =
-                                await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
+                                await _sytelineService.InsertJobTranAsync(row, 0, 0);
 
                             if (sytelineTransNum == null)
                             {
@@ -1408,7 +1399,7 @@ public class PostController : ControllerBase
 
                         // 🔹 Insert into SyteLine
                         int? sytelineTransNum =
-                            await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
+                            await _sytelineService.InsertJobTranAsync(row, 0, 0);
 
                         if (sytelineTransNum == null)
                         {
@@ -1605,7 +1596,7 @@ public class PostController : ControllerBase
 
 
                     int? sytelineTransNum =
-                        await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
+                        await _sytelineService.InsertJobTranAsync(row, 0, 0);
 
                     if (sytelineTransNum == null)
                     {
@@ -2345,7 +2336,7 @@ public class PostController : ControllerBase
                 int comjob = 1; // completed
 
                 var sytelineTransNum =
-                    await _sytelineService.InsertJobTranAsync(latestRow, comjob);
+                    await _sytelineService.InsertJobTranAsync(latestRow, 1, comjob);
 
                 if (sytelineTransNum != null)
                 {
@@ -2935,7 +2926,7 @@ public async Task<IActionResult> StartSingleQCJob([FromBody] StartJobRequestDto 
             // Check your condition
             if (latestRow?.status == "2" && secondLastRow?.status == "1")
             {
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 0);
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 0, 0); // 0 for pause
 
                 if (sytelineTransNum != null)
                 {
@@ -3154,7 +3145,13 @@ if (totalHours <= 8m)
                 secondLastRow.qty_complete = 1;
                 secondLastRow.qty_moved = 1;
                 secondLastRow.close_job = (latestRow?.close_job == 1) ? (byte)1 : (byte)0;
-                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, 1);
+
+                bool isLastOperation = secondLastRow.next_oper == null || secondLastRow.next_oper == 0;
+                int qtyCompleteToSend = 1;
+                int qtyMovedToSend = isLastOperation ? 0 : 1;
+
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, qtyCompleteToSend, qtyMovedToSend);
+                
 
                 if (sytelineTransNum != null)
                 {
@@ -3165,31 +3162,27 @@ if (totalHours <= 8m)
             }
 
 
-            // CASE 2: latestRow = 3, secondLastRow = 2
+           // CASE 2: latestRow = 3, secondLastRow = 2
             if (latestRow?.status == "3" && secondLastRow?.status == "2")
             {
-                var lastImportDocId = await _context.JobTranMst
-                .Where(j => j.job == dto.JobNumber
-                            && j.oper_num == dto.OperationNumber
-                            && j.wc == dto.Wc
-                            && j.SerialNo == dto.SerialNo
-                            && !string.IsNullOrEmpty(j.import_doc_id))
-                .OrderByDescending(j => j.trans_num)
-                .Select(j => j.import_doc_id)
-                .FirstOrDefaultAsync();
+                _context.Entry(secondLastRow).State = EntityState.Detached;
+                secondLastRow.qty_complete = 1;
+                secondLastRow.qty_moved = 1;
+                secondLastRow.qcgroup = "";
+                secondLastRow.close_job = (latestRow?.close_job == 1) ? (byte)1 : (byte)0;
 
-                if (string.IsNullOrEmpty(lastImportDocId))
-                    return BadRequest(new { message = "No Syteline transaction number found to update." });
+                bool isLastOperation = secondLastRow.next_oper == null || secondLastRow.next_oper == 0;
+                int qtyCompleteToSend = 1;
+                int qtyMovedToSend = isLastOperation ? 0 : 1;
 
-                bool sytelineResult = await _sytelineService.UpdateJobTranCompletionAsync(
-                    Convert.ToInt32(lastImportDocId),                // trans_num in Syteline
+                var sytelineTransNum = await _sytelineService.InsertJobTranAsync(secondLastRow, qtyCompleteToSend, qtyMovedToSend);
 
-                    (byte)latestRow.complete_op,                          // byte
-                    latestRow.close_job ?? 0,                       // byte
-                    latestRow.qty_complete ?? 0,
-                    latestRow.qty_moved ?? 0
-                );
-
+                if (sytelineTransNum != null)
+                {
+                    latestRow.import_doc_id = sytelineTransNum.Value.ToString();
+                    _context.JobTranMst.Update(secondLastRow);
+                    await _context.SaveChangesAsync();
+                }
             }
 
 
@@ -3419,7 +3412,7 @@ if (totalHours <= 8m)
 
 
                             int? sytelineTransNum =
-                                await _sytelineService.InsertJobTranAsync(row, (int)row.complete_op);
+                                await _sytelineService.InsertJobTranAsync(row, 1, 1); // qty_complete=0, qty_moved=0 for all rows except last
 
                             if (sytelineTransNum == null)
                             {

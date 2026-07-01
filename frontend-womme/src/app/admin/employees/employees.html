@@ -120,7 +120,7 @@
             <!-- Email -->
             <div class="col-md-6">
               <label for="email" class="form-label">
-                Email <span class="text-danger">*</span>
+                Email 
               </label>
               <input
                 id="email"
@@ -128,11 +128,8 @@
                 class="form-control"
                 [(ngModel)]="newEmployee.email_addr"
                 name="email_addr"
-                required />
-              <div *ngIf="employeeForm.submitted && !newEmployee.email_addr"
-                  class="text-danger small">
-                Email is required
-              </div>
+                 />
+              
             </div>
 
 

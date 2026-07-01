@@ -16,7 +16,7 @@ import { finalize } from 'rxjs/operators';
   selector: 'app-job-list',
   templateUrl: './job-list.html',
   styleUrls: ['./job-list.scss'],
-  imports:[CommonModule,FormsModule,HeaderComponent,SidenavComponent,TableModule, DatePipe]
+  imports:[CommonModule,FormsModule,HeaderComponent,SidenavComponent,TableModule]
 })
 export class JobListComponent implements OnInit {
 

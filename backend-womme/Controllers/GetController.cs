@@ -887,8 +887,8 @@ public class GetController : ControllerBase
     public IActionResult GetDistinctOperations(int page = 0, int size = 50, int? search = null)
     {
         // Step 1: Group by operation number to ensure true distinctness
-        var query = _context.JobTranMst
-            .GroupBy(j => j.oper_num)
+        var query = _context.JobRouteMst
+            .GroupBy(j => j.OperNum)  // replace oper_num with actual field name in JobMst if different
             .Select(g => g.Key);
 
         // Step 2: Apply search filter (if provided)
